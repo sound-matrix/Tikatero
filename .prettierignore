@@ -1,0 +1,9 @@
+.next
+node_modules
+pnpm-lock.yaml
+docs/tikatero-v3-prototype.html
+coverage
+playwright-report
+test-results
+
+docs/BUILD-PLAN.md
