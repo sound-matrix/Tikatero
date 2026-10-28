@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
+    "test:db": "supabase test db",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

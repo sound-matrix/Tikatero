@@ -23,6 +23,18 @@ pnpm dev
 
 `.env.example` lists variable names only. Put real values in `.env.local` or the host’s secret store. Do not commit secrets.
 
+## Database
+
+Schema, row level security, and the local seed live in `supabase/`.
+
+```bash
+supabase start
+supabase db reset
+pnpm test:db
+```
+
+`pnpm test:db` runs the database checks: anonymous reads of published events, organiser order isolation, ticket writes, the append-only audit log, the publish rule, and single-use redemption.
+
 ## Checks
 
 ```bash
