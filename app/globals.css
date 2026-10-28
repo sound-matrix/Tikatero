@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+:root {
+  --coral: #f25c54;
+  --orange: #ff9f43;
+  --ink: #2d3142;
+  --muted: #5c6170;
+  --line: #e7e8ec;
+  --teal: #0e9f9a;
+  --gold: #c9a227;
+  --gold-ink: #8a6d0b;
+  --green: #1f9d55;
+  --red: #d93025;
+  --soft: #f7f8fa;
+  --teal-soft: #e3f6f5;
+  --gold-soft: #fbf4dc;
+  --green-soft: #e5f5ec;
+  --red-soft: #fde8e7;
+  --background: #ffffff;
+  --foreground: #2d3142;
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-coral: var(--coral);
+  --color-orange: var(--orange);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-teal: var(--teal);
+  --color-gold: var(--gold);
+  --color-gold-ink: var(--gold-ink);
+  --color-success: var(--green);
+  --color-danger: var(--red);
+  --color-soft: var(--soft);
+  --color-teal-soft: var(--teal-soft);
+  --color-gold-soft: var(--gold-soft);
+  --color-success-soft: var(--green-soft);
+  --color-danger-soft: var(--red-soft);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter), "Segoe UI", Arial, sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--teal-soft);
+  color: var(--ink);
+}
+
+dialog:modal {
+  height: fit-content;
+  max-height: calc(100vh - 2rem);
+  margin: auto;
+}
+
+dialog::backdrop {
+  background: rgb(45 49 66 / 45%);
+}
