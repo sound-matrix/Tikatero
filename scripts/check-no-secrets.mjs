@@ -2,11 +2,14 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 const root = process.argv[2] ?? ".next/static";
-const forbiddenName = /SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY/;
+const forbiddenName =
+  /SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY|R2_SECRET_ACCESS_KEY|R2_ACCESS_KEY_ID/;
 const forbiddenValue = /sb_secret_[A-Za-z0-9_-]+/;
 const serverValues = [
   process.env.SUPABASE_SERVICE_ROLE_KEY,
   process.env.SUPABASE_SECRET_KEY,
+  process.env.R2_SECRET_ACCESS_KEY,
+  process.env.R2_ACCESS_KEY_ID,
 ].filter(Boolean);
 let files = 0;
 let leaks = false;

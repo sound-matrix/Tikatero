@@ -10,6 +10,9 @@ it("rejects server variable names, modern secrets, service-role JWTs and exact e
   try {
     for (const content of [
       "SUPABASE_SERVICE_ROLE_KEY",
+      "R2_SECRET_ACCESS_KEY",
+      "R2_ACCESS_KEY_ID",
+      "r2-private-test-sentinel",
       "sb_secret_testvalue",
       `eyJhbGciOiJIUzI1NiJ9.${payload}.testsignature`,
       "private-test-sentinel",
@@ -17,7 +20,11 @@ it("rejects server variable names, modern secrets, service-role JWTs and exact e
       writeFileSync(join(root, "client.js"), content);
       expect(() =>
         execFileSync(process.execPath, ["scripts/check-no-secrets.mjs", root], {
-          env: { ...process.env, SUPABASE_SERVICE_ROLE_KEY: "private-test-sentinel" },
+          env: {
+            ...process.env,
+            SUPABASE_SERVICE_ROLE_KEY: "private-test-sentinel",
+            R2_SECRET_ACCESS_KEY: "r2-private-test-sentinel",
+          },
           stdio: "pipe",
         }),
       ).toThrow();

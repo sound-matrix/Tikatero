@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { ImageUpload } from "@/components/image-upload";
 import { useState } from "react";
 import { adminNav, consoleNav } from "@/lib/nav";
 import { cities } from "@/lib/cities";
@@ -46,6 +47,17 @@ export function StyleguideView() {
 
   return (
     <div className="space-y-12">
+      <section aria-label="Media upload component">
+        <h2 className="mb-4 text-2xl font-bold">Media upload</h2>
+        <p className="mb-4 text-muted">
+          Component preview. Uploading needs an organiser account and an existing event.
+        </p>
+        <ImageUpload
+          kind="poster"
+          entityId="00000000-0000-4000-8000-000000000000"
+          label="Event poster"
+        />
+      </section>
       <section>
         <h2 className="text-2xl font-bold">Colour</h2>
         <p className="mt-2 max-w-2xl text-muted">
