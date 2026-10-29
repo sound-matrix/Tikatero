@@ -1,3 +1,4 @@
+import { SurfaceGuard } from "@/components/auth/surface-guard";
 import { Suspense } from "react";
 import { SideNav } from "@/components/layout/side-nav";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -17,7 +18,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <SideNav title="Tikatero admin" items={adminNav} />
         </Suspense>
         <div id="content" className="min-w-0 flex-1">
-          {children}
+          <Suspense fallback={<p className="p-8">Loading your account…</p>}>
+            <SurfaceGuard surface="admin">{children}</SurfaceGuard>
+          </Suspense>
         </div>
       </div>
       <SiteFooter />
