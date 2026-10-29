@@ -81,6 +81,8 @@ it("requires a whole quantity, valid sales window and explicit free-event prices
       vip: true,
     },
   ];
+  // A chosen sales window can remain open after the event starts.
+  v.startsAt = "2026-11-01T19:00";
   expect(() => validateStep(v, 5, id)).not.toThrow();
   expect(stepPayload(v, 5)).toMatchObject({ tiers: [{ price_paise: 100001 }] });
   v.free = true;

@@ -144,13 +144,8 @@ export function validateStep(v: Values, step: number, eventId: string) {
             "Per-order maximum cannot exceed quantity.",
           );
         const start = fromIstInput(t.salesStart),
-          end = fromIstInput(t.salesEnd),
-          eventStart = fromIstInput(v.startsAt);
+          end = fromIstInput(t.salesEnd);
         requireValue(!start || !end || end > start, "Ticket sales must end after they start.");
-        requireValue(
-          !eventStart || ((!start || start <= eventStart) && (!end || end <= eventStart)),
-          "Ticket sales must end by the event start time.",
-        );
       }
       break;
     case 6:
