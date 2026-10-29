@@ -7,7 +7,7 @@ export function EventCard({ event: e }: { event: PublicEvent }) {
   return (
     <article className="overflow-hidden rounded-2xl border border-line bg-white p-3 transition hover:shadow-md">
       <Link href={`/e/${e.slug}`} className="block rounded-xl">
-        <EventMedia title={e.title} posterKey={e.poster_key} theme={e.theme} />
+        <EventMedia title={e.title} posterKey={e.poster_key} theme={e.theme} compact />
         <div className="px-2 pb-2 pt-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted">
             {e.category ?? "Event"} · {e.city ?? e.country}

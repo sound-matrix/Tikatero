@@ -17,11 +17,13 @@ export function EventMedia({
   posterKey,
   theme,
   priority = false,
+  compact = false,
 }: {
   title: string;
   posterKey: string | null;
   theme: string | null;
   priority?: boolean;
+  compact?: boolean;
 }) {
   const src = mediaUrl(posterKey),
     colors = themes[(theme ?? "none") as keyof typeof themes] ?? themes.none;
@@ -35,24 +37,34 @@ export function EventMedia({
           src={src}
           alt={`${title} poster`}
           fill
-          sizes="(max-width: 768px) 100vw, 760px"
+          sizes={
+            compact
+              ? "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 360px"
+              : "(max-width: 768px) 100vw, 760px"
+          }
           className="object-cover"
           priority={priority}
         />
       ) : (
-        <div className="flex max-w-lg flex-col items-center gap-3 p-6 text-center text-ink">
+        <div
+          className={`flex max-w-lg flex-col items-center text-center text-ink ${compact ? "gap-2 p-4" : "gap-3 p-6"}`}
+        >
           <span
             aria-hidden="true"
-            className="rounded-full bg-white/95 px-4 py-2 text-xs font-bold tracking-[.22em]"
+            className={`rounded-full bg-white/95 px-4 text-xs font-bold tracking-[.22em] ${compact ? "py-1" : "py-2"}`}
           >
             TIKATERO · LIVE
           </span>
-          <span className="rounded-xl bg-white/95 px-5 py-3 text-2xl font-extrabold md:text-4xl">
+          <span
+            className={`rounded-xl bg-white/95 font-extrabold ${compact ? "line-clamp-2 px-3 py-2 text-xl" : "px-5 py-3 text-2xl md:text-4xl"}`}
+          >
             {title}
           </span>
-          <span className="rounded-full bg-white/95 px-3 py-1 text-xs font-semibold">
-            An experience to look forward to
-          </span>
+          {!compact && (
+            <span className="rounded-full bg-white/95 px-3 py-1 text-xs font-semibold">
+              An experience to look forward to
+            </span>
+          )}
         </div>
       )}
     </div>
