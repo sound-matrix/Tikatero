@@ -23,7 +23,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
           </Suspense>
         </div>
       </div>
-      <SiteFooter />
+      <SiteFooter copyrightOnly />
     </div>
   );
 }
