@@ -1,3 +1,4 @@
+import { DiscoveryForm } from "./discovery-form";
 import { categories } from "@/lib/events/model";
 import { countries } from "@/lib/discovery/countries";
 import { cities } from "@/lib/cities";
@@ -11,11 +12,7 @@ export function DiscoveryFilters({
   compact?: boolean;
 }) {
   return (
-    <form
-      action="/events"
-      method="get"
-      role="search"
-      aria-label="Find events"
+    <DiscoveryForm
       className={`grid gap-3 ${compact ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-2 lg:grid-cols-4"}`}
     >
       <label className="text-sm font-semibold">
@@ -97,6 +94,6 @@ export function DiscoveryFilters({
       <button className="min-h-12 self-end rounded-xl bg-[linear-gradient(135deg,var(--coral),var(--orange))] px-6 py-3 text-xl font-bold text-ink">
         Find events
       </button>
-    </form>
+    </DiscoveryForm>
   );
 }

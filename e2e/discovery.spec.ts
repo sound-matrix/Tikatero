@@ -99,6 +99,7 @@ test.describe("Attendee discovery", () => {
         await expect(
           page.getByRole("heading", { name: "Sample Music Night", exact: true }),
         ).toBeVisible();
+        await expect(page.getByRole("button", { name: "Find events", exact: true })).toBeEnabled();
         await page.screenshot({
           path: info.outputPath(`discovery-${surface}-${name}.png`),
           fullPage: true,
