@@ -1,6 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { Turnstile } from "./turnstile";
+import Script from "next/script";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { computePricing, type PricingVersion } from "@/lib/pricing/compute";
@@ -15,6 +16,7 @@ export function CheckoutForm({
   isFree,
   siteKey,
   testMode,
+  useCashfree,
   now,
 }: {
   slug: string;
@@ -24,6 +26,7 @@ export function CheckoutForm({
   isFree: boolean;
   siteKey: string;
   testMode: boolean;
+  useCashfree: boolean;
   now: number;
 }) {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -62,6 +65,16 @@ export function CheckoutForm({
               .filter(Boolean),
             turnstile: String(form.get("cf-turnstile-response") ?? ""),
           });
+          if (result.payment && window.Cashfree) {
+            try {
+              await window
+                .Cashfree({ mode: result.payment.mode })
+                .checkout({ paymentSessionId: result.payment.sessionId, redirectTarget: "_self" });
+              return;
+            } catch {
+              /* The payment page provides a recoverable retry. */
+            }
+          }
           if (result.url) router.push(result.url);
           else {
             setError(result.error ?? "Please try again.");
@@ -70,6 +83,7 @@ export function CheckoutForm({
         });
       }}
     >
+      {useCashfree && <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" />}
       <div className="space-y-8">
         <section aria-labelledby="ticket-heading">
           <h2 id="ticket-heading" className="text-xl font-bold">

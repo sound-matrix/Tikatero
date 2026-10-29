@@ -63,17 +63,15 @@ it.each(["buyer", "organiser"] as const)(
       total_paise: total.buyer_total,
       organiser_share_paise: total.organiser_share,
     };
-    const fetch = vi
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          order_id: order.id,
-          order_amount: total.buyer_total / 100,
-          order_currency: "INR",
-          payment_session_id: "test-session",
-        }),
-      });
+    const fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        order_id: order.id,
+        order_amount: total.buyer_total / 100,
+        order_currency: "INR",
+        payment_session_id: "test-session",
+      }),
+    });
     vi.stubGlobal("fetch", fetch);
     await new Cashfree().create(input, "https://tickets.example.test");
     const [url, request] = fetch.mock.calls[0];
@@ -117,19 +115,28 @@ it("selects mock without keys; fails closed for incomplete live configuration", 
 it("rejects a provider create response for a different amount", async () => {
   vi.stubGlobal(
     "fetch",
-    vi
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          order_id: order.id,
-          order_amount: 1,
-          order_currency: "INR",
-          payment_session_id: "session",
-        }),
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        order_id: order.id,
+        order_amount: 1,
+        order_currency: "INR",
+        payment_session_id: "session",
       }),
+    }),
   );
   await expect(new Cashfree().create(order, "https://example.test")).rejects.toThrow(
     "invalid order",
   );
+});
+
+it("expires an absent remote order after its hold deadline", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 404 }));
+  expect(
+    (await new Cashfree().get({ ...order, hold_expires_at: "2020-01-01T00:00:00Z" })).state,
+  ).toBe("expired");
+});
+it("retains a pending order on provider network errors", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network unavailable")));
+  await expect(new Cashfree().get(order)).rejects.toThrow();
 });

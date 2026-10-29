@@ -41,4 +41,8 @@ export function tierUnavailable(tier: CheckoutTier, now: number) {
   if (tier.sales_end && Date.parse(tier.sales_end) <= now) return "Sales closed";
   return "";
 }
-export type CheckoutResult = { error?: string; url?: string };
+export type CheckoutResult = {
+  error?: string;
+  url?: string;
+  payment?: { sessionId: string; mode: "sandbox" | "production" };
+};

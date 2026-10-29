@@ -37,6 +37,7 @@ async function Checkout({ params }: { params: Promise<{ slug: string }> }) {
           feePayer={event.fee_payer}
           isFree={event.is_free}
           siteKey={process.env.TURNSTILE_SITE_KEY ?? ""}
+          useCashfree={mode === "cashfree"}
           testMode={mode === "mock" || process.env.CASHFREE_ENV !== "production"}
           now={now}
         />

@@ -12,6 +12,7 @@ export async function GET(request: Request) {
     .from("orders")
     .select("*")
     .in("status", ["created", "pending"])
+    .not("payment_provider", "is", null)
     .order("reconciled_at", { ascending: true, nullsFirst: true })
     .limit(100);
   if (error) return new Response(null, { status: 503 });
@@ -32,6 +33,11 @@ export async function GET(request: Request) {
           checked++;
         } catch {
           failed++;
+          // Rotate unavailable providers so they cannot starve later pending orders.
+          await createServiceClient()
+            .from("orders")
+            .update({ reconciled_at: new Date().toISOString() })
+            .eq("id", order.id);
         }
       }),
     );

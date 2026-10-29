@@ -7,6 +7,11 @@ import {
   type PaymentResult,
 } from "./model";
 export const CASHFREE_API_VERSION = "2026-01-01";
+class CashfreeError extends Error {
+  constructor(readonly status: number) {
+    super("Payment service is temporarily unavailable. Please try again.");
+  }
+}
 export class Cashfree implements PaymentProvider {
   readonly mode = "cashfree" as const;
   private async request(path: string, init?: RequestInit) {
@@ -27,8 +32,7 @@ export class Cashfree implements PaymentProvider {
       },
     });
     // Do not expose/log provider bodies: they can contain customer/payment data.
-    if (!response.ok)
-      throw new Error("Payment service is temporarily unavailable. Please try again.");
+    if (!response.ok) throw new CashfreeError(response.status);
     return response.json();
   }
   async create(order: ProviderOrder, origin: string) {
@@ -47,7 +51,18 @@ export class Cashfree implements PaymentProvider {
     return { sessionId: result.payment_session_id };
   }
   async get(order: ProviderOrder): Promise<PaymentResult> {
-    const result = await this.request(`/orders/${encodeURIComponent(order.id)}`);
+    let result;
+    try {
+      result = await this.request(`/orders/${encodeURIComponent(order.id)}`);
+    } catch (error) {
+      if (
+        error instanceof CashfreeError &&
+        error.status === 404 &&
+        Date.parse(order.hold_expires_at) <= Date.now()
+      )
+        return { state: "expired", amount: order.total_paise, currency: "INR" };
+      throw error;
+    }
     if (result.order_id !== order.id) throw new Error("Payment order does not match.");
     return {
       state:

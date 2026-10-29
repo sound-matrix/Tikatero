@@ -112,7 +112,20 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
         .eq("id", id)
         .eq("status", "pending");
       if (saved.error) throw new Error("Payment session unavailable.");
-      return { url: `/orders/${id}/pay` };
+      return {
+        url: `/orders/${id}/pay`,
+        ...(provider.mode === "cashfree"
+          ? {
+              payment: {
+                sessionId,
+                mode:
+                  process.env.CASHFREE_ENV === "production"
+                    ? ("production" as const)
+                    : ("sandbox" as const),
+              },
+            }
+          : {}),
+      };
     } catch {
       return { url: `/orders/${id}/status` };
     }
