@@ -262,7 +262,7 @@ select is_empty(
 select throws_ok(
   $$update public.organisers set sales_paused = true where id = 'b1111111-1111-4111-8111-111111111111'$$,
   '42501',
-  'only staff can change verification, payout, or ownership controls',
+  'permission denied for table organisers',
   'organiser cannot change payout or sales controls'
 );
 
@@ -327,9 +327,8 @@ select set_config('request.jwt.claim.sub', 'a1111111-1111-4111-8111-111111111111
 select set_config('request.jwt.claim.role', 'authenticated', true);
 set local role authenticated;
 
-update public.organisers
-set sales_paused = true
-where id = 'b1111111-1111-4111-8111-111111111111';
+-- PR 07 closes direct writes: staff controls must commit an audit row.
+select public.admin_organiser_control('b1111111-1111-4111-8111-111111111111', 'sales_paused', true);
 
 select is(
   (select sales_paused from public.organisers where id = 'b1111111-1111-4111-8111-111111111111'),

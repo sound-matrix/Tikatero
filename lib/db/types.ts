@@ -1250,6 +1250,37 @@ export type Database = {
       };
     };
     Functions: {
+      admin_review_kyc: {
+        Args: {
+          p_id: string;
+          p_revision: number | null;
+          p_decision: string;
+          p_steps: string[];
+          p_note: string;
+        };
+        Returns: string;
+      };
+      admin_account_action: {
+        Args: { p_id: string; p_action: string; p_reason: string };
+        Returns: string;
+      };
+      admin_organiser_control: {
+        Args: { p_id: string; p_control: string; p_enabled: boolean };
+        Returns: string;
+      };
+      admin_search_accounts: {
+        Args: { p_query?: string; p_offset?: number };
+        Returns: {
+          id: string;
+          full_name: string | null;
+          email: string | null;
+          phone: string | null;
+          role: Database["public"]["Enums"]["user_role"];
+          blocked_at: string | null;
+          block_reason: string | null;
+        }[];
+      };
+
       claim_email_send: {
         Args: {
           p_template: string;
