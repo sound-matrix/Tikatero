@@ -58,7 +58,7 @@ test.describe("Attendee discovery", () => {
     );
     await expect(page.getByRole("contentinfo")).toHaveText("© Sound Matrix");
     await page.getByRole("link", { name: "Book", exact: true }).filter({ visible: true }).click();
-    await expect(page.getByRole("heading", { name: "Booking opens soon" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Choose your tickets" })).toBeVisible();
     await page.goto("/");
     await expect(searchForm.getByLabel("City", { exact: true })).toHaveValue("Hyderabad");
   });

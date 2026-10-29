@@ -3,6 +3,19 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      order_outbox: {
+        Row: {
+          id: string;
+          order_id: string;
+          topic: string;
+          payload: Json;
+          created_at: string;
+          consumed_at: string | null;
+        };
+        Insert: { order_id: string; topic: string; payload: Json };
+        Update: { consumed_at?: string | null };
+        Relationships: [];
+      };
       audit_log: {
         Row: {
           action: string;
@@ -522,6 +535,17 @@ export type Database = {
       };
       orders: {
         Row: {
+          payment_provider: "mock" | "cashfree" | "free" | null;
+          payment_session_id: string | null;
+          vendor_id: string | null;
+          organiser_share_paise: number;
+          platform_share_paise: number;
+          access_token_hash: string | null;
+          hold_expires_at: string | null;
+          attendee_names: Json;
+          consent_at: string | null;
+          is_test: boolean;
+          reconciled_at: string | null;
           buyer_email: string;
           buyer_id: string | null;
           buyer_name: string;
@@ -543,6 +567,17 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          payment_provider?: "mock" | "cashfree" | "free" | null;
+          payment_session_id?: string | null;
+          vendor_id?: string | null;
+          organiser_share_paise?: number;
+          platform_share_paise?: number;
+          access_token_hash?: string | null;
+          hold_expires_at?: string | null;
+          attendee_names?: Json;
+          consent_at?: string | null;
+          is_test?: boolean;
+          reconciled_at?: string | null;
           buyer_email: string;
           buyer_id?: string | null;
           buyer_name: string;
@@ -563,6 +598,17 @@ export type Database = {
           total_paise: number;
         };
         Update: {
+          payment_provider?: "mock" | "cashfree" | "free" | null;
+          payment_session_id?: string | null;
+          vendor_id?: string | null;
+          organiser_share_paise?: number;
+          platform_share_paise?: number;
+          access_token_hash?: string | null;
+          hold_expires_at?: string | null;
+          attendee_names?: Json;
+          consent_at?: string | null;
+          is_test?: boolean;
+          reconciled_at?: string | null;
           buyer_email?: string;
           buyer_id?: string | null;
           buyer_name?: string;
@@ -1291,6 +1337,41 @@ export type Database = {
       };
     };
     Functions: {
+      checkout_user_by_email: { Args: { p_email: string }; Returns: string };
+      checkout_rate_limit: { Args: { p_key: string }; Returns: boolean };
+      checkout_hold: {
+        Args: {
+          p_order_id: string;
+          p_buyer_id: string;
+          p_slug: string;
+          p_name: string;
+          p_email: string;
+          p_phone: string;
+          p_lines: Json;
+          p_pricing_version_id: string;
+          p_fee_payer: "buyer" | "organiser";
+          p_is_free: boolean;
+          p_amounts: Json;
+          p_provider: string;
+          p_token_hash: string;
+          p_attendees: Json;
+          p_is_test: boolean;
+        };
+        Returns: Json;
+      };
+      checkout_transition: {
+        Args: {
+          p_order_id: string;
+          p_state: string;
+          p_amount: number;
+          p_currency: string;
+          p_payment_id?: string;
+          p_source?: string;
+          p_event_id?: string;
+          p_payload?: Json;
+        };
+        Returns: string;
+      };
       save_event_wizard: {
         Args: {
           p_event_id: string;
