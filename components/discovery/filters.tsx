@@ -46,7 +46,7 @@ export function DiscoveryFilters({
       </datalist>
       <label className="text-sm font-semibold">
         Country
-        <select className={input} name="country" defaultValue={value.country}>
+        <select aria-label="Country" className={input} name="country" defaultValue={value.country}>
           <option value="">Anywhere in the world</option>
           {countries.map((code) => (
             <option key={code} value={code}>
@@ -59,7 +59,12 @@ export function DiscoveryFilters({
         <>
           <label className="text-sm font-semibold">
             Category
-            <select name="category" defaultValue={value.category} className={input}>
+            <select
+              aria-label="Category"
+              name="category"
+              defaultValue={value.category}
+              className={input}
+            >
               <option value="">All categories</option>
               {categories.map((c) => (
                 <option key={c}>{c}</option>
@@ -76,7 +81,12 @@ export function DiscoveryFilters({
           </label>
           <label className="text-sm font-semibold">
             Ticket price
-            <select name="price" defaultValue={value.price} className={input}>
+            <select
+              aria-label="Ticket price"
+              name="price"
+              defaultValue={value.price}
+              className={input}
+            >
               <option value="">Free and paid</option>
               <option value="free">Free — RSVP</option>
               <option value="paid">Paid</option>

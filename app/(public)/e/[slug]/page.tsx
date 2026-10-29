@@ -148,14 +148,14 @@ async function Detail({ params }: Props) {
                     ) : (
                       <span
                         aria-hidden="true"
-                        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white text-2xl text-gold-ink"
+                        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white text-2xl text-[#796009]"
                       >
                         ✦
                       </span>
                     )}
                     <div>
                       {g.is_vip && (
-                        <p className="text-xs font-bold uppercase tracking-widest text-gold-ink">
+                        <p className="text-xs font-bold uppercase tracking-widest text-[#796009]">
                           Special guest
                         </p>
                       )}
@@ -215,7 +215,7 @@ async function Detail({ params }: Props) {
                 >
                   <div className="flex justify-between gap-2">
                     <h3 className="font-bold">{t.name}</h3>
-                    {t.is_vip && <span className="text-xs font-bold text-gold-ink">VIP</span>}
+                    {t.is_vip && <span className="text-xs font-bold text-[#796009]">VIP</span>}
                   </div>
                   <p className="mt-2 font-bold">{publicPrice(t.price_paise, e.is_free)}</p>
                   <p className="mt-1 text-sm text-muted">
