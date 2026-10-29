@@ -11,3 +11,10 @@ export function kycProvider(): KycProvider {
     return new MockKycProvider();
   return new CashfreeSecureId();
 }
+
+export function mockNeedsManualReview(): boolean {
+  return (
+    process.env.VERCEL_ENV === "production" ||
+    (process.env.NODE_ENV === "production" && process.env.KYC_MODE !== "mock")
+  );
+}

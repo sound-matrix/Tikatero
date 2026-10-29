@@ -163,7 +163,10 @@ New env names (empty in `.env.example`):
 Set `KYC_MODE` to `mock`, **or leave either Secure ID key unset**, to use the mock provider.
 This works without Cashfree or R2 credentials: the mock DigiLocker and selfie steps do not
 upload files. Mock mode is clearly labelled and uses synthetic checks, including Aadhaar ending 1234. It never checks government records or moves money. Never use simulation as evidence for
-staff approval. When switching to Cashfree, old mock checks are flagged for replacement.
+staff approval. Production submissions always flag non-skipped mock checks as `needs_docs`
+when `VERCEL_ENV=production`, even with explicit mock mode. A production Node build also holds
+simulated evidence unless `KYC_MODE=mock` is explicitly set for local/preview testing. The banner
+clearly labels all simulated checks. When switching to Cashfree, old mock checks are flagged for replacement.
 `KYC_NAME_MATCH_THRESHOLD` defaults to 85; invalid/out-of-range settings fail closed.
 
 With both Secure ID keys set and mock mode off, `CASHFREE_SECURE_ID_ENV` accepts `sandbox`

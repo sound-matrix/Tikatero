@@ -76,8 +76,11 @@ export function Onboarding({ initial }: { initial: FlowState }) {
       </p>
       {initial.mode === "mock" && (
         <p className="mt-3 rounded-xl bg-soft p-4 text-sm text-ink">
-          <strong>Mock mode.</strong> These are sample checks. Use made-up details. We won’t check
-          government records or send money. Our team still needs to approve your account.
+          <strong>
+            Test mode — checks are simulated; the verification team will review your documents.
+          </strong>{" "}
+          Use made-up details. We won’t check government records or send money. Our team still needs
+          to approve your account.
         </p>
       )}
       <div className="my-6">

@@ -69,6 +69,8 @@ const form = (step: string, values: Record<string, string> = {}) => {
 beforeEach(() => {
   vi.resetAllMocks();
   vi.stubEnv("KYC_MODE", "mock");
+  vi.stubEnv("VERCEL_ENV", "");
+  vi.stubEnv("NODE_ENV", "test");
   vi.stubEnv("KYC_NAME_MATCH_THRESHOLD", "");
   mock.account.mockResolvedValue({
     client: {},
@@ -227,4 +229,31 @@ it("keeps a submitted application saved even if email is unavailable", async () 
   mock.notify.mockRejectedValue(new Error("unavailable"));
   const result = await saveKycStep(initial, form("submit"));
   expect(result.success).toContain("submitted");
+});
+
+it.each([
+  ["production", "production", "mock"],
+  ["production", "production", ""],
+  ["", "production", ""],
+])(
+  "holds simulated evidence for review in Vercel=%s / Node=%s / KYC=%s",
+  async (vercelEnv, nodeEnv, kycMode) => {
+    vi.stubEnv("VERCEL_ENV", vercelEnv);
+    vi.stubEnv("NODE_ENV", nodeEnv);
+    vi.stubEnv("KYC_MODE", kycMode);
+    vi.stubEnv("CASHFREE_SECURE_ID_CLIENT_ID", "");
+    vi.stubEnv("CASHFREE_SECURE_ID_CLIENT_SECRET", "");
+    mock.load.mockResolvedValue(application(complete));
+    const result = await saveKycStep(initial, form("submit"));
+    expect(result.application?.status).toBe("needs_docs");
+    expect(result.application?.flagged_steps).toEqual(["pan", "aadhaar", "bank", "selfie"]);
+    expect(mock.notify).toHaveBeenCalledOnce();
+  },
+);
+it("allows explicit local mock testing in a production Node build without a Vercel production target", async () => {
+  vi.stubEnv("NODE_ENV", "production");
+  vi.stubEnv("KYC_MODE", "mock");
+  mock.load.mockResolvedValue(application(complete));
+  const result = await saveKycStep(initial, form("submit"));
+  expect(result.application?.status).toBe("auto_passed");
 });

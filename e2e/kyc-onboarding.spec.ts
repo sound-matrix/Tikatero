@@ -40,6 +40,12 @@ test.describe("India organiser verification", () => {
         page.getByRole("heading", { name: "Coming soon — please contact support" }),
       ).toBeVisible();
       await page.getByLabel("Where is your organiser based?").selectOption("IN");
+      await expect(
+        page.getByText(
+          "Test mode — checks are simulated; the verification team will review your documents.",
+          { exact: true },
+        ),
+      ).toBeVisible();
       await page.getByLabel("Organiser display name").fill("Riverfront Live");
       await page.getByLabel("Legal name").fill("Alex Shah");
       await page.getByLabel("Contact phone").fill("9876543210");

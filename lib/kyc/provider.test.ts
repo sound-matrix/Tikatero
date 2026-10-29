@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import { kycProvider } from "./index";
+import { kycProvider, mockNeedsManualReview } from "./index";
 import { MockKycProvider } from "./mock";
 import { CashfreeSecureId } from "./cashfree-secure-id";
 afterEach(() => {
@@ -108,3 +108,19 @@ it("live Aadhaar checks provider consent and reduces a document to last four onl
     last4: "1234",
   });
 });
+
+it.each([
+  ["production", "production", "mock", true],
+  ["production", "development", "mock", true],
+  ["", "production", "", true],
+  ["preview", "production", "mock", false],
+  ["", "development", "", false],
+])(
+  "classifies production mock review policy (%s, %s, %s)",
+  (vercelEnv, nodeEnv, kycMode, expected) => {
+    vi.stubEnv("VERCEL_ENV", vercelEnv);
+    vi.stubEnv("NODE_ENV", nodeEnv);
+    vi.stubEnv("KYC_MODE", kycMode);
+    expect(mockNeedsManualReview()).toBe(expected);
+  },
+);

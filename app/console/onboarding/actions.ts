@@ -3,7 +3,7 @@ import { KycError } from "@/lib/kyc/model";
 import { requireAccount } from "@/lib/auth/account";
 import { createServiceClient } from "@/lib/supabase/service";
 import { requireKycMembership } from "@/lib/kyc/access";
-import { kycProvider } from "@/lib/kyc";
+import { kycProvider, mockNeedsManualReview } from "@/lib/kyc";
 import {
   autoResult,
   canEdit,
@@ -55,7 +55,7 @@ export async function saveKycStep(_previous: FlowState, data: FormData): Promise
       const result = autoResult(progress, threshold);
       flagged = result.flagged;
       // Simulation results can never become live verification evidence.
-      if (provider.mode === "cashfree")
+      if (provider.mode === "cashfree" || (provider.mode === "mock" && mockNeedsManualReview()))
         for (const step of editableSteps.slice(1) as Exclude<Step, "details">[])
           if (
             progress[step]?.mode === "mock" &&
