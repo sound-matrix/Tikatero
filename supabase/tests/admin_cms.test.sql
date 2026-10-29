@@ -1,5 +1,5 @@
 begin;
-select plan(40);
+select plan(44);
 insert into auth.users(id,email) values
  ('c7000001-0000-4000-8000-000000000001','admin-cms-staff@example.test'),
  ('c7000002-0000-4000-8000-000000000002','admin-cms-owner@example.test'),
@@ -28,6 +28,14 @@ select is((select count(*)::integer from public.audit_log),0,'audit hidden from 
 select throws_ok($$ update public.events set status='published' where id='c7300001-0000-4000-8000-000000000001' $$,'P0001',null,'publish locked before approval');
 
 select set_config('request.jwt.claims','{"sub":"c7000001-0000-4000-8000-000000000001","role":"authenticated"}',true);
+select is((select count(*)::integer from public.admin_search_accounts('admin-cms-owner@example.test')),1,'staff searches account email');
+select is((select count(*)::integer from public.admin_search_accounts('CMS review')),1,'staff searches organiser name');
+reset role;
+update public.kyc_applications set step_progress='{"details":{"phone":"9876543210"}}' where id='c7200001-0000-4000-8000-000000000001';
+update public.organisers set legal_name='CMS Legal Firm' where id='c7100001-0000-4000-8000-000000000001';
+set local role authenticated;
+select is((select count(*)::integer from public.admin_search_accounts('9876543210')),1,'staff searches saved organiser contact phone');
+select is((select count(*)::integer from public.admin_search_accounts('CMS Legal Firm')),1,'staff searches organiser legal name');
 select throws_ok($$ select public.admin_review_kyc('c7200002-0000-4000-8000-000000000002',1,'approved','{}',null) $$,'42501','You cannot review your own organiser','staff cannot approve own organiser');
 select throws_ok($$ update public.organisers set kyc_status='approved',approved_at=now() where id='c7100001-0000-4000-8000-000000000001' $$,'42501',null,'staff cannot bypass audited controls');
 select throws_ok($$ insert into public.audit_log(action,entity) values('forged','profiles') $$,'42501',null,'staff cannot forge an audit row');

@@ -137,7 +137,10 @@ begin
   return query select p.id,p.full_name,u.email::text,p.phone,p.role,p.blocked_at,p.block_reason
     from public.profiles p join auth.users u on u.id=p.id
     where coalesce(p_query,'')='' or position(lower(left(p_query,120)) in lower(concat_ws(' ',p.full_name,u.email,p.phone)))>0
-      or exists(select 1 from public.organisers o where o.owner_id=p.id and position(lower(left(p_query,120)) in lower(o.display_name))>0)
+      or exists(select 1 from public.organisers o where o.owner_id=p.id and (
+        position(lower(left(p_query,120)) in lower(concat_ws(' ',o.display_name,o.legal_name)))>0
+        or exists(select 1 from public.kyc_applications a where a.organiser_id=o.id
+          and position(lower(left(p_query,120)) in coalesce(a.step_progress #>> '{details,phone}',''))>0)))
     order by p.created_at desc,p.id limit 25 offset greatest(0,least(coalesce(p_offset,0),100000));
 end;
 $$;
