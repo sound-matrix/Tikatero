@@ -66,9 +66,10 @@ export function PricingForm({ initial }: { initial: PricingVersion }) {
             onChange={(e) => update("fixed_fee", e.target.value)}
             required
           />
-          <label className="font-semibold">
+          <label className="font-semibold" htmlFor="pricing-gateway-mode">
             Gateway mode
             <select
+              id="pricing-gateway-mode"
               name="gateway_mode"
               value={fields.gateway_mode}
               onChange={(e) => update("gateway_mode", e.target.value)}
@@ -100,9 +101,10 @@ export function PricingForm({ initial }: { initial: PricingVersion }) {
           aria-label="Live pricing preview"
         >
           <h2 className="text-xl font-bold">Live preview</h2>
-          <label className="mt-3 block font-semibold">
+          <label className="mt-3 block font-semibold" htmlFor="pricing-fee-payer">
             Who pays the fees?
             <select
+              id="pricing-fee-payer"
               value={feePayer}
               onChange={(e) => setFeePayer(e.target.value as typeof feePayer)}
               className="ml-3 min-h-12 rounded-xl border border-line bg-white px-3"

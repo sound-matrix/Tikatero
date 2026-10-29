@@ -39,6 +39,7 @@ test("staff saves a version; preview and public fees update; previous version is
   await expect(page).toHaveURL(/\/admin$/);
   await page.goto("/admin/pricing");
   const row = page.getByTestId("pricing-preview-100000");
+  await expect(row).toBeVisible();
   await expect(row).toContainText("₹ 953.39");
   await page.screenshot({
     path: testInfo.outputPath("pricing-active-desktop.png"),
@@ -51,7 +52,9 @@ test("staff saves a version; preview and public fees update; previous version is
     await page
       .getByLabel("Fixed fee per paid ticket (₹)")
       .fill(decimalHundredths(values.fixed_fee_paise));
-    await page.getByLabel("Gateway mode", { exact: true }).selectOption(values.gateway_mode);
+    await page
+      .getByRole("combobox", { name: "Gateway mode", exact: true })
+      .selectOption(values.gateway_mode);
     await page.getByLabel("Gateway fee (%) before GST").fill(decimalHundredths(values.gateway_bps));
     await page.getByLabel("Payout days", { exact: true }).fill(String(values.payout_days));
   };
@@ -74,6 +77,15 @@ test("staff saves a version; preview and public fees update; previous version is
     const { data: current } = await client.rpc("active_pricing_version");
     const next = current![0];
     expect(next.id).not.toBe(original.id);
+    expect(next).toMatchObject({
+      platform_pct: 200,
+      fixed_fee_paise: 1000,
+      gateway_mode: "absorb",
+      payout_days: 3,
+    });
+    await page.reload();
+    await expect(row).toBeVisible();
+    await expect(row).toContainText("₹ 964.60");
     await expect(page.getByTestId("active-pricing-id")).toHaveText(next.id);
     const { data: old } = await client
       .from("pricing_versions")
@@ -96,6 +108,7 @@ test("staff saves a version; preview and public fees update; previous version is
       fullPage: true,
     });
     await page.setViewportSize({ width: 390, height: 844 });
+    await expect(row).toBeVisible();
     await page.screenshot({
       path: testInfo.outputPath("pricing-saved-mobile.png"),
       fullPage: true,
