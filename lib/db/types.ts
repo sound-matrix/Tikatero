@@ -137,6 +137,7 @@ export type Database = {
           created_at: string;
           entity_ref: string | null;
           id: string;
+          idempotency_key: string | null;
           resend_id: string | null;
           status: string;
           template: string;
@@ -147,6 +148,7 @@ export type Database = {
           created_at?: string;
           entity_ref?: string | null;
           id?: string;
+          idempotency_key?: string | null;
           resend_id?: string | null;
           status: string;
           template: string;
@@ -156,6 +158,7 @@ export type Database = {
           created_at?: string;
           entity_ref?: string | null;
           id?: string;
+          idempotency_key?: string | null;
           resend_id?: string | null;
           status?: string;
           template?: string;
@@ -1235,6 +1238,24 @@ export type Database = {
       };
     };
     Functions: {
+      claim_email_send: {
+        Args: {
+          p_template: string;
+          p_entity_ref: string;
+          p_to_email: string;
+          p_configured: boolean;
+        };
+        Returns: {
+          id: string;
+          created_at: string;
+          template: string;
+          entity_ref: string | null;
+          to_email: string;
+          resend_id: string | null;
+          status: string;
+          idempotency_key: string | null;
+        }[];
+      };
       is_event_team: {
         Args: { event_id: string; roles: Database["public"]["Enums"]["team_role"][] };
         Returns: boolean;
