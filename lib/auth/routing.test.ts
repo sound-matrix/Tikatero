@@ -38,7 +38,9 @@ describe("role routing uses profiles and actual memberships", () => {
   it("denies cross-surface URLs including nested routes", () => {
     expect(routeRedirect(account(), "/admin/organisers")).toBe("/me");
     expect(routeRedirect(account(), "/console/settings")).toBe("/me");
-    expect(routeRedirect(account("organiser", ["draft"]), "/console/events")).toBe(
+    expect(routeRedirect(account("organiser", ["draft"]), "/console/events")).toBeNull();
+    expect(routeRedirect(account("organiser", ["draft"]), "/console/events/new")).toBeNull();
+    expect(routeRedirect(account("organiser", ["draft"]), "/console/payouts")).toBe(
       "/console/pending",
     );
     expect(routeRedirect(account("organiser", ["draft"]), "/console/pending/extra")).toBe(

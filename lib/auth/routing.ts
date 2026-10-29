@@ -30,7 +30,12 @@ export function routeRedirect(account: Account, path: string): string | null {
   if (within(path, "/console")) {
     if (!account.organisers.length) return landing;
     const approved = account.organisers.some((org) => org.kyc_status === "approved");
-    if (!approved && path !== "/console/pending" && path !== "/console/onboarding")
+    if (
+      !approved &&
+      path !== "/console/pending" &&
+      path !== "/console/onboarding" &&
+      !within(path, "/console/events")
+    )
       return "/console/pending";
     if (approved && path === "/console/pending") return "/console";
   }

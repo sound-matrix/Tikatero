@@ -280,12 +280,15 @@ export type Database = {
           published_at: string | null;
           refund_policy: string;
           slug: string;
-          starts_at: string;
+          starts_at: string | null;
           status: Database["public"]["Enums"]["event_status"];
           theme: string | null;
           timezone: string;
           title: string;
           updated_at: string;
+          wizard_step: number;
+          wizard_revision: number;
+          wizard_completed_steps: number[];
           venue_name: string | null;
         };
         ComputedFields: never;
@@ -310,12 +313,15 @@ export type Database = {
           published_at?: string | null;
           refund_policy?: string;
           slug: string;
-          starts_at: string;
+          starts_at?: string | null;
           status?: Database["public"]["Enums"]["event_status"];
           theme?: string | null;
           timezone?: string;
           title: string;
           updated_at?: string;
+          wizard_step?: number;
+          wizard_revision?: number;
+          wizard_completed_steps?: number[];
           venue_name?: string | null;
         };
         Update: {
@@ -339,12 +345,15 @@ export type Database = {
           published_at?: string | null;
           refund_policy?: string;
           slug?: string;
-          starts_at?: string;
+          starts_at?: string | null;
           status?: Database["public"]["Enums"]["event_status"];
           theme?: string | null;
           timezone?: string;
           title?: string;
           updated_at?: string;
+          wizard_step?: number;
+          wizard_revision?: number;
+          wizard_completed_steps?: number[];
           venue_name?: string | null;
         };
         Relationships: [
@@ -1250,6 +1259,19 @@ export type Database = {
       };
     };
     Functions: {
+      save_event_wizard: {
+        Args: {
+          p_event_id: string;
+          p_organiser_id: string;
+          p_revision: number;
+          p_step: number;
+          p_next_step: number;
+          p_data: Json;
+          p_publish?: boolean;
+        };
+        Returns: Database["public"]["Tables"]["events"]["Row"][];
+      };
+
       admin_review_kyc: {
         Args: {
           p_id: string;

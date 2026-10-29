@@ -87,7 +87,7 @@ test.describe("Supabase role routing", () => {
         const allowed = surface.startsWith("/admin")
           ? role === "staff" || role === "admin"
           : surface.startsWith("/console")
-            ? role === "approved"
+            ? role === "approved" || role === "pending"
             : role !== "blocked";
         await expect(page).toHaveURL(new RegExp(`${allowed ? surface : destination}$`));
       }
