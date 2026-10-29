@@ -13,15 +13,17 @@ export async function GET(request: NextRequest) {
       : tokenHash && params.get("type") === "email"
         ? await client.auth.verifyOtp({ token_hash: tokenHash, type: "email" })
         : null;
-    if (result && !result.error) return response("/auth/complete", request);
+    if (result && !result.error) return response("/auth/complete");
   } catch {
     /* Provider failures use the same plain-English error. */
   }
-  return response("/login?error=link", request);
+  return response("/login?error=link");
 }
 
-function response(path: string, request: NextRequest) {
-  const result = NextResponse.redirect(new URL(path, request.url), 303);
+function response(path: string) {
+  // Relative Location preserves the public host, including behind a reverse
+  // proxy whose internal request URL may use a different origin.
+  const result = new NextResponse(null, { status: 303, headers: { Location: path } });
   result.headers.set("Cache-Control", "private, no-store");
   result.headers.set("Referrer-Policy", "no-referrer");
   return result;

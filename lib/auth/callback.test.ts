@@ -12,7 +12,7 @@ it("exchanges PKCE code and ignores attacker-controlled redirects", async () => 
   const response = await GET(
     new NextRequest("http://localhost/auth/callback?code=one-time&next=https://evil.invalid"),
   );
-  expect(response.headers.get("location")).toBe("http://localhost/auth/complete");
+  expect(response.headers.get("location")).toBe("/auth/complete");
   expect(response.headers.get("cache-control")).toContain("no-store");
   expect(auth.exchangeCodeForSession).toHaveBeenCalledWith("one-time");
 });
@@ -22,18 +22,29 @@ it("supports email token hash confirmation", async () => {
     new NextRequest("http://localhost/auth/callback?token_hash=one-time&type=email"),
   );
   expect(auth.verifyOtp).toHaveBeenCalledWith({ token_hash: "one-time", type: "email" });
-  expect(response.headers.get("location")).toBe("http://localhost/auth/complete");
+  expect(response.headers.get("location")).toBe("/auth/complete");
 });
 it.each(["", "?token_hash=token&type=recovery", "?error=access_denied"])(
   "rejects malformed callbacks %s",
   async (query) => {
     const response = await GET(new NextRequest(`http://localhost/auth/callback${query}`));
-    expect(response.headers.get("location")).toBe("http://localhost/login?error=link");
+    expect(response.headers.get("location")).toBe("/login?error=link");
     expect(auth.verifyOtp).not.toHaveBeenCalled();
   },
 );
 it("expired or already-used link exposes no provider errors", async () => {
   auth.exchangeCodeForSession.mockResolvedValue({ error: { message: "private provider details" } });
   const response = await GET(new NextRequest("http://localhost/auth/callback?code=expired"));
-  expect(response.headers.get("location")).toBe("http://localhost/login?error=link");
+  expect(response.headers.get("location")).toBe("/login?error=link");
+});
+
+it("keeps the public host when a reverse proxy uses an internal request origin", async () => {
+  auth.verifyOtp.mockResolvedValue({ error: null });
+  const response = await GET(
+    new NextRequest("http://localhost:3000/auth/callback?token_hash=one-time&type=email", {
+      headers: { host: "127.0.0.1:3000" },
+    }),
+  );
+  const location = response.headers.get("location")!;
+  expect(new URL(location, "http://127.0.0.1:3000").origin).toBe("http://127.0.0.1:3000");
 });
