@@ -3,7 +3,11 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { publicEvent } from "@/lib/discovery/data";
-export const metadata = { title: "Booking opens soon", robots: { index: false, follow: false } };
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  await connection();
+  if (!(await publicEvent((await params).slug))) notFound();
+  return { title: "Booking opens soon", robots: { index: false, follow: false } };
+}
 async function Booking({ params }: { params: Promise<{ slug: string }> }) {
   await connection();
   const e = await publicEvent((await params).slug);

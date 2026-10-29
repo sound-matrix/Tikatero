@@ -57,10 +57,9 @@ test.describe("Attendee discovery", () => {
     page,
   }) => {
     for (const slug of ["discovery-draft", "discovery-paused"]) {
-      // HTML bots receive the completed response before headers; no streamed-404 ambiguity.
-      const response = await request.get(`/e/${slug}`, { headers: { "user-agent": "Twitterbot" } });
+      const response = await request.get(`/e/${slug}`);
       expect(response.status()).toBe(404);
-      await page.goto(`/e/${slug}/book`);
+      expect((await page.goto(`/e/${slug}/book`))?.status()).toBe(404);
       await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
       expect((await request.get(`/e/${slug}/opengraph-image`)).status()).toBe(404);
     }
@@ -92,7 +91,32 @@ test.describe("Attendee discovery", () => {
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       ).toBe(true);
       await page.screenshot({ path: info.outputPath(`discovery-${name}.png`), fullPage: true });
+      for (const [surface, url] of [
+        ["home", "/"],
+        ["listing", "/events"],
+      ] as const) {
+        await page.goto(url);
+        await expect(
+          page.getByRole("heading", { name: "Sample Music Night", exact: true }),
+        ).toBeVisible();
+        await page.screenshot({
+          path: info.outputPath(`discovery-${surface}-${name}.png`),
+          fullPage: true,
+        });
+      }
     }
+  });
+  test("copies a share link when Web Share is unavailable", async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.addInitScript(() =>
+      Object.defineProperty(navigator, "share", { value: undefined, configurable: true }),
+    );
+    await page.goto("/e/sample-music-night");
+    await page.getByRole("button", { name: "Share event" }).click();
+    await expect(page.getByRole("status")).toContainText("Link copied");
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      "http://127.0.0.1:3000/e/sample-music-night",
+    );
   });
   test("Open Graph image is a real PNG", async ({ request }) => {
     const response = await request.get("/e/sample-music-night/opengraph-image");

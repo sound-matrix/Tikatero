@@ -1,7 +1,7 @@
 // Explicit local/CI test fixture. Never imported by application code or production seeding.
-import { loadEnvConfig } from "@next/env";
+import nextEnv from "@next/env";
 import { createClient } from "@supabase/supabase-js";
-loadEnvConfig(process.cwd());
+nextEnv.loadEnvConfig(process.cwd());
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
   key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !key || !["localhost", "127.0.0.1"].includes(new URL(url).hostname))
@@ -25,17 +25,15 @@ for (const id of [owner, paused]) {
       }),
     );
   check(
-    await client
-      .from("organisers")
-      .upsert({
-        id,
-        owner_id: id,
-        slug: `discovery-${id}`,
-        display_name: "Riverfront Events",
-        kyc_status: "approved",
-        approved_at: new Date().toISOString(),
-        sales_paused: false,
-      }),
+    await client.from("organisers").upsert({
+      id,
+      owner_id: id,
+      slug: `discovery-${id}`,
+      display_name: "Riverfront Events",
+      kyc_status: "approved",
+      approved_at: new Date().toISOString(),
+      sales_paused: false,
+    }),
   );
 }
 const start = new Date(Date.now() + 45 * 86400000);
@@ -132,14 +130,12 @@ check(
   ]),
 );
 check(
-  await client
-    .from("event_guests")
-    .upsert({
-      id: "d9000000-0000-4000-8000-000000000030",
-      event_id: eventId,
-      name: "Alex Rao",
-      title: "Chief guest & musician",
-      is_vip: true,
-    }),
+  await client.from("event_guests").upsert({
+    id: "d9000000-0000-4000-8000-000000000030",
+    event_id: eventId,
+    name: "Alex Rao",
+    title: "Chief guest & musician",
+    is_vip: true,
+  }),
 );
 console.log("Local attendee discovery fixtures ready.");

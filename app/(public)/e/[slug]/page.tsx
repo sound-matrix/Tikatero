@@ -15,7 +15,7 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   await connection();
   const e = await publicEvent((await params).slug);
-  if (!e) return { title: "Event not found", robots: { index: false, follow: false } };
+  if (!e) notFound();
   const origin = await siteOrigin(),
     url = `${origin}/e/${e.slug}`,
     description = (
