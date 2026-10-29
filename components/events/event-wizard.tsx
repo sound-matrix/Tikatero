@@ -799,7 +799,11 @@ export function EventWizard({
                     ))}
                   </div>
                 </fieldset>
-                <div className="rounded-2xl border border-line bg-soft p-5">
+                <div
+                  className="rounded-2xl border border-line bg-soft p-5"
+                  data-testid="wizard-pricing-example"
+                  data-pricing-version={pricingVersion.id}
+                >
                   <h3 className="text-lg font-bold">Example for a ₹1,000 ticket incl. GST</h3>
                   {values.free && (
                     <p className="mt-2 text-sm text-muted">
