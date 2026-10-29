@@ -20,7 +20,7 @@ import {
   type Tier,
 } from "@/lib/events/model";
 import type { Draft } from "@/lib/events/store";
-import { previewPricing } from "@/lib/pricing";
+import { previewPricing, organiserFeeWording, type PricingVersion } from "@/lib/pricing";
 import { formatInr, formatIst } from "@/lib/format";
 import { VenueMap } from "./venue-map";
 import { TicketPreview } from "./ticket-preview";
@@ -82,6 +82,7 @@ export type WizardProps = {
   origin: string;
   mediaBase: string | null;
   uploadsConfigured: boolean;
+  pricingVersion: PricingVersion;
 };
 export function EventWizard({
   id: initialId,
@@ -94,6 +95,7 @@ export function EventWizard({
   origin,
   mediaBase,
   uploadsConfigured,
+  pricingVersion,
 }: WizardProps) {
   const router = useRouter();
   const [id] = useState(initialId);
@@ -108,7 +110,10 @@ export function EventWizard({
   const canPublish = approved && !paused,
     complete = draft?.completed ?? [],
     alreadyPublished = draft?.status === "published";
-  const preview = previewPricing({ ticketPaise: 100000, feePayer: values.feePayer });
+  const preview = previewPricing(
+    { ticketPaise: 100000, feePayer: values.feePayer },
+    pricingVersion,
+  );
   useEffect(() => {
     if (!dirty) return;
     const warn = (e: BeforeUnloadEvent) => {
@@ -808,6 +813,8 @@ export function EventWizard({
                     <dd className="text-right">
                       {formatInr(preview.platformFeePaise + preview.feeGstPaise)} incl. GST
                     </dd>
+                    <dt>Gateway incl. GST</dt>
+                    <dd className="text-right">{formatInr(preview.gatewayFeePaise)} incl. GST</dd>
                     <dt>Buyer pays</dt>
                     <dd className="text-right font-bold">
                       {formatInr(preview.buyerTotalPaise)} incl. GST
@@ -817,10 +824,7 @@ export function EventWizard({
                       {formatInr(preview.organiserPayoutPaise)}
                     </dd>
                   </dl>
-                  <p className="mt-4 text-xs text-muted">
-                    Illustration only: 2% platform fee + 18% GST on that fee. No gateway charges
-                    included. Actual fees will be shown before taking payments.
-                  </p>
+                  <p className="mt-4 text-xs text-muted">{organiserFeeWording(pricingVersion)}</p>
                 </div>
                 <Field label="Refund policy">
                   <select

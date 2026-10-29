@@ -1,46 +1,52 @@
-/** PR 08 preview contract. PR 10 replaces this illustrative implementation. */
+import { formatInr } from "@/lib/format";
+import { computePricing, type PricingVersion } from "./compute";
+export { computePricing, type PricingVersion } from "./compute";
+/** Used only for unconfigured local previews. Configured deployments read the database. */
+export const launchPricing: PricingVersion = {
+  id: "00000000-0000-4000-8000-000000000010",
+  platform_pct: 150,
+  fixed_fee_paise: 500,
+  gst_bps: 1800,
+  gateway_mode: "pass_at_cost",
+  gateway_bps: 195,
+  payout_days: 2,
+};
 export type FeePreviewInput = {
   ticketPaise: number;
   feePayer: "organiser" | "buyer";
   free?: boolean;
 };
-export type FeePreview = {
-  ticketPaise: number;
-  platformFeePaise: number;
-  feeGstPaise: number;
-  buyerTotalPaise: number;
-  organiserPayoutPaise: number;
-  illustrative: true;
-};
-export function previewPricing({
-  ticketPaise,
-  feePayer,
-  free = false,
-}: FeePreviewInput): FeePreview {
-  if (!Number.isSafeInteger(ticketPaise) || ticketPaise < 0)
-    throw new Error("Use an integer price in paise.");
-  const price = free ? 0 : ticketPaise;
-  // Illustrative only: 2% platform fee plus 18% GST on that fee; no gateway charges.
-  const platformFeePaise = Math.round((price * 200) / 10000),
-    feeGstPaise = Math.round((platformFeePaise * 1800) / 10000),
-    fee = platformFeePaise + feeGstPaise;
+export function previewPricing(
+  { ticketPaise, feePayer, free = false }: FeePreviewInput,
+  version: PricingVersion,
+) {
+  const { total } = computePricing({
+    lines: [{ price_paise: ticketPaise, qty: 1 }],
+    version,
+    fee_payer: feePayer,
+    is_free: free,
+  });
   return {
-    ticketPaise: price,
-    platformFeePaise,
-    feeGstPaise,
-    buyerTotalPaise: price + (feePayer === "buyer" ? fee : 0),
-    organiserPayoutPaise: Math.max(0, price - (feePayer === "organiser" ? fee : 0)),
-    illustrative: true,
+    ticketPaise: total.subtotal,
+    platformFeePaise: total.platform_fee,
+    feeGstPaise: total.platform_fee_gst,
+    gatewayFeePaise: total.gateway_fee,
+    buyerTotalPaise: total.buyer_total,
+    organiserPayoutPaise: total.organiser_share,
   };
 }
-
-/** Public wording belongs to the pricing contract so PR 10 can replace it centrally. */
-export function organiserFeeWording() {
-  const example = previewPricing({ ticketPaise: 100000, feePayer: "organiser" });
-  const paise = example.platformFeePaise + example.feeGstPaise;
-  const amount = new Intl.NumberFormat("en-IN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(paise / 100);
-  return `Illustrative platform fee: ₹ ${amount} incl. GST on a ₹ 1,000 ticket. Final pricing is coming soon.`;
+/** Also used to format percentage form values, without floating-point conversion. */
+export function decimalHundredths(value: number) {
+  return `${Math.floor(value / 100)}.${String(value % 100).padStart(2, "0")}`;
+}
+export function rateText(bps: number) {
+  return decimalHundredths(bps).replace(/\.?0+$/, "");
+}
+export function organiserFeeWording(version: PricingVersion) {
+  const example = previewPricing({ ticketPaise: 100000, feePayer: "organiser" }, version);
+  const gateway =
+    version.gateway_mode === "pass_at_cost" && version.gateway_bps > 0
+      ? `plus payment gateway at cost (${rateText(version.gateway_bps)}% + GST)`
+      : "payment gateway absorbed";
+  return `Free for free events. Paid tickets: ${rateText(version.platform_pct)}% + ${formatInr(version.fixed_fee_paise).replace("₹", "₹ ")} + ${rateText(version.gst_bps)}% GST, ${gateway}. On a ₹ 1,000 ticket incl. GST, you receive ${formatInr(example.organiserPayoutPaise).replace("₹", "₹ ")}.`;
 }

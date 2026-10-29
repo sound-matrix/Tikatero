@@ -1,3 +1,4 @@
+import { activePricing } from "@/lib/pricing/data";
 import { randomUUID } from "node:crypto";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
@@ -76,6 +77,7 @@ export async function EventEditor({
         origin={`${proto}://${host}`}
         mediaBase={publicMediaBase()}
         uploadsConfigured={uploadsReady()}
+        pricingVersion={await activePricing()}
       />
     </>
   );
