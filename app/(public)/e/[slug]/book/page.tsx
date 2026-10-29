@@ -2,6 +2,11 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { notFound, redirect } from "next/navigation";
 import { publicEvent } from "@/lib/discovery/data";
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  await connection();
+  if (!(await publicEvent((await params).slug))) notFound();
+  return { title: "Checkout", robots: { index: false, follow: false } };
+}
 async function Booking({ params }: { params: Promise<{ slug: string }> }) {
   await connection();
   const { slug } = await params;

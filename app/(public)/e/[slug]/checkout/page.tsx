@@ -7,7 +7,11 @@ import { checkoutData } from "@/lib/checkout/store";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { formatIst } from "@/lib/format";
 import { refundText } from "@/lib/discovery/model";
-export const metadata = { title: "Checkout", robots: { index: false, follow: false } };
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  await connection();
+  if (!(await checkoutData((await params).slug))) notFound();
+  return { title: "Checkout", robots: { index: false, follow: false } };
+}
 async function Checkout({ params }: { params: Promise<{ slug: string }> }) {
   await connection();
   const now = await requestTime();

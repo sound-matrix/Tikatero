@@ -1,11 +1,12 @@
 import "server-only";
+import { cache } from "react";
 import { createServiceClient } from "@/lib/supabase/service";
 import { activePricing } from "@/lib/pricing/data";
 import { paymentProvider } from "@/lib/payments";
 import type { CheckoutOrder } from "./model";
 import type { Json } from "@/lib/db/types";
 import type { PaymentResult, ProviderOrder } from "@/lib/payments/model";
-export async function checkoutData(slug: string) {
+export const checkoutData = cache(async (slug: string) => {
   const client = createServiceClient();
   const { data: event, error } = await client
     .from("events")
@@ -36,7 +37,8 @@ export async function checkoutData(slug: string) {
   else if (Date.parse(event.ends_at ?? event.starts_at ?? "") <= Date.now())
     disabled = "This event has ended.";
   return { event, tiers: tiers ?? [], version, disabled, mode };
-}
+});
+
 export function providerOrder(order: CheckoutOrder): ProviderOrder {
   if (!order.hold_expires_at || !order.buyer_phone)
     throw new Error("This order has no payment session.");

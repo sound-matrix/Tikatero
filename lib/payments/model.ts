@@ -25,7 +25,10 @@ export interface PaymentProvider {
 /** Only the provider boundary uses rupee decimals. The ledger remains integer paise. */
 export function rupees(paise: number) {
   if (!Number.isSafeInteger(paise) || paise < 0) throw new Error("Invalid payment amount.");
-  return Number(`${Math.floor(paise / 100)}.${String(paise % 100).padStart(2, "0")}`);
+  const amount = Number(`${Math.floor(paise / 100)}.${String(paise % 100).padStart(2, "0")}`);
+  if (parseHundredths(String(amount)) !== paise)
+    throw new Error("Payment amount exceeds provider precision.");
+  return amount;
 }
 export function providerPaise(value: unknown) {
   if (typeof value !== "number" && typeof value !== "string")

@@ -143,9 +143,12 @@ export function CheckoutForm({
                 className="mt-2 block min-h-12 w-full rounded-xl border border-line px-4"
               />
             </label>
-            <label className="block font-semibold">
-              Email
+            <div>
+              <label htmlFor="buyer-email" className="block font-semibold">
+                Email
+              </label>
               <input
+                id="buyer-email"
                 required
                 type="email"
                 name="email"
@@ -154,10 +157,10 @@ export function CheckoutForm({
                 aria-describedby="email-help"
                 className="mt-2 block min-h-12 w-full rounded-xl border border-line px-4"
               />
-              <span id="email-help" className="mt-1 block text-sm font-normal text-muted">
+              <p id="email-help" className="mt-1 text-sm text-muted">
                 Tickets &amp; PDF go here
-              </span>
-            </label>
+              </p>
+            </div>
             <label className="block font-semibold">
               Phone
               <input

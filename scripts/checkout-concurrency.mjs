@@ -19,42 +19,36 @@ const owner = randomUUID(),
   email = `checkout-race-${owner}@example.test`;
 check(await client.auth.admin.createUser({ id: owner, email, email_confirm: true }));
 check(
-  await client
-    .from("organisers")
-    .insert({
-      id: owner,
-      owner_id: owner,
-      display_name: "Checkout race",
-      slug: `race-${owner}`,
-      kyc_status: "approved",
-      approved_at: new Date().toISOString(),
-      cashfree_vendor_id: "test-vendor",
-    }),
+  await client.from("organisers").insert({
+    id: owner,
+    owner_id: owner,
+    display_name: "Checkout race",
+    slug: `race-${owner}`,
+    kyc_status: "approved",
+    approved_at: new Date().toISOString(),
+    cashfree_vendor_id: "test-vendor",
+  }),
 );
 check(
-  await client
-    .from("events")
-    .insert({
-      id: event,
-      organiser_id: owner,
-      title: "Race test",
-      slug: `race-${event}`,
-      starts_at: new Date(Date.now() + 86400000).toISOString(),
-      status: "published",
-      capacity: 10,
-    }),
+  await client.from("events").insert({
+    id: event,
+    organiser_id: owner,
+    title: "Race test",
+    slug: `race-${event}`,
+    starts_at: new Date(Date.now() + 86400000).toISOString(),
+    status: "published",
+    capacity: 10,
+  }),
 );
 check(
-  await client
-    .from("ticket_types")
-    .insert({
-      id: tier,
-      event_id: event,
-      name: "Ten seats",
-      price_paise: 100000,
-      qty_total: 10,
-      per_order_max: 1,
-    }),
+  await client.from("ticket_types").insert({
+    id: tier,
+    event_id: event,
+    name: "Ten seats",
+    price_paise: 100000,
+    qty_total: 10,
+    per_order_max: 1,
+  }),
 );
 const [version] = check(await client.rpc("active_pricing_version"));
 const results = await Promise.all(
