@@ -86,7 +86,9 @@ test.describe("Guest checkout", () => {
     }
     await page.getByRole("button", { name: /^Pay ₹/ }).click();
     await expect(page.getByRole("heading", { name: "Test payment", exact: true })).toBeVisible();
-    await expect(page.getByText("Test mode — no real money", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("main").getByText("Test mode — no real money", { exact: true }),
+    ).toBeVisible();
     await page.getByRole("button", { name: "Success", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Booking confirmed" })).toBeVisible();
     const orderId = /\/orders\/([^/]+)/.exec(page.url())![1];
