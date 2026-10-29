@@ -21,6 +21,7 @@ writeFileSync(
     `NEXT_PUBLIC_SUPABASE_ANON_KEY=${values.ANON_KEY}`,
     `SUPABASE_SERVICE_ROLE_KEY=${values.SERVICE_ROLE_KEY}`,
     "AUTH_E2E_REQUIRED=1",
+    "KYC_MODE=mock",
   ].join("\n") + "\n",
   { mode: 0o600 },
 );

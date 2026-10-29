@@ -1,16 +1,13 @@
 "use client";
 
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
-import { cities } from "@/lib/cities";
+import Link from "next/link";
 
 export function PublicHeader() {
-  const params = useSearchParams();
   const pathname = usePathname();
   const inAccount = pathname === "/blocked" || pathname === "/me" || pathname.startsWith("/me/");
-  const query = params.get("q") ?? "";
-  const city = params.get("city") ?? "";
 
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-white">
@@ -23,43 +20,13 @@ export function PublicHeader() {
             </Button>
           </div>
         </div>
-        <form
-          action="/"
-          method="get"
-          role="search"
-          className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center"
-          key={`${query}:${city}`}
+        <nav
+          aria-label="Main navigation"
+          className="flex flex-1 items-center justify-end gap-5 text-sm font-semibold"
         >
-          <label className="sr-only" htmlFor="site-search">
-            Search
-          </label>
-          <input
-            id="site-search"
-            name="q"
-            defaultValue={query}
-            placeholder="Search events, artists, venues"
-            className="min-h-12 w-full flex-1 rounded-xl border-[1.5px] border-line px-3.5 text-base text-ink"
-          />
-          <label className="sr-only" htmlFor="site-city">
-            City
-          </label>
-          <select
-            id="site-city"
-            name="city"
-            defaultValue={city}
-            className="min-h-12 w-full rounded-xl border-[1.5px] border-line bg-white px-3.5 text-base text-ink sm:w-44"
-          >
-            <option value="">All cities</option>
-            {cities.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-          <Button type="submit" variant="primary">
-            Search
-          </Button>
-        </form>
+          <Link href="/events">Find events</Link>
+          <Link href="/console">Host an event</Link>
+        </nav>
         <div className="hidden md:block">
           <Button href={inAccount ? "/me" : "/login"} variant="secondary">
             {inAccount ? "Your account" : "Sign in"}

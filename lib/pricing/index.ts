@@ -33,3 +33,14 @@ export function previewPricing({
     illustrative: true,
   };
 }
+
+/** Public wording belongs to the pricing contract so PR 10 can replace it centrally. */
+export function organiserFeeWording() {
+  const example = previewPricing({ ticketPaise: 100000, feePayer: "organiser" });
+  const paise = example.platformFeePaise + example.feeGstPaise;
+  const amount = new Intl.NumberFormat("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(paise / 100);
+  return `Illustrative platform fee: ₹ ${amount} incl. GST on a ₹ 1,000 ticket. Final pricing is coming soon.`;
+}
