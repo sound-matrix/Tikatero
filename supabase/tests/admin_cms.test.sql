@@ -1,5 +1,5 @@
 begin;
-select plan(44);
+select plan(46);
 insert into auth.users(id,email) values
  ('c7000001-0000-4000-8000-000000000001','admin-cms-staff@example.test'),
  ('c7000002-0000-4000-8000-000000000002','admin-cms-owner@example.test'),
@@ -75,6 +75,13 @@ reset role;
 select throws_ok($$ update public.audit_log set reason='changed' $$,'P0001','audit_log is insert-only','even table owner cannot update audit');
 select throws_ok($$ delete from public.audit_log $$,'P0001','audit_log is insert-only','even table owner cannot delete audit');
 select throws_ok($$ truncate public.audit_log $$,'P0001','audit_log is insert-only','even table owner cannot truncate audit');
+-- Historical applications must not take the unique revision slot used by PR 6.
+insert into public.kyc_applications(id,organiser_id,region,status,submitted_at)
+values('c7200003-0000-4000-8000-000000000003','c7100001-0000-4000-8000-000000000001','IN','submitted',now());
+set local role authenticated;
+select lives_ok($$ select public.admin_review_kyc('c7200003-0000-4000-8000-000000000003',null,'needs_docs',array['pan'],'Please provide current proof') $$,'staff can review a historical application alongside PR 6 progress');
+select is((select revision from public.kyc_applications where id='c7200003-0000-4000-8000-000000000003'),null::integer,'historical revision slot remains separate');
+reset role;
 update public.profiles set blocked_at=now(),block_reason='Review' where id='c7000001-0000-4000-8000-000000000001';
 set local role authenticated;
 select throws_ok($$ select * from public.admin_search_accounts('') $$,'42501','Staff access required','blocked staff cannot use admin functions');

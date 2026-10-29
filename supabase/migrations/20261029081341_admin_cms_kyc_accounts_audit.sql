@@ -78,7 +78,7 @@ begin
   old_state := jsonb_build_object('status',app.status,'organiser_status',org.kyc_status,'revision',app.revision,'flagged_steps',app.flagged_steps,'reviewer_note',admin_private.safe_note(app.reviewer_note),'approved_at',org.approved_at,'approved_by',org.approved_by);
   update public.kyc_applications set status=p_decision::public.kyc_status,
     flagged_steps=case when p_decision='needs_docs' then p_steps else '{}'::text[] end,
-    reviewer_id=actor,reviewer_note=note,decided_at=now(),revision=coalesce(revision,0)+1 where id=p_id returning * into app;
+    reviewer_id=actor,reviewer_note=note,decided_at=now(),revision=case when revision is null then null else revision+1 end where id=p_id returning * into app;
   update public.organisers set kyc_status=p_decision::public.kyc_status,
     approved_at=case when p_decision='approved' then now() end,
     approved_by=case when p_decision='approved' then actor end where id=org.id returning * into org;

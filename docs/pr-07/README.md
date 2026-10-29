@@ -9,7 +9,7 @@ Notifications reuse the existing email sender and templates with an audit-ID ide
 ## Validation
 
 - Lint, typecheck, 161 unit tests, production build, client secret scan.
-- All five pgTAP files pass on a fresh PostgreSQL 16 database with Supabase roles/Auth schema: 44 new Admin CMS assertions, including a deliberately failed audit insert rolling back both application and organiser changes.
+- All five pgTAP files pass on a fresh PostgreSQL 16 database with Supabase roles/Auth schema: 46 new Admin CMS assertions, including a deliberately failed audit insert rolling back both application and organiser changes.
 - Playwright coverage: approve/unlock organiser console, block/reason/unblock, hold/sales toggles, request-docs/reject email templates, non-staff denial on every new route. CI runs these against the local Supabase stack.
 - Queue, detail and accounts screenshots are captured by `e2e/admin-cms.spec.ts` and uploaded as `admin-cms-screenshots` in CI.
 

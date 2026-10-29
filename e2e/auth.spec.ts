@@ -141,6 +141,8 @@ test.describe("Supabase role routing", () => {
     await page.reload();
     await expect(page.getByRole("heading", { name: "Your account" })).toBeVisible();
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    // Finish the server-action redirect before testing the consumed link.
+    await expect(page).toHaveURL(/\/login$/);
     await page.goto(link);
     await expect(page).toHaveURL(/\/login\?error=link$/);
     await expect(page.getByRole("status").filter({ hasText: "expired" })).toBeVisible();

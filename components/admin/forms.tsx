@@ -88,7 +88,7 @@ export function ReviewForm({
               type="submit"
               name="decision"
               value="rejected"
-              className="border-danger text-danger"
+              className="border-danger! text-danger!"
             >
               Reject
             </Button>
@@ -137,7 +137,7 @@ export function AccountForm({
                   type="submit"
                   name="action"
                   value="block"
-                  className="border-danger text-danger"
+                  className="border-danger! text-danger!"
                 >
                   Block
                 </Button>
@@ -145,7 +145,7 @@ export function AccountForm({
                   type="submit"
                   name="action"
                   value="suspend"
-                  className="border-danger text-danger"
+                  className="border-danger! text-danger!"
                 >
                   Suspend
                 </Button>
