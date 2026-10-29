@@ -46,6 +46,12 @@ jobs:
       - run: node scripts/local-auth-env.mjs
       - run: pnpm exec playwright test
       - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: admin-cms-screenshots
+          path: test-results/**/*.png
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: browser-test-results

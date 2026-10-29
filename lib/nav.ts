@@ -8,9 +8,10 @@ export const consoleNav = [
 
 export const adminNav = [
   { href: "/admin", label: "Overview" },
-  { href: "/admin/organisers", label: "Organisers" },
+  { href: "/admin/kyc", label: "KYC queue" },
   { href: "/admin/events", label: "Events" },
   { href: "/admin/pricing", label: "Pricing" },
   { href: "/admin/accounts", label: "Accounts" },
+  { href: "/admin/audit", label: "Audit log" },
   { href: "/admin/emails/preview", label: "Email previews" },
 ] as const;
