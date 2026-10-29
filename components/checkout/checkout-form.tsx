@@ -67,9 +67,19 @@ export function CheckoutForm({
           });
           if (result.payment && window.Cashfree) {
             try {
-              await window
+              const response = await window
                 .Cashfree({ mode: result.payment.mode })
                 .checkout({ paymentSessionId: result.payment.sessionId, redirectTarget: "_self" });
+              if (response && typeof response === "object" && "error" in response && response.error)
+                throw new Error();
+              if (
+                response &&
+                typeof response === "object" &&
+                "paymentDetails" in response &&
+                response.paymentDetails &&
+                result.url
+              )
+                router.push(result.url.replace(/\/pay$/, "/status"));
               return;
             } catch {
               /* The payment page provides a recoverable retry. */

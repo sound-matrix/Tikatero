@@ -50,6 +50,7 @@ async function Payment({ params }: { params: Promise<{ id: string }> }) {
       ) : order.payment_session_id ? (
         <CashfreeCheckout
           sessionId={order.payment_session_id}
+          statusUrl={`/orders/${id}/status`}
           mode={process.env.CASHFREE_ENV === "production" ? "production" : "sandbox"}
         />
       ) : (

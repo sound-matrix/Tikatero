@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Script from "next/script";
+import { useRouter } from "next/navigation";
 declare global {
   interface Window {
     Cashfree?: (options: { mode: "sandbox" | "production" }) => {
@@ -14,10 +15,13 @@ declare global {
 export function CashfreeCheckout({
   sessionId,
   mode,
+  statusUrl,
 }: {
   sessionId: string;
   mode: "sandbox" | "production";
+  statusUrl: string;
 }) {
+  const router = useRouter();
   const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
   return (
@@ -33,9 +37,18 @@ export function CashfreeCheckout({
         onClick={async () => {
           try {
             if (!window.Cashfree) throw new Error();
-            await window
+            const response = await window
               .Cashfree({ mode })
               .checkout({ paymentSessionId: sessionId, redirectTarget: "_self" });
+            if (response && typeof response === "object" && "error" in response && response.error)
+              throw new Error();
+            if (
+              response &&
+              typeof response === "object" &&
+              "paymentDetails" in response &&
+              response.paymentDetails
+            )
+              router.push(statusUrl);
           } catch {
             setError("Payment could not start. Please try again.");
           }
