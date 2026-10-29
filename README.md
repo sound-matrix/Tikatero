@@ -126,3 +126,92 @@ Verification: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:db`,
 `pnpm build && pnpm check:no-secrets`, and `pnpm exec playwright test`.
 Sender tests mock Resend; each template has an HTML/plain-text snapshot. All CI
 checks run without a real Resend key. Snapshots contain synthetic sample data only.
+
+## Organiser verification (PR 06)
+
+Open `/console/onboarding` from the pending console. Choose India, then save each of the seven
+steps. Outside India shows a support link. Saving a step persists masked results, so organisers
+can leave and resume. A `needs_docs` application reopens only its flagged steps; changing a
+flagged legal name resets dependent checks. Submitted applications are locked for review.
+`auto_passed` is a queue result, **not approval**: the existing database publishing guard still
+requires `approved`. The existing event screen remains a placeholder; this PR does not add the
+event wizard. The pending page explains drafting and shows publishing as locked.
+
+Apply the new migration before using the flow. It extends PR 2's `kyc_applications` with
+`step_progress`, an optimistic `revision`, `flagged_steps` and `submission_count`. A partial
+unique index allows one current onboarding row per organiser while retaining historical rows.
+The existing masked columns, review fields, statuses and membership helpers are reused.
+
+Organiser members read their own application through existing RLS; staff can read all. Writes
+run through authenticated server actions and a service-only, security-invoker save RPC. Both
+check active membership; the RPC repeats the check and locks the organiser/application, checks
+the revision, and updates queue status in the same transaction. Browser writes to provider
+results are revoked so callers cannot forge a successful check or approve themselves. PR 7
+should use staff-authorized server operations to update reviewer fields and `flagged_steps`.
+The only auth-route change is allowing the exact onboarding path for pending members.
+
+### Provider settings
+
+New env names (empty in `.env.example`):
+
+- `KYC_MODE`
+- `KYC_NAME_MATCH_THRESHOLD`
+- `CASHFREE_SECURE_ID_CLIENT_ID`
+- `CASHFREE_SECURE_ID_CLIENT_SECRET`
+- `CASHFREE_SECURE_ID_ENV`
+
+Set `KYC_MODE` to `mock`, **or leave either Secure ID key unset**, to use the mock provider.
+This works without Cashfree or R2 credentials: the mock DigiLocker and selfie steps do not
+upload files. Mock mode is clearly labelled and uses synthetic checks, including Aadhaar ending 1234. It never checks government records or moves money. Never use simulation as evidence for
+staff approval. When switching to Cashfree, old mock checks are flagged for replacement.
+`KYC_NAME_MATCH_THRESHOLD` defaults to 85; invalid/out-of-range settings fail closed.
+
+With both Secure ID keys set and mock mode off, `CASHFREE_SECURE_ID_ENV` accepts `sandbox`
+(default) or `production`. The adapter uses fixed Cashfree hosts and no automatic retries for
+verification deposits. Configure a public HTTPS `NEXT_PUBLIC_SITE_URL` for DigiLocker's return
+address. The organiser gives consent on Cashfree/DigiLocker, returns to the Aadhaar step, and
+chooses “I finished DigiLocker — check result”. Reference IDs come from the saved application,
+not callback query parameters. No live provider calls were made for this PR; provider account
+permissions, consent URLs and production responses must be checked in Cashfree sandbox before
+turning it on. Official API references used:
+
+- [PAN](https://www.cashfree.com/docs/api-reference/vrs/v2/pan/verify-pan-sync)
+- [Bank verification](https://www.cashfree.com/docs/api-reference/vrs/v2/bav-v2/bank-account-verification-sync-v2)
+- [GSTIN](https://www.cashfree.com/docs/api-reference/vrs/v2/gstin/verify-gstin)
+- [DigiLocker](https://www.cashfree.com/docs/secure-id/digilocker/digilocker)
+
+### Privacy and manual checks
+
+PAN and bank account numbers are transient verification inputs only. Only their last four,
+provider reference IDs and scores are saved. GSTIN contains a PAN, so only its last four are
+saved too. Names, organiser type, contact phone and city are saved as organiser details. Provider
+responses are reduced to an allowlist; document bodies, addresses and raw provider errors are
+not persisted or logged. Raw input controls are cleared after a successful save. No KYC inputs
+are placed in local storage or URLs.
+
+Offline Aadhaar XML is read transiently (under 1 MB, no XML entity expansion); only the last four
+from the UIDAI reference are kept, and the file is discarded. This is **not signature
+verification**, so it always needs manual review. QR document and selfie fallbacks reuse the
+existing `ImageUpload` with `kyc_doc`: JPG/PNG/WebP (also PDF for Aadhaar) in the private R2 bucket. Upload masked
+Aadhaar documents only. Object keys are checked against the current organiser and remain
+private; the existing staff-only read route is unchanged. A still-image upload never claims to
+prove liveness. Live biometric capture is left behind the provider interface; the configured
+Cashfree flow currently uses the manual selfie fallback. Mock mode simulates both liveness and
+face matching.
+
+All completed checks and name matches at/above the threshold produce `auto_passed`; failed,
+manual or low-match checks produce `needs_docs`. Both are retained in the staff queue. On submit,
+the existing email wrapper sends `kyc_submitted` to the owner and `staff_alert` to active staff
+and admins. Identity is `kyc/<application-id>/submission/<count>`, so retrying a notification is
+idempotent and a later corrected submission has a distinct identity. Missing email configuration
+is logged by PR 5's wrapper; email failure does not undo saved verification progress.
+
+### Verification
+
+Run `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, and `pnpm check:no-secrets`.
+With local Supabase running, reset migrations and run `supabase test db`, then
+`node scripts/local-auth-env.mjs` and `pnpm exec playwright test`. The KYC browser test covers
+resume, all mock steps, masked database results, pending status, locked publishing, flagged-step
+resubmission and missing-key email logs. Unit tests cover matching, masking, provider selection,
+Cashfree response minimisation, server-action ownership and state transitions. Screenshots are in
+[`docs/pr-06`](docs/pr-06/README.md).

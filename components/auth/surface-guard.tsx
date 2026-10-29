@@ -3,7 +3,7 @@ import { requireAccount } from "@/lib/auth/account";
 import { landingPath } from "@/lib/auth/routing";
 
 // Recheck inside the server render too. Proxy additionally restricts pending
-// organisers to /console/pending on every request, including RSC requests.
+// organisers to pending/onboarding on every request, including RSC requests.
 export async function SurfaceGuard({
   surface,
   children,
