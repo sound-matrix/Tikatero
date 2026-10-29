@@ -1370,6 +1370,28 @@ export type Database = {
         Returns: Database["public"]["Tables"]["kyc_applications"]["Row"][];
       };
       is_org_member: { Args: { org_id: string }; Returns: boolean };
+      active_pricing_version: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          id: string;
+          platform_pct: number;
+          fixed_fee_paise: number;
+          gst_bps: number;
+          gateway_mode: Database["public"]["Enums"]["gateway_mode"];
+          gateway_bps: number;
+          payout_days: number;
+        }[];
+      };
+      admin_save_pricing_version: {
+        Args: {
+          p_platform_pct: number;
+          p_fixed_fee_paise: number;
+          p_gateway_mode: Database["public"]["Enums"]["gateway_mode"];
+          p_gateway_bps: number;
+          p_payout_days: number;
+        };
+        Returns: string;
+      };
       is_staff: { Args: Record<PropertyKey, never>; Returns: boolean };
       redeem_ticket: {
         Args: { code: string; gate: string; sig: string };

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { discover } from "@/lib/discovery/data";
 import { locationFilters } from "@/lib/discovery/location";
 import { listingUrl, type Search } from "@/lib/discovery/model";
+import { activePricing } from "@/lib/pricing/data";
 import { organiserFeeWording } from "@/lib/pricing";
 import { categories } from "@/lib/events/model";
 import { DiscoveryFilters } from "@/components/discovery/filters";
@@ -71,6 +72,13 @@ async function HomeContent({ searchParams }: { searchParams: Promise<Search> }) 
     </>
   );
 }
+async function FeeWording() {
+  try {
+    return organiserFeeWording(await activePricing());
+  } catch {
+    return "Pricing is temporarily unavailable. Please check again shortly.";
+  }
+}
 export default function HomePage({ searchParams }: { searchParams: Promise<Search> }) {
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 md:px-6">
@@ -98,7 +106,11 @@ export default function HomePage({ searchParams }: { searchParams: Promise<Searc
         <div>
           <h2 className="text-2xl font-bold">Bring people together.</h2>
           <p className="mt-2 text-white/90">Create your event, your way.</p>
-          <p className="mt-2 max-w-xl text-sm text-white/90">{organiserFeeWording()}</p>
+          <p className="mt-2 max-w-xl text-sm text-white/90">
+            <Suspense fallback={<>Loading current fees…</>}>
+              <FeeWording />
+            </Suspense>
+          </p>
         </div>
         <Link
           href="/console"

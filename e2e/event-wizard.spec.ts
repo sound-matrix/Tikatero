@@ -1,5 +1,7 @@
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
+import { previewPricing } from "../lib/pricing";
+import { formatInr } from "../lib/format";
 import type { Database } from "../lib/db/types";
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
   key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -117,7 +119,21 @@ test.describe("Organiser event wizard", () => {
     await shot(page, info, 6);
     await next(page, "Fees & refunds");
     await page.getByRole("radio", { name: /The buyer pays the platform fee/ }).check();
-    await expect(page.getByText("₹1,023.60 incl. GST", { exact: true })).toBeVisible();
+    const example = page.getByTestId("wizard-pricing-example");
+    const versionId = await example.getAttribute("data-pricing-version");
+    const { data: version, error: pricingError } = await client()
+      .from("pricing_versions")
+      .select("*")
+      .eq("id", versionId!)
+      .single();
+    expect(pricingError).toBeNull();
+    const pricing = previewPricing({ ticketPaise: 100000, feePayer: "buyer" }, version!);
+    await expect(
+      example.getByText(`${formatInr(pricing.buyerTotalPaise)} incl. GST`, { exact: true }),
+    ).toBeVisible();
+    await expect(
+      example.getByText(formatInr(pricing.organiserPayoutPaise), { exact: true }),
+    ).toBeVisible();
     await shot(page, info, 7);
     await next(page, "Review & publish");
     const publicLink = page.getByRole("link", {
