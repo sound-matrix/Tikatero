@@ -366,6 +366,10 @@ export type Database = {
       };
       kyc_applications: {
         Row: {
+          step_progress: Json;
+          revision: number | null;
+          flagged_steps: string[];
+          submission_count: number;
           aadhaar_last4: string | null;
           bank_acct_last4: string | null;
           bank_holder_name: string | null;
@@ -390,6 +394,10 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          step_progress?: Json;
+          revision?: number | null;
+          flagged_steps?: string[];
+          submission_count?: number;
           aadhaar_last4?: string | null;
           bank_acct_last4?: string | null;
           bank_holder_name?: string | null;
@@ -413,6 +421,10 @@ export type Database = {
           submitted_at?: string | null;
         };
         Update: {
+          step_progress?: Json;
+          revision?: number | null;
+          flagged_steps?: string[];
+          submission_count?: number;
           aadhaar_last4?: string | null;
           bank_acct_last4?: string | null;
           bank_holder_name?: string | null;
@@ -1259,6 +1271,18 @@ export type Database = {
       is_event_team: {
         Args: { event_id: string; roles: Database["public"]["Enums"]["team_role"][] };
         Returns: boolean;
+      };
+      save_kyc_progress: {
+        Args: {
+          p_user_id: string;
+          p_organiser_id: string;
+          p_revision: number;
+          p_progress: Json;
+          p_flagged: string[];
+          p_status: Database["public"]["Enums"]["kyc_status"];
+          p_submit: boolean;
+        };
+        Returns: Database["public"]["Tables"]["kyc_applications"]["Row"][];
       };
       is_org_member: { Args: { org_id: string }; Returns: boolean };
       is_staff: { Args: Record<PropertyKey, never>; Returns: boolean };

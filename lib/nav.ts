@@ -1,4 +1,5 @@
 export const consoleNav = [
+  { href: "/console/onboarding", label: "Verification" },
   { href: "/console", label: "Overview" },
   { href: "/console/events", label: "Events" },
   { href: "/console/payouts", label: "Payouts" },

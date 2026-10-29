@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 const root = process.argv[2] ?? ".next/static";
 const forbiddenName =
-  /SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY|R2_SECRET_ACCESS_KEY|R2_ACCESS_KEY_ID|RESEND_API_KEY/;
+  /SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY|R2_SECRET_ACCESS_KEY|R2_ACCESS_KEY_ID|RESEND_API_KEY|CASHFREE_SECURE_ID_CLIENT_SECRET/;
 const forbiddenValue = /sb_secret_[A-Za-z0-9_-]+|\bre_[A-Za-z0-9_-]{16,}/;
 const serverValues = [
   process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -11,6 +11,7 @@ const serverValues = [
   process.env.R2_SECRET_ACCESS_KEY,
   process.env.R2_ACCESS_KEY_ID,
   process.env.RESEND_API_KEY,
+  process.env.CASHFREE_SECURE_ID_CLIENT_SECRET,
 ].filter(Boolean);
 let files = 0;
 let leaks = false;

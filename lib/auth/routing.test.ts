@@ -45,6 +45,11 @@ describe("role routing uses profiles and actual memberships", () => {
       "/console/pending",
     );
     expect(routeRedirect(account("organiser", ["draft"]), "/console/pending")).toBeNull();
+    expect(routeRedirect(account("organiser", ["draft"]), "/console/onboarding")).toBeNull();
+    expect(routeRedirect(account(), "/console/onboarding")).toBe("/me");
+    expect(routeRedirect(account("organiser", ["draft"]), "/console/onboarding/extra")).toBe(
+      "/console/pending",
+    );
     expect(routeRedirect(account("organiser", ["approved"]), "/admin")).toBe("/console");
     expect(routeRedirect(account("staff"), "/console")).toBe("/admin");
     expect(routeRedirect(account("staff"), "/admin/events")).toBeNull();
