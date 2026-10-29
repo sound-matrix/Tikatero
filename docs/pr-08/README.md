@@ -20,3 +20,16 @@ Pending organisers can open event list/draft routes through the narrowly authori
 ## Environment
 
 No new environment variables. Existing Supabase and R2 configuration is reused. Without R2 configuration, poster/guest photo steps explain that uploads are unavailable and drafts can continue. No live database migration is applied by the PR.
+
+## Screenshots
+
+Captured from the passing browser suite using test fixtures and upload safe mode.
+
+1. [Basics](wizard-step-01.png)
+2. [Date & time](wizard-step-02.png)
+3. [Venue & map](wizard-step-03.png)
+4. [Poster](wizard-step-04.png)
+5. [VIP & guests](wizard-step-05.png)
+6. [Ticket tiers](wizard-step-06.png)
+7. [Fees & refunds](wizard-step-07.png)
+8. [Review & publish](wizard-step-08.png)
