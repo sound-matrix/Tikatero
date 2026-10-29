@@ -44,9 +44,14 @@ test.describe("Attendee discovery", () => {
       "href",
       /17.385/,
     );
-    await expect(page.locator('script[type="application/ld+json"]')).toContainText(
-      '"@type":"Event"',
+    const structured = JSON.parse(
+      (await page.locator('script[type="application/ld+json"]').textContent()) ?? "null",
     );
+    expect(structured).toMatchObject({
+      "@type": "Event",
+      name: "Sample Music Night",
+      url: "http://127.0.0.1:3000/e/sample-music-night",
+    });
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
       "href",
       /\/e\/sample-music-night$/,
