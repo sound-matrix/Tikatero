@@ -19,10 +19,11 @@ test.describe("Attendee discovery", () => {
     await expect(
       page.getByRole("heading", { name: "Sample Music Night", exact: true }),
     ).toBeVisible();
-    await page.getByLabel("City", { exact: true }).fill("Hyderabad");
-    await page.getByLabel("Country", { exact: true }).selectOption("IN");
-    await page.getByLabel("Ticket price", { exact: true }).selectOption("paid");
-    await page.getByRole("button", { name: "Find events", exact: true }).click();
+    const searchForm = page.getByRole("search", { name: "Find events", exact: true });
+    await searchForm.getByLabel("City", { exact: true }).fill("Hyderabad");
+    await searchForm.getByLabel("Country", { exact: true }).selectOption("IN");
+    await searchForm.getByLabel("Ticket price", { exact: true }).selectOption("paid");
+    await searchForm.getByRole("button", { name: "Find events", exact: true }).click();
     await expect(page).toHaveURL(/city=Hyderabad/);
     await expect
       .poll(
@@ -54,7 +55,7 @@ test.describe("Attendee discovery", () => {
     await page.getByRole("link", { name: "Book", exact: true }).filter({ visible: true }).click();
     await expect(page.getByRole("heading", { name: "Booking opens soon" })).toBeVisible();
     await page.goto("/");
-    await expect(page.getByLabel("City", { exact: true })).toHaveValue("Hyderabad");
+    await expect(searchForm.getByLabel("City", { exact: true })).toHaveValue("Hyderabad");
   });
   test("draft and paused events are 404 including booking and OG routes", async ({
     request,
