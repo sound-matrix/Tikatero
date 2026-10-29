@@ -44,7 +44,22 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - run: node scripts/local-auth-env.mjs
+      - run: node scripts/discovery-fixture.mjs
       - run: pnpm exec playwright test
+      - run: pnpm build
+      - run: pnpm exec lhci autorun
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: discovery-lighthouse
+          path: lighthouse-results/
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: discovery-screenshots
+          path: test-results/**/discovery-*.png
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         if: always()
         with:

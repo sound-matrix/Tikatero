@@ -11,7 +11,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <div id="content" className="flex-1">
         {children}
       </div>
-      <SiteFooter />
+      <SiteFooter copyrightOnly />
     </div>
   );
 }

@@ -1211,6 +1211,38 @@ export type Database = {
       };
     };
     Views: {
+      discovery_events: {
+        Row: {
+          id: string;
+          slug: string;
+          title: string;
+          description: string | null;
+          category: string | null;
+          starts_at: string;
+          ends_at: string | null;
+          gates_open_at: string | null;
+          venue_name: string | null;
+          address: string | null;
+          city: string | null;
+          country: string;
+          lat: number | null;
+          lng: number | null;
+          maps_url: string | null;
+          poster_key: string | null;
+          theme: string | null;
+          is_free: boolean;
+          refund_policy: string;
+          published_at: string | null;
+          created_at: string;
+          organiser_name: string;
+          verified: boolean;
+          tickets_sold: number;
+          min_price_paise: number | null;
+          tiers: Json;
+          guests: Json;
+        };
+        Relationships: [];
+      };
       event_attendees_v: {
         Row: {
           event_id: string;
