@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -24,6 +24,9 @@ import { previewPricing } from "@/lib/pricing";
 import { formatInr, formatIst } from "@/lib/format";
 import { VenueMap } from "./venue-map";
 import { TicketPreview } from "./ticket-preview";
+const subscribeToHydration = () => () => {};
+const clientReady = () => true;
+const serverReady = () => false;
 const fieldClass =
   "min-h-12 w-full rounded-xl border border-line bg-white px-3 text-ink outline-none";
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -81,7 +84,7 @@ export type WizardProps = {
   uploadsConfigured: boolean;
 };
 export function EventWizard({
-  id,
+  id: initialId,
   organiserId,
   organiserName,
   approved,
@@ -93,6 +96,8 @@ export function EventWizard({
   uploadsConfigured,
 }: WizardProps) {
   const router = useRouter();
+  const [id] = useState(initialId);
+  const hydrated = useSyncExternalStore(subscribeToHydration, clientReady, serverReady);
   const [values, setValues] = useState<Values>(initial?.values ?? emptyValues()),
     [draft, setDraft] = useState(initial),
     [step, setStep] = useState(initialStep),
@@ -201,7 +206,9 @@ export function EventWizard({
           <button
             key={name}
             type="button"
-            disabled={busy || (index > step && !complete.includes(index) && index !== step + 1)}
+            disabled={
+              !hydrated || busy || (index > step && !complete.includes(index) && index !== step + 1)
+            }
             aria-current={index === step ? "step" : undefined}
             onClick={() => {
               if (index !== step) void save(index);
@@ -230,13 +237,14 @@ export function EventWizard({
         </span>
       </div>
       <form
+        aria-busy={busy || !hydrated}
         onSubmit={(e) => {
           e.preventDefault();
           void save(Math.min(7, step + 1));
         }}
       >
         <Card className="p-5! md:p-7!">
-          <fieldset disabled={busy} className="min-w-0 space-y-5">
+          <fieldset disabled={busy || !hydrated} className="min-w-0 space-y-5">
             {step === 0 && (
               <Section
                 title="Tell people about your event"
@@ -969,17 +977,17 @@ export function EventWizard({
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
           <Button
             type="button"
-            disabled={step === 0 || busy}
+            disabled={step === 0 || busy || !hydrated}
             onClick={() => void save(Math.max(0, step - 1))}
           >
             Back
           </Button>
           <div className="flex flex-wrap gap-3">
-            <Button type="button" disabled={busy} onClick={() => void save(step)}>
+            <Button type="button" disabled={busy || !hydrated} onClick={() => void save(step)}>
               {busy ? "Saving…" : alreadyPublished ? "Save changes" : "Save draft"}
             </Button>
             {step < 7 && (
-              <Button type="submit" variant="primary" disabled={busy}>
+              <Button type="submit" variant="primary" disabled={busy || !hydrated}>
                 {busy ? "Saving…" : "Save and continue"}
               </Button>
             )}
