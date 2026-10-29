@@ -12,10 +12,20 @@ Discovery results revalidate every 60 seconds (30-second client stale interval, 
 
 ## Validation
 
-Unit tests cover IST boundaries, integer-paise display, filter validation/URLs, availability and safe JSON-LD encoding. Transactional pgTAP fixtures verify public visibility and safe columns. Playwright covers discovery, remembered location, free RSVP, empty states, draft/paused 404s, booking placeholders, sharing, OG images, mobile layout and axe. Lighthouse CI runs three mobile audits against a production build and requires at least 90 for performance and accessibility.
+CI includes 192 unit tests, 151 pgTAP assertions and 28 browser tests, plus lint, typecheck, build and `check:no-secrets`.
+
+Unit tests cover IST boundaries, integer-paise display, filter validation/URLs, availability and safe JSON-LD encoding. Transactional pgTAP fixtures verify public visibility and safe columns. Playwright covers discovery, remembered location, free RSVP, empty states, draft/paused 404s, booking placeholders, sharing, OG images, mobile layout and axe. Lighthouse CI runs three mobile audits against a production build and requires a median score of at least 90 for performance and accessibility.
+
+CI runs Playwright against the production build; local Playwright runs use the development server. The local test environment explicitly uses the existing `KYC_MODE=mock` setting.
 
 The CI-only discovery fixture is created by `scripts/discovery-fixture.mjs`, which refuses any non-local Supabase URL. It is never imported or run by production code. Existing migration files are unchanged. No new environment variables.
 
 ## Screenshots
 
-CI captures desktop (1440 px) and mobile (390 px) versions of the homepage, listing and event detail. Reviewed images and final CI scores are attached here before handoff.
+Screenshots use local test data and media placeholders. Desktop is 1440 px wide; mobile is 390 px wide.
+
+| Page          | Desktop                               | Mobile                               |
+| ------------- | ------------------------------------- | ------------------------------------ |
+| Homepage      | [View](discovery-home-desktop.png)    | [View](discovery-home-mobile.png)    |
+| Event listing | [View](discovery-listing-desktop.png) | [View](discovery-listing-mobile.png) |
+| Event detail  | [View](discovery-desktop.png)         | [View](discovery-mobile.png)         |

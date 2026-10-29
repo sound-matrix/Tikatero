@@ -12,6 +12,10 @@ test.describe("Attendee discovery", () => {
       page.getByRole("heading", { name: "Sample Music Night", exact: true }),
     ).toBeVisible();
     await page.getByRole("link", { name: "See all events" }).click();
+    await expect(page).toHaveURL(/\/events(?:\?|$)/);
+    await expect(
+      page.getByRole("heading", { name: "Find your next event", exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Sample Music Night", exact: true }),
     ).toBeVisible();
