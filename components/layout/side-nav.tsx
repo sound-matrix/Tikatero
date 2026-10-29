@@ -50,8 +50,8 @@ export function SideNav({
         <Link href="/" className="inline-flex min-h-12 items-center font-semibold text-ink">
           Find events
         </Link>
-        <Link href="/login" className="inline-flex min-h-12 items-center font-semibold text-teal">
-          Sign in
+        <Link href="/me" className="inline-flex min-h-12 items-center font-semibold text-teal">
+          Your account
         </Link>
       </div>
     </aside>

@@ -1,0 +1,32 @@
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { expect, it } from "vitest";
+
+it("rejects server variable names, modern secrets, service-role JWTs and exact env values", () => {
+  const root = mkdtempSync(join(tmpdir(), "tikatero-assets-"));
+  const payload = Buffer.from(JSON.stringify({ role: "service_role" })).toString("base64url");
+  try {
+    for (const content of [
+      "SUPABASE_SERVICE_ROLE_KEY",
+      "sb_secret_testvalue",
+      `eyJhbGciOiJIUzI1NiJ9.${payload}.testsignature`,
+      "private-test-sentinel",
+    ]) {
+      writeFileSync(join(root, "client.js"), content);
+      expect(() =>
+        execFileSync(process.execPath, ["scripts/check-no-secrets.mjs", root], {
+          env: { ...process.env, SUPABASE_SERVICE_ROLE_KEY: "private-test-sentinel" },
+          stdio: "pipe",
+        }),
+      ).toThrow();
+    }
+    writeFileSync(join(root, "client.js"), "public asset");
+    expect(() =>
+      execFileSync(process.execPath, ["scripts/check-no-secrets.mjs", root], { stdio: "pipe" }),
+    ).not.toThrow();
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

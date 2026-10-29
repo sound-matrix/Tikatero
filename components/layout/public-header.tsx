@@ -1,12 +1,14 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { cities } from "@/lib/cities";
 
 export function PublicHeader() {
   const params = useSearchParams();
+  const pathname = usePathname();
+  const inAccount = pathname === "/blocked" || pathname === "/me" || pathname.startsWith("/me/");
   const query = params.get("q") ?? "";
   const city = params.get("city") ?? "";
 
@@ -16,8 +18,8 @@ export function PublicHeader() {
         <div className="flex items-center justify-between gap-3">
           <Logo />
           <div className="md:hidden">
-            <Button href="/login" variant="secondary">
-              Sign in
+            <Button href={inAccount ? "/me" : "/login"} variant="secondary">
+              {inAccount ? "Your account" : "Sign in"}
             </Button>
           </div>
         </div>
@@ -59,8 +61,8 @@ export function PublicHeader() {
           </Button>
         </form>
         <div className="hidden md:block">
-          <Button href="/login" variant="secondary">
-            Sign in
+          <Button href={inAccount ? "/me" : "/login"} variant="secondary">
+            {inAccount ? "Your account" : "Sign in"}
           </Button>
         </div>
       </div>

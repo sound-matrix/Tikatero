@@ -1,34 +1,23 @@
 import type { Metadata } from "next";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Suspense } from "react";
+import { LoginForm } from "@/components/auth/login-form";
 
-export const metadata: Metadata = {
-  title: "Sign in",
-};
+export const metadata: Metadata = { title: "Sign in" };
 
-export default function LoginPage() {
+async function Form({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const params = await searchParams;
+  return <LoginForm linkError={params.error === "link"} />;
+}
+
+export default function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   return (
     <main className="mx-auto w-full max-w-md px-4 py-10">
+      <p className="mb-3 text-sm font-semibold text-teal">Welcome to Tikatero</p>
       <h1 className="text-3xl font-extrabold tracking-tight text-ink">Sign in</h1>
-      <p className="mt-3 text-muted">
-        You will sign in with a code sent to your email. That step is not available yet.
-      </p>
-      <Card className="mt-6">
-        <Input
-          label="Email"
-          name="email"
-          type="email"
-          placeholder="you@example.com"
-          autoComplete="email"
-          disabled
-        />
-        <div className="mt-4">
-          <Button variant="primary" disabled className="w-full">
-            Email me a code
-          </Button>
-        </div>
-      </Card>
+      <p className="mt-3 text-muted">One sign-in. Your account type decides where you land.</p>
+      <Suspense fallback={<p className="mt-6">Loading sign-in…</p>}>
+        <Form searchParams={searchParams} />
+      </Suspense>
     </main>
   );
 }
