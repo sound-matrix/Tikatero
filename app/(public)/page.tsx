@@ -102,7 +102,7 @@ export default function HomePage({ searchParams }: { searchParams: Promise<Searc
         </div>
         <Link
           href="/console"
-          className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,var(--coral),var(--orange))] px-5 font-bold text-ink"
+          className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,var(--coral),var(--orange))] px-5 text-xl font-bold text-ink"
         >
           Host an event
         </Link>

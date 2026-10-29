@@ -57,7 +57,7 @@ async function Detail({ params }: Props) {
     city: e.city ?? "",
   });
   const bookClass =
-    "inline-flex min-h-12 items-center justify-center rounded-xl bg-[linear-gradient(135deg,var(--coral),var(--orange))] px-7 py-3 font-bold text-ink";
+    "inline-flex min-h-12 items-center justify-center rounded-xl bg-[linear-gradient(135deg,var(--coral),var(--orange))] px-7 py-3 text-xl font-bold text-ink";
   const book = available ? (
     <Link href={`/e/${e.slug}/book`} className={bookClass}>
       {e.is_free ? "RSVP" : "Book"}
@@ -72,7 +72,7 @@ async function Detail({ params }: Props) {
     </button>
   );
   return (
-    <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 md:px-6 md:pb-12">
+    <main data-sticky-booking className="mx-auto max-w-6xl px-4 pb-12 pt-6 md:px-6">
       <Link
         href="/events"
         className="mb-5 inline-block text-sm font-semibold underline underline-offset-4"

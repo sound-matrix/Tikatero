@@ -55,6 +55,7 @@ const common = {
   lng: 78.4867,
   theme: "new_year",
   refund_policy: "72h",
+  is_free: false,
   status: "published",
   published_at: new Date().toISOString(),
 };
@@ -91,6 +92,7 @@ const eventId = events[0].id;
 check(
   await client.from("ticket_types").upsert([
     {
+      is_vip: false,
       id: "d9000000-0000-4000-8000-000000000020",
       event_id: eventId,
       name: "General admission",
@@ -110,6 +112,7 @@ check(
       sort: 1,
     },
     {
+      is_vip: false,
       id: "d9000000-0000-4000-8000-000000000022",
       event_id: eventId,
       name: "Late release",
@@ -120,6 +123,8 @@ check(
       sort: 2,
     },
     {
+      is_vip: false,
+      sort: 0,
       id: "d9000000-0000-4000-8000-000000000023",
       event_id: events[3].id,
       name: "RSVP",

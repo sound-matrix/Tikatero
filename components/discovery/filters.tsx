@@ -84,7 +84,7 @@ export function DiscoveryFilters({
           </label>
         </>
       )}
-      <button className="min-h-12 self-end rounded-xl bg-[linear-gradient(135deg,var(--coral),var(--orange))] px-6 py-3 font-bold text-ink">
+      <button className="min-h-12 self-end rounded-xl bg-[linear-gradient(135deg,var(--coral),var(--orange))] px-6 py-3 text-xl font-bold text-ink">
         Find events
       </button>
     </form>
