@@ -7,6 +7,7 @@ const publicMediaBase = process.env.R2_PUBLIC_BASE_URL
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  serverExternalPackages: ["@react-pdf/renderer"],
   // Resolve event visibility in metadata before sending headers: missing/draft/paused
   // event URLs must return HTTP 404, including to ordinary browsers.
   htmlLimitedBots: /.*/,

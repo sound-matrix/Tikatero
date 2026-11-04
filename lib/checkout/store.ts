@@ -6,6 +6,7 @@ import { paymentProvider, PaymentsNotConfiguredError } from "@/lib/payments";
 import type { CheckoutOrder } from "./model";
 import type { Json } from "@/lib/db/types";
 import { PAYMENTS_UNAVAILABLE, type PaymentResult, type ProviderOrder } from "@/lib/payments/model";
+import { fulfilPaidOrder } from "@/lib/tickets/fulfil";
 export const checkoutData = cache(async (slug: string) => {
   const client = createServiceClient();
   const { data: event, error } = await client
@@ -67,6 +68,13 @@ export async function transition(
     ...(event ? { p_source: "cashfree", p_event_id: event.id, p_payload: event.payload } : {}),
   });
   if (error) throw new Error("Payment status could not be saved.");
+  if (data === "paid") {
+    try {
+      await fulfilPaidOrder(order.id);
+    } catch {
+      // The paid ledger stands. The payments cron retries tickets and email.
+    }
+  }
   return data;
 }
 export async function reconcile(order: CheckoutOrder) {

@@ -68,7 +68,7 @@ async function fill(page: import("@playwright/test").Page, slug: string, free = 
 }
 test.describe("Guest checkout", () => {
   test.skip(!configured, "Requires local Supabase.");
-  test("mock success confirms once and never issues PR 12 tickets", async ({
+  test("mock success confirms once and issues one ticket", async ({
     page,
     request,
   }, info) => {
@@ -99,18 +99,21 @@ test.describe("Guest checkout", () => {
       check(await client.from("ticket_types").select("qty_sold").eq("id", id).single()).data!
         .qty_sold,
     ).toBe(1);
-    expect(
-      check(
-        await client
-          .from("order_outbox")
-          .select("id")
-          .eq("order_id", orderId)
-          .eq("topic", "order.paid"),
-      ).data,
-    ).toHaveLength(1);
-    expect(
-      check(await client.from("tickets").select("id").eq("order_id", orderId)).data,
-    ).toHaveLength(0);
+    const paid = check(
+      await client
+        .from("order_outbox")
+        .select("consumed_at")
+        .eq("order_id", orderId)
+        .eq("topic", "order.paid")
+        .single(),
+    ).data;
+    expect(paid!.consumed_at).toBeTruthy();
+    const tickets = check(
+      await client.from("tickets").select("code").eq("order_id", orderId),
+    ).data;
+    expect(tickets).toHaveLength(1);
+    expect(tickets![0].code).toMatch(/^TK-[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{5}-01$/);
+    await expect(page.getByRole("link", { name: "Ticket 1 of 1" })).toBeVisible();
     // A different browser/request without the private order cookie gets no order data.
     expect((await request.get(`/orders/${orderId}/status/poll`)).status()).toBe(404);
     await page.screenshot({ path: info.outputPath("checkout-confirmed.png"), fullPage: true });
@@ -138,10 +141,14 @@ test.describe("Guest checkout", () => {
     await fill(page, slug, true);
     await page.getByRole("button", { name: "Confirm RSVP", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Booking confirmed" })).toBeVisible();
+    const orderId = /\/orders\/([^/]+)/.exec(page.url())![1];
     expect(
       check(await db().from("ticket_types").select("qty_sold").eq("id", id).single()).data!
         .qty_sold,
     ).toBe(1);
+    expect(
+      check(await db().from("tickets").select("id").eq("order_id", orderId)).data,
+    ).toHaveLength(1);
   });
   test("paused organiser sees friendly block", async ({ page }) => {
     const { slug } = await fixture({ paused: true });

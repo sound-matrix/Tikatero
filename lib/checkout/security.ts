@@ -5,17 +5,23 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { CheckoutOrder } from "./model";
 export const tokenHash = (token: string) => createHash("sha256").update(token).digest("hex");
-export async function grantOrderAccess(id: string) {
-  const token = randomBytes(32).toString("base64url");
-  (await cookies()).set(`checkout_${id}`, token, {
-    httpOnly: true,
-    sameSite: "lax",
+function orderCookie(path: string) {
+  return {
+    httpOnly: true as const,
+    sameSite: "lax" as const,
     secure:
       process.env.NODE_ENV === "production" &&
       process.env.NEXT_PUBLIC_SITE_URL?.startsWith("https:"),
-    path: `/orders/${id}`,
+    path,
     maxAge: 60 * 60 * 24 * 30,
-  });
+  };
+}
+
+export async function grantOrderAccess(id: string) {
+  const token = randomBytes(32).toString("base64url");
+  const jar = await cookies();
+  jar.set(`checkout_${id}`, token, orderCookie(`/orders/${id}`));
+  jar.set(`ticket_${id}`, token, orderCookie("/t"));
   return tokenHash(token);
 }
 /** Order IDs alone never grant access. Guest access is scoped to the order cookie. */

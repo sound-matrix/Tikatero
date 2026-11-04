@@ -69,13 +69,28 @@ orders through RLS. Merely knowing an order UUID grants no access. Guest checkou
 links/creates an unverified profile by email; it never authenticates the browser,
 confirms the email, or overwrites an existing profile.
 
-## PR 12 contract
+## Tickets after payment
 
-Consume `order_outbox` rows with topic `order.paid`, fulfil idempotently per order,
-and stamp `consumed_at`. Honour `payload.is_test`; test orders must remain clearly
-marked and must not trigger real production fulfilment accidentally. Free RSVP
-orders use provider `free` and the exact same paid transition/outbox. This PR does
-not create tickets, QR codes, PDFs, confirmation emails or payouts.
+`public.issue_tickets(order_id)` runs as the service role. It locks a paid order and
+its unconsumed `order.paid` outbox row, inserts one ticket per seat, and stamps
+`consumed_at`. Calling it again, including a call that waits on the same row lock,
+returns those same tickets. `payment.review_required` never issues tickets.
+
+The app calls it as soon as `checkout_transition` returns `paid` (webhook, mock,
+free RSVP, and poll reconciliation). `/api/cron/payments` also sweeps unconsumed
+`order.paid` rows and paid orders whose confirmation email has not been accepted.
+
+Ticket codes look like `TK-XXXXX-NN`. The QR payload is `code.signature`, signed
+with a per-event key derived from `TICKET_QR_SECRET`. Set that secret in Vercel
+production and preview before payments go live. `tickets.qr_secret` stores only
+the key version `v1`.
+
+Test orders (`orders.is_test`) still receive tickets, a TEST TICKET banner, and the
+same confirmation email so a mock checkout can be checked. They do not create
+payouts. The confirmation is sent once. A definite Resend render or provider
+failure can be retried by the cron. A provider timeout is not retried, because the
+message may already have been accepted. Free RSVP uses provider `free` and the
+same paid transition.
 
 ## Validation
 

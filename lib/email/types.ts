@@ -6,6 +6,8 @@ export type TemplateData = {
     orderRef: string;
     amountPaise: number;
     vip?: boolean;
+    testBooking?: boolean;
+    tickets?: { label: string; href: string; path: string }[];
   };
   payment_failed: EmailBase & { eventTitle: string; orderRef: string; amountPaise: number };
   event_reminder: EmailBase & { event: EventDetails };

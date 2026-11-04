@@ -9,6 +9,7 @@ export type OrderStatus = {
   isTest: boolean;
   review: boolean;
   canPay: boolean;
+  tickets: { href: string; label: string }[];
 };
 export function OrderStatusView({ initial }: { initial: OrderStatus }) {
   const [order, setOrder] = useState(initial);
@@ -58,7 +59,9 @@ export function OrderStatusView({ initial }: { initial: OrderStatus }) {
         {order.review
           ? "Your payment arrived after the seats were reallocated. Please contact support with your order number."
           : order.status === "paid"
-            ? "Your booking is confirmed. Keep this order number for your records."
+            ? order.tickets.length
+              ? "Your tickets are ready below. A copy is on its way to your email."
+              : "Your booking is confirmed. Your tickets are being prepared. Refresh this page in a moment."
             : ["failed", "expired"].includes(order.status)
               ? "Your seats have been released. You can start a new booking."
               : "Please wait while we confirm your payment. Do not pay again."}
@@ -67,6 +70,20 @@ export function OrderStatusView({ initial }: { initial: OrderStatus }) {
         <p role="status" className="mt-4 text-muted">
           {error}
         </p>
+      )}
+      {order.status === "paid" && order.tickets.length > 0 && (
+        <ul className="mt-6 space-y-3">
+          {order.tickets.map((ticket) => (
+            <li key={ticket.href}>
+              <Link
+                className="inline-flex min-h-12 items-center rounded-xl bg-linear-to-r from-coral to-orange px-5 font-bold text-white"
+                href={ticket.href}
+              >
+                {ticket.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
       {order.canPay && order.status === "pending" && (
         <Link

@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { createServiceClient } from "@/lib/supabase/service";
 import { reconcile, transition } from "@/lib/checkout/store";
+import { sweepTicketFulfilment } from "@/lib/tickets/fulfil";
 export async function GET(request: Request) {
   const expected = process.env.CRON_SECRET
     ? Buffer.from(`Bearer ${process.env.CRON_SECRET}`)
@@ -41,9 +42,16 @@ export async function GET(request: Request) {
         }
       }),
     );
+  let ticketFailures = 0;
+  try {
+    ticketFailures = (await sweepTicketFulfilment()).failed;
+  } catch {
+    ticketFailures = 1;
+  }
+  const unsettled = failed + ticketFailures;
   return Response.json(
-    { checked, failed },
-    { status: failed ? 503 : 200, headers: { "Cache-Control": "no-store" } },
+    { checked, failed, ticketFailures },
+    { status: unsettled ? 503 : 200, headers: { "Cache-Control": "no-store" } },
   );
 }
 export const maxDuration = 300;

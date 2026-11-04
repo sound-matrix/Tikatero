@@ -1,6 +1,7 @@
 import { ownOrder } from "@/lib/checkout/security";
 import { reconcileOnDemand } from "@/lib/checkout/store";
 import { createServiceClient } from "@/lib/supabase/service";
+import { loadOrderTickets } from "@/lib/tickets/load";
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const order = await ownOrder((await params).id);
   if (!order) return new Response(null, { status: 404 });
@@ -20,6 +21,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       isTest: order.is_test,
       review: !!review,
       canPay: !!order.payment_session_id && Date.parse(order.hold_expires_at ?? "") > Date.now(),
+      tickets: status === "paid" ? await loadOrderTickets(order.id) : [],
     },
     { headers: { "Cache-Control": "private, no-store" } },
   );

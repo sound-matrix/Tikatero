@@ -55,7 +55,7 @@ function configuration() {
 }
 function attachmentsFor(template: TemplateName, attachments: EmailAttachment[] | undefined) {
   if (!attachments?.length) return undefined;
-  if (template !== "order_confirmed" || !Array.isArray(attachments) || attachments.length > 10)
+  if (template !== "order_confirmed" || !Array.isArray(attachments) || attachments.length > 50)
     throw new Error("Invalid email attachments.");
   let bytes = 0;
   return attachments.map((item) => {
