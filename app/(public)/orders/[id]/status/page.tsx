@@ -1,12 +1,14 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ownOrder } from "@/lib/checkout/security";
+import { reconcileOnDemand } from "@/lib/checkout/store";
 import { createServiceClient } from "@/lib/supabase/service";
 import { OrderStatusView } from "@/components/checkout/order-status";
 export const metadata = { title: "Order status", robots: { index: false, follow: false } };
 async function Status({ params }: { params: Promise<{ id: string }> }) {
   const order = await ownOrder((await params).id);
   if (!order) notFound();
+  const status = await reconcileOnDemand(order);
   const { data: review, error } = await createServiceClient()
     .from("order_outbox")
     .select("id")
@@ -18,7 +20,7 @@ async function Status({ params }: { params: Promise<{ id: string }> }) {
     <OrderStatusView
       initial={{
         id: order.id,
-        status: order.status,
+        status,
         total: order.total_paise,
         isTest: order.is_test,
         review: !!review,

@@ -6,6 +6,7 @@ import {
   providerPaise,
   verifyWebhook,
   mockConfirmationAllowed,
+  orderIsTest,
   type ProviderOrder,
 } from "./model";
 import { Cashfree, CASHFREE_API_VERSION } from "./cashfree";
@@ -111,6 +112,27 @@ it("selects mock without keys; fails closed for incomplete live configuration", 
   vi.stubEnv("CASHFREE_APP_ID", "synthetic-id");
   vi.stubEnv("CASHFREE_SECRET_KEY", "synthetic-secret");
   expect(paymentProvider().mode).toBe("cashfree");
+});
+it("allows production mock only as an explicit opt-in, and preview/dev without keys", () => {
+  vi.stubEnv("CASHFREE_APP_ID", "");
+  vi.stubEnv("CASHFREE_SECRET_KEY", "");
+  vi.stubEnv("CASHFREE_ENV", "");
+  vi.stubEnv("PAYMENTS_ALLOW_MOCK", "");
+  vi.stubEnv("NODE_ENV", "production");
+  vi.stubEnv("VERCEL_ENV", "production");
+  expect(() => paymentProvider()).toThrow(/payments not configured/);
+  vi.stubEnv("PAYMENTS_ALLOW_MOCK", "true");
+  vi.stubEnv("CASHFREE_ENV", "mock");
+  expect(paymentProvider().mode).toBe("mock");
+  expect(orderIsTest("mock", { CASHFREE_ENV: "mock" })).toBe(true);
+  expect(orderIsTest("cashfree", { CASHFREE_ENV: "production" })).toBe(false);
+  vi.stubEnv("PAYMENTS_ALLOW_MOCK", "");
+  vi.stubEnv("CASHFREE_ENV", "");
+  vi.stubEnv("VERCEL_ENV", "preview");
+  expect(paymentProvider().mode).toBe("mock");
+  vi.stubEnv("VERCEL_ENV", "");
+  vi.stubEnv("NODE_ENV", "development");
+  expect(paymentProvider().mode).toBe("mock");
 });
 it("rejects a provider create response for a different amount", async () => {
   vi.stubGlobal(

@@ -6,7 +6,8 @@ import { checkoutSchema, type CheckoutResult, type CheckoutOrder } from "@/lib/c
 import { checkoutData, providerOrder, transition } from "@/lib/checkout/store";
 import { grantOrderAccess, tokenHash, verifyTurnstile } from "@/lib/checkout/security";
 import { computePricing } from "@/lib/pricing/compute";
-import { paymentProvider } from "@/lib/payments";
+import { paymentProvider, PaymentsNotConfiguredError } from "@/lib/payments";
+import { orderIsTest, PAYMENTS_UNAVAILABLE, type PaymentProvider } from "@/lib/payments/model";
 function providerMinimum(mode: string, amount: number) {
   return mode === "cashfree" && amount > 0 && amount < 100;
 }
@@ -53,6 +54,17 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
       return { error: "Cashfree payments must be at least ₹ 1." };
     if (amounts.total.buyer_total > 0 && amounts.total.organiser_share <= 0)
       return { error: "This ticket cannot be booked at its current price." };
+    const free = amounts.total.buyer_total === 0;
+    let gateway: PaymentProvider | "free";
+    if (free) gateway = "free";
+    else {
+      try {
+        gateway = paymentProvider();
+      } catch (error) {
+        if (error instanceof PaymentsNotConfiguredError) return { error: PAYMENTS_UNAVAILABLE };
+        throw error;
+      }
+    }
     const { data: existing, error: lookupError } = await client.rpc("checkout_user_by_email", {
       p_email: values.email,
     });
@@ -72,8 +84,6 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
       if (!buyerId) throw new Error("Buyer profile unavailable.");
     }
     const id = randomUUID();
-    const provider = paymentProvider();
-    const free = amounts.total.buyer_total === 0;
     const hash = await grantOrderAccess(id);
     const { data: held, error } = await client.rpc("checkout_hold", {
       p_order_id: id,
@@ -87,10 +97,10 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
       p_fee_payer: data.event.fee_payer,
       p_is_free: data.event.is_free,
       p_amounts: amounts.total,
-      p_provider: free ? "free" : provider.mode,
+      p_provider: gateway === "free" ? "free" : gateway.mode,
       p_token_hash: hash,
       p_attendees: values.attendees,
-      p_is_test: !free && (provider.mode === "mock" || process.env.CASHFREE_ENV !== "production"),
+      p_is_test: gateway === "free" ? false : orderIsTest(gateway.mode),
     });
     if (error || !held)
       return {
@@ -98,14 +108,14 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
           error?.code === "P0001" ? error.message : "Booking could not be held. Please try again.",
       };
     const order = held as unknown as CheckoutOrder;
-    if (free) {
+    if (gateway === "free") {
       await transition(order, { state: "paid", amount: 0, currency: "INR" });
       return { url: `/orders/${id}/status` };
     }
     // If the request times out, keep the hold and reconcile; the remote create may
     // have succeeded. Never release inventory based on an ambiguous network error.
     try {
-      const { sessionId } = await provider.create(providerOrder(order), origin);
+      const { sessionId } = await gateway.create(providerOrder(order), origin);
       const saved = await client
         .from("orders")
         .update({ payment_session_id: sessionId })
@@ -114,7 +124,7 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
       if (saved.error) throw new Error("Payment session unavailable.");
       return {
         url: `/orders/${id}/pay`,
-        ...(provider.mode === "cashfree"
+        ...(gateway.mode === "cashfree"
           ? {
               payment: {
                 sessionId,
@@ -129,7 +139,8 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
     } catch {
       return { url: `/orders/${id}/status` };
     }
-  } catch {
+  } catch (error) {
+    if (error instanceof PaymentsNotConfiguredError) return { error: PAYMENTS_UNAVAILABLE };
     return { error: "Checkout is temporarily unavailable. Please try again." };
   }
 }

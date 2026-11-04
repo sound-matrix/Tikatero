@@ -83,3 +83,24 @@ export function verifyWebhook(
 export function mockConfirmationAllowed(env: { NODE_ENV?: string; PAYMENTS_ALLOW_MOCK?: string }) {
   return env.NODE_ENV !== "production" || env.PAYMENTS_ALLOW_MOCK === "true";
 }
+export const PAYMENTS_UNAVAILABLE =
+  "Online payments are not available yet. Please check back soon.";
+/**
+ * Production must not silently select mock. Vercel preview and `vercel dev`
+ * still may: those runtimes set NODE_ENV=production, so VERCEL_ENV wins.
+ */
+export function productionPaymentLock(
+  env: { NODE_ENV?: string; VERCEL_ENV?: string } = process.env,
+) {
+  if (env.VERCEL_ENV === "preview" || env.VERCEL_ENV === "development") return false;
+  return env.VERCEL_ENV === "production" || env.NODE_ENV === "production";
+}
+/** Mock orders are never live charges. Sandbox Cashfree orders stay marked too. */
+export function orderIsTest(
+  mode: "mock" | "cashfree" | "free",
+  env: { NODE_ENV?: string; CASHFREE_ENV?: string } = process.env,
+) {
+  if (mode === "free") return false;
+  if (mode === "mock") return true;
+  return env.CASHFREE_ENV !== "production";
+}

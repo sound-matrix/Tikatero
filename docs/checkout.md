@@ -11,15 +11,25 @@ under inventory locks. A concurrent price change asks the buyer to refresh.
 
 Names and placeholders are in `.env.example`. No payment keys enter client assets.
 
-- `CASHFREE_ENV`: `mock`, `sandbox`, `production`. Empty with no keys uses mock;
-  incomplete sandbox/production credentials fail closed.
+- `CASHFREE_ENV`: `mock`, `sandbox`, `production`. On preview and local development,
+  empty with no keys uses mock. Incomplete sandbox/production credentials fail closed.
+  Production (`VERCEL_ENV=production`, or `NODE_ENV=production` outside Vercel preview
+  and `vercel dev`) selects mock only when `PAYMENTS_ALLOW_MOCK=true` and
+  `CASHFREE_ENV=mock`. Otherwise missing Cashfree credentials throw
+  `payments not configured`. Paid checkout then shows "Online payments are not
+  available yet. Please check back soon." and creates no order or hold. Free events
+  still book.
 - `CASHFREE_APP_ID`, `CASHFREE_SECRET_KEY`: server credentials for the selected account.
 - `CASHFREE_WEBHOOK_SECRET`: optional distinct signing key; falls back to the PG secret.
 - `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`: configure both together. Without the
   secret the server logs a configuration-only skip note. Hostname and action must match.
-- `CRON_SECRET`: bearer authentication for `/api/cron/payments`.
-- `PAYMENTS_ALLOW_MOCK`: exactly `true` enables test success in production builds.
-  Default blocks success. Mock/sandbox orders are explicitly tagged `is_test`.
+- `CRON_SECRET`: bearer authentication for `/api/cron/payments`. The same value must
+  be stored as the GitHub Actions secret `CRON_SECRET`. Do not commit the value.
+- `APP_URL`: optional GitHub Actions variable for the reconcile workflow. When unset,
+  the workflow calls `https://tikatero.vercel.app`.
+- `PAYMENTS_ALLOW_MOCK`: exactly `true`, together with `CASHFREE_ENV=mock`, enables the
+  mock provider in production. Mock orders are always stored with `is_test=true`.
+  Sandbox orders are also `is_test`. Default blocks mock in production.
 
 The existing canonical site URL must match the deployed origin. Configure Cashfree
 webhooks to POST `/api/cashfree/webhook` and enable Easy Split for the merchant and
@@ -43,9 +53,21 @@ stays expired and `payment.review_required` is queued; an operator must resolve 
 No automatic fulfilment is emitted. Cashfree create timeouts retain the order for
 reconciliation because the remote create could have succeeded.
 
-Cron runs every five minutes in bounded batches. Provider errors leave orders for
-retry. An unpaid stale order is expired after a successful Get Order check. Payment
-webhooks remain able to reconcile a late success. Orders are immutable price
+Reconciliation runs in bounded batches. GitHub Actions workflow
+`.github/workflows/payments-cron.yml` calls `GET /api/cron/payments` every five
+minutes and can also be started with `workflow_dispatch`. The repository needs the
+Actions secret `CRON_SECRET` (the same value as the Vercel env var) and the optional
+Actions variable `APP_URL`. Vercel Cron is only a once-daily backstop (`0 3 * * *`)
+because Hobby accounts reject schedules that run more than once per day. The route
+requires `Authorization: Bearer $CRON_SECRET`, compared with a timing-safe equality
+check, and returns 401 otherwise. No secret values belong in the repo or in logs.
+
+The order status page and `/orders/[id]/status/poll` each reconcile that one
+authorized order on demand, at most once every 10 seconds, using the service role.
+A paid Cashfree order can therefore confirm between scheduled runs. Provider errors
+leave the order for retry and stamp `reconciled_at` so one failure cannot be polled
+continuously. An unpaid stale order is expired after a successful Get Order check.
+Payment webhooks remain able to reconcile a late success. Orders are immutable price
 snapshots; provider vendor IDs and amounts are copied at checkout.
 
 The guest receives a random, HttpOnly, SameSite cookie scoped to that order. Only
@@ -65,7 +87,9 @@ not create tickets, QR codes, PDFs, confirmation emails or payouts.
 ## Validation
 
 Unit tests cover raw-byte signatures, webhook tampering and stable dedupe identity,
-provider totals/splits, production mock gating and input tampering. Transactional
+provider totals/splits, production mock gating (no hold when unconfigured, `is_test`
+when mock is explicitly enabled, mock allowed on preview/dev) and input tampering.
+Transactional
 pgTAP covers holds, inventory exhaustion, paid-once, failed/expired releases and RLS.
 `scripts/checkout-concurrency.mjs` runs 50 simultaneous hold RPCs against ten seats,
 then races duplicate webhooks and pollers across the ten successful orders.

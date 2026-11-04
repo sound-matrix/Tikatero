@@ -2,10 +2,10 @@ import "server-only";
 import { cache } from "react";
 import { createServiceClient } from "@/lib/supabase/service";
 import { activePricing } from "@/lib/pricing/data";
-import { paymentProvider } from "@/lib/payments";
+import { paymentProvider, PaymentsNotConfiguredError } from "@/lib/payments";
 import type { CheckoutOrder } from "./model";
 import type { Json } from "@/lib/db/types";
-import type { PaymentResult, ProviderOrder } from "@/lib/payments/model";
+import { PAYMENTS_UNAVAILABLE, type PaymentResult, type ProviderOrder } from "@/lib/payments/model";
 export const checkoutData = cache(async (slug: string) => {
   const client = createServiceClient();
   const { data: event, error } = await client
@@ -26,12 +26,21 @@ export const checkoutData = cache(async (slug: string) => {
     activePricing(),
   ]);
   if (oe || te || !organiser) throw new Error("Checkout is temporarily unavailable.");
-  const mode = paymentProvider().mode;
+  let mode: "mock" | "cashfree" = "mock";
+  let paymentsUnavailable = false;
+  try {
+    mode = paymentProvider().mode;
+  } catch (error) {
+    if (!(error instanceof PaymentsNotConfiguredError)) throw error;
+    // Free RSVP does not need a payment provider.
+    paymentsUnavailable = !event.is_free;
+  }
   let disabled = "";
   if (organiser.kyc_status !== "approved")
     disabled = "This organiser is awaiting approval. Please come back soon.";
   else if (organiser.sales_paused)
     disabled = "Ticket sales are temporarily paused. Please come back soon.";
+  else if (paymentsUnavailable) disabled = PAYMENTS_UNAVAILABLE;
   else if (!event.is_free && mode === "cashfree" && !organiser.cashfree_vendor_id?.trim())
     disabled = "This organiser is not ready to accept payments. Please come back soon.";
   else if (Date.parse(event.ends_at ?? event.starts_at ?? "") <= Date.now())
@@ -79,4 +88,28 @@ export async function reconcile(order: CheckoutOrder) {
   if (stale)
     return transition(order, { state: "expired", amount: order.total_paise, currency: "INR" });
   return order.status;
+}
+const ON_DEMAND_RECONCILE_MS = 10_000;
+/**
+ * Confirm one buyer-authorized order between cron runs. Cashfree is read with the
+ * service role, and a successful or failed attempt stamps reconciled_at so a
+ * polling visitor cannot call the provider more than once every 10 seconds.
+ */
+export async function reconcileOnDemand(order: CheckoutOrder) {
+  if (!["created", "pending"].includes(order.status)) return order.status;
+  const last = Date.parse(order.reconciled_at ?? "");
+  if (Number.isFinite(last) && Date.now() - last <= ON_DEMAND_RECONCILE_MS) return order.status;
+  try {
+    return await reconcile(order);
+  } catch {
+    try {
+      await createServiceClient()
+        .from("orders")
+        .update({ reconciled_at: new Date().toISOString() })
+        .eq("id", order.id);
+    } catch {
+      // Provider failures stay out of logs. The next authorized visit can retry.
+    }
+    return order.status;
+  }
 }
