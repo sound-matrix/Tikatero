@@ -20,6 +20,15 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      testIgnore: "**/pricing.spec.ts",
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "chromium-pricing",
+      testMatch: "**/pricing.spec.ts",
+      // Pricing edits global configuration; run after other browser flows so a
+      // checkout cannot legitimately reject a quote while that test changes it.
+      dependencies: ["chromium"],
       use: { ...devices["Desktop Chrome"] },
     },
   ],

@@ -45,6 +45,7 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: node scripts/local-auth-env.mjs
       - run: node scripts/discovery-fixture.mjs
+      - run: node scripts/checkout-concurrency.mjs
       - run: pnpm build
         id: browser-build
       - run: pnpm exec playwright test

@@ -22,6 +22,8 @@ writeFileSync(
     `SUPABASE_SERVICE_ROLE_KEY=${values.SERVICE_ROLE_KEY}`,
     "AUTH_E2E_REQUIRED=1",
     "KYC_MODE=mock",
+    "CASHFREE_ENV=mock",
+    "PAYMENTS_ALLOW_MOCK=true",
   ].join("\n") + "\n",
   { mode: 0o600 },
 );
