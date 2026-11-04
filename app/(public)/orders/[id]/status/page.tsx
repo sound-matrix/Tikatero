@@ -4,6 +4,7 @@ import { ownOrder } from "@/lib/checkout/security";
 import { reconcileOnDemand } from "@/lib/checkout/store";
 import { createServiceClient } from "@/lib/supabase/service";
 import { OrderStatusView } from "@/components/checkout/order-status";
+import { loadOrderTickets } from "@/lib/tickets/load";
 export const metadata = { title: "Order status", robots: { index: false, follow: false } };
 async function Status({ params }: { params: Promise<{ id: string }> }) {
   const order = await ownOrder((await params).id);
@@ -25,6 +26,7 @@ async function Status({ params }: { params: Promise<{ id: string }> }) {
         isTest: order.is_test,
         review: !!review,
         canPay: !!order.payment_session_id,
+        tickets: status === "paid" ? await loadOrderTickets(order.id) : [],
       }}
     />
   );

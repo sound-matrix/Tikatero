@@ -79,6 +79,66 @@ export async function signUpload(value: UploadInput): Promise<SignedUpload> {
   }
 }
 
+const TICKET_PDF_KEY =
+  /^tickets\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/TK-[A-Z0-9]{5}-[0-9]{2}\.pdf$/;
+
+export function privateStorageConfigured() {
+  return Boolean(
+    process.env.R2_ACCOUNT_ID &&
+    process.env.R2_ACCESS_KEY_ID &&
+    process.env.R2_SECRET_ACCESS_KEY &&
+    process.env.R2_PRIVATE_BUCKET &&
+    process.env.R2_PUBLIC_BUCKET !== process.env.R2_PRIVATE_BUCKET,
+  );
+}
+
+function ticketPdfKey(key: string) {
+  if (!TICKET_PDF_KEY.test(key)) throw new Error("Ticket file is not available.");
+  return key;
+}
+
+export async function putPrivatePdf(key: string, body: Buffer) {
+  const objectKey = ticketPdfKey(key);
+  if (!privateStorageConfigured()) throw new Error("Ticket file storage is not configured.");
+  const client = createR2Client();
+  try {
+    await client.send(
+      new PutObjectCommand({
+        Bucket: bucket(true),
+        Key: objectKey,
+        Body: body,
+        ContentType: "application/pdf",
+        CacheControl: "private, no-store",
+      }),
+    );
+  } finally {
+    client.destroy();
+  }
+}
+
+export async function signTicketPdf(key: string, filename: string) {
+  const objectKey = ticketPdfKey(key);
+  if (!/^TK-[A-Z0-9]{5}-[0-9]{2}\.pdf$/.test(filename)) {
+    throw new Error("Ticket file is not available.");
+  }
+  const client = createR2Client();
+  try {
+    return await getSignedUrl(
+      client,
+      new GetObjectCommand({
+        Bucket: bucket(true),
+        Key: objectKey,
+        ResponseCacheControl: "private, no-store",
+        ResponseContentDisposition: `attachment; filename="${filename}"`,
+        ResponseContentType: "application/pdf",
+      }),
+      { expiresIn: UPLOAD_TTL_SECONDS },
+    );
+  } finally {
+    client.destroy();
+  }
+}
+
 // This function is server-only. Its HTTP caller must also require a staff account.
 export async function getSignedReadUrl(key: string, ttlSeconds = UPLOAD_TTL_SECONDS) {
   validatePrivateKey(key);

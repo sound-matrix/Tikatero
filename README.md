@@ -88,18 +88,20 @@ site configuration also skips. If the database is unavailable, `logging_failed`
 is returned and no email is attempted.
 
 The no-duplicates guarantee deliberately favors at-most-once delivery attempts:
-`sending`, `sent`, `unknown`, `failed_provider` and `failed_render` claims are never
-automatically reclaimed. Resend retains its own keys for only 24 hours. If a
-process stops after claiming, delivery may be missed; if the provider times out,
-it may already have accepted the email. Reconcile held records with the provider
-before any intentional new notification. Do not delete claims or add blind
-retries. `sent_unlogged` means the provider accepted the email but the final log
-update failed; its existing claim still blocks a repeat. `sent` means accepted by
-the provider, not guaranteed inbox delivery. Webhook delivery tracking is later work.
+`sending`, `sent`, and `unknown` claims are never automatically reclaimed. Resend
+retains its own keys for only 24 hours. If a process stops after claiming, delivery
+may be missed; if the provider times out, it may already have accepted the email.
+Reconcile held records with the provider before any intentional new notification.
+Do not delete claims or add blind retries. The one exception is order confirmation:
+the payments cron may delete an `order_confirmed` row only when its status is
+`failed_provider` or `failed_render`, then try that order again. `sent_unlogged`
+means the provider accepted the email but the final log update failed; its existing
+claim still blocks a repeat. `sent` means accepted by the provider, not guaranteed
+inbox delivery. Webhook delivery tracking is later work.
 
 `order_confirmed` accepts an optional attachments array of `{ filename, content,
 contentType? }`. Content must be a Buffer or base64 string; remote paths are not
-accepted. Maximum 10 attachments and 10 MB combined decoded content. No attachment
+accepted. Maximum 50 attachments and 10 MB combined decoded content. No attachment
 or email content is stored in `email_log`. Template data and optional `actionPath`
 are typed; action paths must stay on the configured site. Defaults point to
 existing account/console/admin surfaces; later integrations supply their intended

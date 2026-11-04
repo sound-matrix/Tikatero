@@ -51,19 +51,26 @@ const definitions: {
 } = {
   order_confirmed: {
     label: "Order confirmed",
-    build: (d) =>
-      notice(
+    build: (d) => {
+      const tickets = d.tickets ?? [];
+      if (tickets.length > 50) throw new Error("Invalid email data.");
+      return notice(
         "Your booking is confirmed",
-        "You’re all set. Here are your booking details. Keep this email handy for your event.",
+        tickets.length
+          ? "You’re all set. Your tickets are attached, and each link below works for 7 days."
+          : "You’re all set. Here are your booking details. Keep this email handy for your event.",
         [
           ...eventRows(d.event),
           detail("Booking reference", d.orderRef),
           detail("Total paid", formatINR(d.amountPaise)),
+          ...(d.testBooking ? [detail("Payment", "Test booking. No real money was taken.")] : []),
+          ...tickets.map((ticket) => detail(ticket.label, ticket.href)),
         ],
-        "View your booking",
-        "/me",
+        tickets.length ? "View your ticket" : "View your booking",
+        tickets[0]?.path ?? "/me",
         { badge: "Booking confirmed", vip: d.vip },
-      ),
+      );
+    },
   },
   payment_failed: {
     label: "Payment failed",

@@ -545,6 +545,7 @@ export type Database = {
           attendee_names: Json;
           consent_at: string | null;
           is_test: boolean;
+          emailed_at: string | null;
           reconciled_at: string | null;
           buyer_email: string;
           buyer_id: string | null;
@@ -577,6 +578,7 @@ export type Database = {
           attendee_names?: Json;
           consent_at?: string | null;
           is_test?: boolean;
+          emailed_at?: string | null;
           reconciled_at?: string | null;
           buyer_email: string;
           buyer_id?: string | null;
@@ -608,6 +610,7 @@ export type Database = {
           attendee_names?: Json;
           consent_at?: string | null;
           is_test?: boolean;
+          emailed_at?: string | null;
           reconciled_at?: string | null;
           buyer_email?: string;
           buyer_id?: string | null;
@@ -1109,7 +1112,9 @@ export type Database = {
           holder_name: string | null;
           id: string;
           order_id: string;
+          pdf_key: string | null;
           qr_secret: string;
+          seq: number | null;
           status: Database["public"]["Enums"]["ticket_status"];
           ticket_type_id: string;
           transferred_to: string | null;
@@ -1126,7 +1131,9 @@ export type Database = {
           holder_name?: string | null;
           id?: string;
           order_id: string;
+          pdf_key?: string | null;
           qr_secret: string;
+          seq?: number | null;
           status?: Database["public"]["Enums"]["ticket_status"];
           ticket_type_id: string;
           transferred_to?: string | null;
@@ -1142,7 +1149,9 @@ export type Database = {
           holder_name?: string | null;
           id?: string;
           order_id?: string;
+          pdf_key?: string | null;
           qr_secret?: string;
+          seq?: number | null;
           status?: Database["public"]["Enums"]["ticket_status"];
           ticket_type_id?: string;
           transferred_to?: string | null;
@@ -1359,6 +1368,8 @@ export type Database = {
         };
         Returns: Json;
       };
+      issue_tickets: { Args: { p_order_id: string }; Returns: number };
+      release_failed_order_email: { Args: { p_entity_ref: string }; Returns: boolean };
       checkout_transition: {
         Args: {
           p_order_id: string;
