@@ -23,10 +23,7 @@ Names and placeholders are in `.env.example`. No payment keys enter client asset
 - `CASHFREE_WEBHOOK_SECRET`: optional distinct signing key; falls back to the PG secret.
 - `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`: configure both together. Without the
   secret the server logs a configuration-only skip note. Hostname and action must match.
-- `CRON_SECRET`: bearer authentication for `/api/cron/payments`. The same value must
-  be stored as the GitHub Actions secret `CRON_SECRET`. Do not commit the value.
-- `APP_URL`: optional GitHub Actions variable for the reconcile workflow. When unset,
-  the workflow calls `https://tikatero.vercel.app`.
+- `CRON_SECRET`: bearer authentication for `/api/cron/payments`. Do not commit the value.
 - `PAYMENTS_ALLOW_MOCK`: exactly `true`, together with `CASHFREE_ENV=mock`, enables the
   mock provider in production. Mock orders are always stored with `is_test=true`.
   Sandbox orders are also `is_test`. Default blocks mock in production.
@@ -53,14 +50,10 @@ stays expired and `payment.review_required` is queued; an operator must resolve 
 No automatic fulfilment is emitted. Cashfree create timeouts retain the order for
 reconciliation because the remote create could have succeeded.
 
-Reconciliation runs in bounded batches. GitHub Actions workflow
-`.github/workflows/payments-cron.yml` calls `GET /api/cron/payments` every five
-minutes and can also be started with `workflow_dispatch`. The repository needs the
-Actions secret `CRON_SECRET` (the same value as the Vercel env var) and the optional
-Actions variable `APP_URL`. Vercel Cron is only a once-daily backstop (`0 3 * * *`)
-because Hobby accounts reject schedules that run more than once per day. The route
-requires `Authorization: Bearer $CRON_SECRET`, compared with a timing-safe equality
-check, and returns 401 otherwise. No secret values belong in the repo or in logs.
+Vercel Cron calls `GET /api/cron/payments` every five minutes (`*/5 * * * *`) in
+bounded batches. The route requires `Authorization: Bearer $CRON_SECRET`, compared
+with a timing-safe equality check, and returns 401 otherwise. No secret values
+belong in the repo or in logs.
 
 The order status page and `/orders/[id]/status/poll` each reconcile that one
 authorized order on demand, at most once every 10 seconds, using the service role.
