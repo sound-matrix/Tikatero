@@ -11,6 +11,8 @@ async function Events({ searchParams }: { searchParams: Promise<{ page?: string 
   const n = Number(params.page),
     page = Number.isSafeInteger(n) && n > 0 ? Math.min(n, 10000) : 1;
   const ids = account.organisers.map((o) => o.id);
+  const assigned = account.assignments ?? [];
+  const teamOnly = ids.length === 0 && assigned.length > 0;
   const { data, error } = ids.length
     ? await client
         .from("events")
@@ -19,7 +21,17 @@ async function Events({ searchParams }: { searchParams: Promise<{ page?: string 
         .order("updated_at", { ascending: false })
         .order("id")
         .range((page - 1) * 25, page * 25)
-    : { data: [], error: null };
+    : teamOnly
+      ? await client
+          .from("events")
+          .select("id,title,status,starts_at,ends_at,updated_at")
+          .in(
+            "id",
+            assigned.map((item) => item.eventId),
+          )
+          .order("starts_at", { ascending: true })
+          .order("id")
+      : { data: [], error: null };
   if (error) throw new Error("Your events could not be loaded. Try again.");
   const rows = (data ?? []).slice(0, 25);
   return (
@@ -29,12 +41,18 @@ async function Events({ searchParams }: { searchParams: Promise<{ page?: string 
           <p className="mb-2 text-sm font-bold uppercase tracking-widest text-teal">
             Organiser console
           </p>
-          <h1 className="text-3xl font-extrabold">Your events</h1>
-          <p className="mt-2 text-muted">Continue a draft or update your event details.</p>
+          <h1 className="text-3xl font-extrabold">{teamOnly ? "Your check-in" : "Your events"}</h1>
+          <p className="mt-2 text-muted">
+            {teamOnly
+              ? "Open the scanner for an event you were invited to."
+              : "Continue a draft or update your event details."}
+          </p>
         </div>
-        <Button href="/console/events/new" variant="primary">
-          Create event
-        </Button>
+        {!teamOnly && (
+          <Button href="/console/events/new" variant="primary">
+            Create event
+          </Button>
+        )}
       </header>
       {account.organisers.some((o) => o.kyc_status !== "approved") && (
         <p className="rounded-xl bg-gold-soft p-4 text-sm">
@@ -60,9 +78,11 @@ async function Events({ searchParams }: { searchParams: Promise<{ page?: string 
                 <tr key={row.id} className="border-t border-line">
                   <td className="p-4 font-semibold">
                     {row.title}
-                    <small className="mt-1 block font-normal text-muted">
-                      {row.is_free ? "Free · RSVP only" : "Paid entry"}
-                    </small>
+                    {"is_free" in row && (
+                      <small className="mt-1 block font-normal text-muted">
+                        {row.is_free ? "Free · RSVP only" : "Paid entry"}
+                      </small>
+                    )}
                   </td>
                   <td className="p-4 text-sm">
                     {row.starts_at ? formatIst(row.starts_at) : "Date not set"}
@@ -74,12 +94,31 @@ async function Events({ searchParams }: { searchParams: Promise<{ page?: string 
                       {label}
                     </span>
                   </td>
-                  <td className="p-4">
+                  <td className="space-x-3 p-4">
+                    {!teamOnly && (
+                      <Link
+                        className="font-semibold text-teal underline"
+                        href={`/console/events/${row.id}/edit`}
+                      >
+                        {row.status === "draft" ? "Continue" : "Edit"}
+                      </Link>
+                    )}
+                    {(!teamOnly ||
+                      assigned.some(
+                        (item) => item.eventId === row.id && item.role === "manager",
+                      )) && (
+                      <Link
+                        className="font-semibold text-teal underline"
+                        href={`/console/events/${row.id}/team`}
+                      >
+                        Team
+                      </Link>
+                    )}
                     <Link
                       className="font-semibold text-teal underline"
-                      href={`/console/events/${row.id}/edit`}
+                      href={`/console/events/${row.id}/scan`}
                     >
-                      {row.status === "draft" ? "Continue" : "Edit"}
+                      Scan
                     </Link>
                   </td>
                 </tr>

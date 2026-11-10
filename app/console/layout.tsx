@@ -2,11 +2,20 @@ import { SurfaceGuard } from "@/components/auth/surface-guard";
 import { Suspense } from "react";
 import { SideNav } from "@/components/layout/side-nav";
 import { SiteFooter } from "@/components/layout/site-footer";
-import { consoleNav } from "@/lib/nav";
+import { requireAccount } from "@/lib/auth/account";
+import { consoleNavFor } from "@/lib/nav";
 
 function NavFallback() {
   return (
     <div className="min-h-16 border-b border-line bg-white md:w-60 md:border-r md:border-b-0" />
+  );
+}
+
+async function ConsoleNav() {
+  const { account } = await requireAccount();
+  const teamOnly = !account.organisers.length && (account.assignments ?? []).length > 0;
+  return (
+    <SideNav title={teamOnly ? "Check-in" : "Organiser console"} items={consoleNavFor(account)} />
   );
 }
 
@@ -15,7 +24,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     <div className="flex min-h-full flex-col bg-white">
       <div className="flex flex-1 flex-col md:flex-row">
         <Suspense fallback={<NavFallback />}>
-          <SideNav title="Organiser console" items={consoleNav} />
+          <ConsoleNav />
         </Suspense>
         <div id="content" className="min-w-0 flex-1">
           <Suspense fallback={<p className="p-8">Loading your account…</p>}>

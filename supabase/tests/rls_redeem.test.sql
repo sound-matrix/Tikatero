@@ -373,22 +373,24 @@ select set_config('request.jwt.claim.sub', 'a5555555-5555-4555-8555-555555555555
 select set_config('request.jwt.claim.role', 'authenticated', true);
 set local role authenticated;
 
-select is(
-  public.redeem_ticket('TK-DIW01-01', current_setting('test.redeem_sig'), 'Main gate'),
-  'ok'::public.scan_result,
-  'first scan redeems the ticket'
+select throws_ok(
+  $$select public.redeem_ticket('TK-DIW01-01', current_setting('test.redeem_sig'), 'Main gate')$$,
+  '42501',
+  'permission denied for function redeem_ticket',
+  'door staff cannot call redeem_ticket'
 );
 
-select is(
-  public.redeem_ticket('TK-DIW01-01', current_setting('test.redeem_sig'), 'Main gate'),
-  'duplicate'::public.scan_result,
-  'second scan returns duplicate'
+select throws_ok(
+  $$select public.redeem_ticket('TK-DIW01-01', current_setting('test.redeem_sig'), 'Main gate')$$,
+  '42501',
+  'permission denied for function redeem_ticket',
+  'a second redeem_ticket call stays revoked'
 );
 
 select is(
   (select status from public.tickets where code = 'TK-DIW01-01'),
-  'used'::public.ticket_status,
-  'ticket is marked used after redemption'
+  'valid'::public.ticket_status,
+  'revoked redeem_ticket does not check the ticket in'
 );
 
 select * from finish();
