@@ -4,13 +4,28 @@ import { requireStaff } from "@/lib/admin/access";
 import { notifyAdminAction } from "@/lib/admin/notify";
 import { onOrganiserApproved } from "@/lib/admin/approved";
 import { uuid } from "@/lib/admin/model";
+import { productionPaymentLock } from "@/lib/payments/model";
+import {
+  OWN_ORGANISER_CONTROL,
+  organiserControlError,
+  settlementHoldPlan,
+} from "@/lib/payouts/model";
+import { notifyPayoutHeld } from "@/lib/payouts/notify";
+import { splitProvider } from "@/lib/payouts/provider";
 export type ActionState = { error?: string; success?: string; notificationId?: string };
 function text(form: FormData, key: string) {
   const value = form.get(key);
   return typeof value === "string" ? value.trim() : "";
 }
 function refresh() {
-  for (const path of ["/admin", "/admin/kyc", "/admin/accounts", "/admin/audit", "/console"])
+  for (const path of [
+    "/admin",
+    "/admin/kyc",
+    "/admin/accounts",
+    "/admin/audit",
+    "/admin/reconciliation",
+    "/console",
+  ])
     revalidatePath(path, "layout");
 }
 async function deliver(id: string): Promise<ActionState> {
@@ -89,7 +104,7 @@ export async function changeAccount(_state: ActionState, form: FormData): Promis
   return action === "unblock" ? { success: "Account unblocked." } : deliver(data);
 }
 export async function changeControl(_state: ActionState, form: FormData): Promise<ActionState> {
-  const { client } = await requireStaff();
+  const { client, account } = await requireStaff();
   const id = text(form, "id"),
     control = text(form, "control"),
     enabled = text(form, "enabled");
@@ -99,12 +114,75 @@ export async function changeControl(_state: ActionState, form: FormData): Promis
     !["true", "false"].includes(enabled)
   )
     return { error: "Choose an organiser control." };
-  const { error } = await client.rpc("admin_organiser_control", {
+  const [{ data: org, error: orgError }, { data: members, error: memberError }] = await Promise.all(
+    [
+      client
+        .from("organisers")
+        .select("id, owner_id, cashfree_vendor_id")
+        .eq("id", id)
+        .maybeSingle(),
+      client.from("organiser_members").select("user_id").eq("organiser_id", id),
+    ],
+  );
+  if (orgError || memberError || !org) return { error: "Organiser not found." };
+  const own = organiserControlError(
+    account.profile.id,
+    org.owner_id,
+    (members ?? []).flatMap((member) => (member.user_id ? [member.user_id] : [])),
+  );
+  if (own) return { error: own };
+  let provider: "mock" | "cashfree" | "unconfigured" = "unconfigured";
+  try {
+    provider = splitProvider().mode;
+  } catch {
+    provider = "unconfigured";
+  }
+  const plan = settlementHoldPlan({
+    control,
+    vendorId: org.cashfree_vendor_id,
+    productionLocked: productionPaymentLock(),
+    provider,
+  });
+  if (plan === "refuse")
+    return { error: "Payout controls need the payment service. Nothing was changed." };
+  const hold = enabled === "true";
+  if (plan === "call" && org.cashfree_vendor_id) {
+    try {
+      await splitProvider().setSettlementHold(org.cashfree_vendor_id, hold);
+    } catch {
+      return {
+        error:
+          "The payout hold could not be updated with the payment service. Nothing was changed.",
+      };
+    }
+  }
+  const { data, error } = await client.rpc("admin_organiser_control", {
     p_id: id,
     p_control: control,
-    p_enabled: enabled === "true",
+    p_enabled: hold,
   });
-  if (error) return { error: error.message };
+  if (error || !data) {
+    if (plan === "call" && org.cashfree_vendor_id) {
+      try {
+        await splitProvider().setSettlementHold(org.cashfree_vendor_id, !hold);
+      } catch {
+        return { error: "The payout hold needs attention. Please try again." };
+      }
+    }
+    return {
+      error: error?.message?.includes(OWN_ORGANISER_CONTROL)
+        ? OWN_ORGANISER_CONTROL
+        : error?.message || "The organiser could not be updated.",
+    };
+  }
+  if (control === "payouts_on_hold" && hold) {
+    try {
+      await notifyPayoutHeld(id, data);
+    } catch {
+      refresh();
+      return { success: "Organiser control saved. The on-hold email needs attention." };
+    }
+  }
   refresh();
   return { success: "Organiser control saved." };
 }

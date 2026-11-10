@@ -46,12 +46,25 @@ export async function ownOrder(id: string): Promise<CheckoutOrder | null> {
   // Even staff/organiser RLS access is not buyer authority for checkout mutations.
   const { data, error } = await client
     .from("orders")
-    .select("*")
+    .select(
+      "id, event_id, buyer_id, buyer_name, buyer_email, buyer_phone, subtotal_paise, total_paise, fee_payer, status, cf_order_id, cf_payment_id, pricing_version_id, created_at, paid_at, payment_provider, payment_session_id, access_token_hash, hold_expires_at, attendee_names, consent_at, is_test, reconciled_at, emailed_at",
+    )
     .eq("id", id)
     .eq("buyer_id", user.id)
     .maybeSingle();
   if (error) throw new Error("Your order could not be loaded.");
-  return data;
+  if (!data) return null;
+  // Fee columns are not granted to the buyer session. Checkout only needs the total.
+  return {
+    ...data,
+    vendor_id: null,
+    organiser_share_paise: 0,
+    platform_share_paise: 0,
+    platform_fee_paise: 0,
+    platform_fee_gst_paise: 0,
+    gateway_fee_paise: 0,
+    absorbed_gateway_paise: null,
+  };
 }
 export async function verifyTurnstile(token: string, hostname: string) {
   const secret = process.env.TURNSTILE_SECRET_KEY;

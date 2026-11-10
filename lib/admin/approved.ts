@@ -1,5 +1,7 @@
 import "server-only";
-/** PR 14 will provision the payout vendor here. Approval already unlocks publishing via PR 2. */
+import { ensureSplitVendor } from "@/lib/payouts/vendor";
+
+/** Approval unlocks publishing. This also creates or reuses the Easy Split vendor. */
 export async function onOrganiserApproved(organiserId: string): Promise<void> {
-  void organiserId;
+  await ensureSplitVendor(organiserId);
 }

@@ -45,7 +45,7 @@ test.describe("staff email preview gallery", () => {
         await expect(
           page.getByRole("heading", { name: "Email previews", exact: true }),
         ).toBeVisible();
-        await expect(page.locator("iframe")).toHaveCount(14);
+        await expect(page.locator("iframe")).toHaveCount(15);
         const receipt = page.frameLocator('iframe[title="order_confirmed email preview"]');
         await expect(
           receipt.getByRole("heading", { name: "Your booking is confirmed" }),
