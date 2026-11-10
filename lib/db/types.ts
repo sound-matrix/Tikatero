@@ -625,6 +625,7 @@ export type Database = {
           event_id: string;
           fee_payer: Database["public"]["Enums"]["fee_payer"];
           gateway_fee_paise: number;
+          absorbed_gateway_paise: number | null;
           id: string;
           paid_at: string | null;
           platform_fee_gst_paise: number;
@@ -658,6 +659,7 @@ export type Database = {
           event_id: string;
           fee_payer: Database["public"]["Enums"]["fee_payer"];
           gateway_fee_paise?: number;
+          absorbed_gateway_paise?: number | null;
           id?: string;
           paid_at?: string | null;
           platform_fee_gst_paise?: number;
@@ -690,6 +692,7 @@ export type Database = {
           event_id?: string;
           fee_payer?: Database["public"]["Enums"]["fee_payer"];
           gateway_fee_paise?: number;
+          absorbed_gateway_paise?: number | null;
           id?: string;
           paid_at?: string | null;
           platform_fee_gst_paise?: number;
@@ -852,6 +855,7 @@ export type Database = {
           organiser_id: string;
           settled_at: string | null;
           status: Database["public"]["Enums"]["payout_status"];
+          is_test: boolean;
         };
         ComputedFields: never;
         Insert: {
@@ -865,6 +869,7 @@ export type Database = {
           organiser_id: string;
           settled_at?: string | null;
           status?: Database["public"]["Enums"]["payout_status"];
+          is_test?: boolean;
         };
         Update: {
           amount_paise?: number;
@@ -877,6 +882,7 @@ export type Database = {
           organiser_id?: string;
           settled_at?: string | null;
           status?: Database["public"]["Enums"]["payout_status"];
+          is_test?: boolean;
         };
         Relationships: [
           {
@@ -908,6 +914,31 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      payout_exceptions: {
+        ComputedFields: never;
+        Row: {
+          created_at: string;
+          order_id: string;
+          organiser_id: string;
+          organiser_share_paise: number;
+          reason: string;
+        };
+        Insert: {
+          created_at?: string;
+          order_id: string;
+          organiser_id: string;
+          organiser_share_paise: number;
+          reason: string;
+        };
+        Update: {
+          created_at?: string;
+          order_id?: string;
+          organiser_id?: string;
+          organiser_share_paise?: number;
+          reason?: string;
+        };
+        Relationships: [];
       };
       pricing_versions: {
         Row: {
@@ -1596,6 +1627,36 @@ export type Database = {
       remove_event_team_member: {
         Args: { p_member: string; p_actor: string };
         Returns: undefined;
+      };
+      organiser_dashboard: { Args: Record<PropertyKey, never>; Returns: Json };
+      organiser_event_sales: { Args: { p_event_id: string }; Returns: Json };
+      admin_gateway_reconciliation: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          order_id: string;
+          event_id: string;
+          event_title: string;
+          organiser_share_paise: number;
+          platform_share_paise: number;
+          gateway_fee_paise: number;
+          absorbed_gateway_paise: number;
+          platform_net_paise: number;
+          buyer_total_paise: number;
+          paid_at: string | null;
+          is_test: boolean;
+        }[];
+      };
+      apply_payout_settlement: {
+        Args: {
+          p_event_id: string;
+          p_order_id: string;
+          p_status: string;
+          p_split_ref: string | null;
+          p_amount: number;
+          p_settled_at: string | null;
+          p_payload: Json;
+        };
+        Returns: Json;
       };
     };
     Enums: {

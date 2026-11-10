@@ -109,6 +109,17 @@ async function Events({ searchParams }: { searchParams: Promise<{ page?: string 
                       )) && (
                       <Link
                         className="font-semibold text-teal underline"
+                        href={`/console/events/${row.id}`}
+                      >
+                        Sales
+                      </Link>
+                    )}
+                    {(!teamOnly ||
+                      assigned.some(
+                        (item) => item.eventId === row.id && item.role === "manager",
+                      )) && (
+                      <Link
+                        className="font-semibold text-teal underline"
                         href={`/console/events/${row.id}/team`}
                       >
                         Team

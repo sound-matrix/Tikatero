@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/service";
 import { verifyWebhook, providerPaise } from "@/lib/payments/model";
 import { transition } from "@/lib/checkout/store";
+import { applySettlement, settlementCommand } from "@/lib/payouts/settle";
 const schema = z.object({
   type: z.enum([
     "PAYMENT_SUCCESS_WEBHOOK",
@@ -37,6 +38,12 @@ export async function POST(request: Request) {
     return new Response(null, { status: 401 });
   try {
     const json = JSON.parse(raw);
+    const settlement = settlementCommand(json);
+    if (settlement?.error === "invalid") return new Response(null, { status: 400 });
+    if (settlement) {
+      await applySettlement(settlement);
+      return Response.json({ received: true });
+    }
     if (
       ![
         "PAYMENT_SUCCESS_WEBHOOK",

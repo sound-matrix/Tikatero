@@ -34,6 +34,11 @@ function eventLeaf(path: string, leaf: "scan" | "team") {
   return match?.[1]?.toLowerCase() ?? null;
 }
 
+function eventSales(path: string) {
+  const match = /^\/console\/events\/([0-9a-f-]{36})(?:\/export)?$/i.exec(path);
+  return match?.[1]?.toLowerCase() ?? null;
+}
+
 // All destinations are fixed local paths. Query strings and user metadata never grant access.
 export function routeRedirect(account: Account, path: string): string | null {
   const landing = landingPath(account);
@@ -52,6 +57,12 @@ export function routeRedirect(account: Account, path: string): string | null {
       if (
         teamEvent &&
         assignments.some((item) => item.eventId === teamEvent && item.role === "manager")
+      )
+        return null;
+      const salesEvent = eventSales(path);
+      if (
+        salesEvent &&
+        assignments.some((item) => item.eventId === salesEvent && item.role === "manager")
       )
         return null;
       return assignments.length === 1

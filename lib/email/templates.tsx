@@ -215,6 +215,17 @@ const definitions: {
         { badge: "Payout settled" },
       ),
   },
+  payout_on_hold: {
+    label: "Payout on hold",
+    build: (d) =>
+      notice(
+        "Your payout is on hold",
+        "We have paused this payout. No money has been sent to your bank. We will email you when it can be paid.",
+        [detail("Organiser", d.organiserName), detail("Amount on hold", formatINR(d.amountPaise))],
+        "View payouts",
+        "/console/payouts",
+      ),
+  },
   account_blocked: {
     label: "Account blocked",
     build: (d) =>

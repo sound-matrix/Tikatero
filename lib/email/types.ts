@@ -20,6 +20,7 @@ export type TemplateData = {
   kyc_rejected: EmailBase & { organiserName: string; reason: string };
   team_invite: EmailBase & { organiserName: string; inviterName: string; role: string };
   payout_settled: EmailBase & { organiserName: string; payoutRef: string; amountPaise: number };
+  payout_on_hold: EmailBase & { organiserName: string; amountPaise: number };
   account_blocked: EmailBase & { reason: string };
   staff_alert: EmailBase & { title: string; summary: string; entityLabel: string };
 };

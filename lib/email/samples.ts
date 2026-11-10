@@ -63,6 +63,11 @@ export const emailSamples: TemplateData = {
     payoutRef: "PO-DEMO-3052",
     amountPaise: 149900,
   },
+  payout_on_hold: {
+    recipientName,
+    organiserName: "Riverfront Live",
+    amountPaise: 149900,
+  },
   account_blocked: {
     recipientName,
     reason: "Your account needs a review. Please contact support for help.",

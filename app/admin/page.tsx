@@ -82,6 +82,12 @@ async function Dashboard() {
         <Link href="/admin/audit" className="mt-4 inline-block font-semibold text-teal underline">
           View audit log
         </Link>
+        <Link
+          href="/admin/reconciliation"
+          className="mt-4 ml-4 inline-block font-semibold text-teal underline"
+        >
+          Gateway costs
+        </Link>
       </Card>
     </AdminPage>
   );
