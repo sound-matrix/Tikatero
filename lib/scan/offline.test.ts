@@ -2,7 +2,13 @@ import { afterEach, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 import { eventSigningKey, signTicket } from "@/lib/tickets/qr";
-import { judgeOfflineScan, type OfflinePackView, type QueuedScan } from "./offline";
+import {
+  judgeOfflineScan,
+  OFFLINE_LIST_MISS,
+  type OfflinePackView,
+  type OfflineTicket,
+  type QueuedScan,
+} from "./offline";
 
 const secret = "synthetic-ticket-qr-secret-value-32";
 const eventId = "c1200003-0000-4000-8000-000000000001";
@@ -21,6 +27,7 @@ function pack(now = Date.parse("2026-11-07T12:00:00.000Z")): OfflinePackView {
         holderName: "Asha",
         tier: "General Admission",
         test: false,
+        status: "valid",
         checkedInAt: null,
       },
       {
@@ -28,6 +35,7 @@ function pack(now = Date.parse("2026-11-07T12:00:00.000Z")): OfflinePackView {
         holderName: "Test Buyer",
         tier: "General Admission",
         test: true,
+        status: "valid",
         checkedInAt: null,
       },
     ],
@@ -110,4 +118,98 @@ it("rejects a forged signature, a test ticket, an unknown code, and an expired p
     now,
   });
   expect(expired.error).toMatch(/expired/);
+});
+
+function withTicket(ready: OfflinePackView, ticket: OfflineTicket): OfflinePackView {
+  return { ...ready, tickets: [...ready.tickets, ticket] };
+}
+
+it("does not admit void, refunded, transferred, or missing tickets offline", async () => {
+  const now = Date.parse("2026-11-07T12:00:00.000Z");
+  const ready = pack(now);
+  const voidCode = "TK-01Z01-04";
+  const refundedCode = "TK-01Z01-05";
+  const transferredCode = "TK-01Z01-06";
+  const missingCode = "TK-01Z01-07";
+  const loaded = withTicket(
+    withTicket(
+      withTicket(ready, {
+        code: voidCode,
+        holderName: "Void",
+        tier: "General Admission",
+        test: false,
+        status: "void",
+        checkedInAt: null,
+      }),
+      {
+        code: refundedCode,
+        holderName: "Refunded",
+        tier: "General Admission",
+        test: false,
+        status: "refunded",
+        checkedInAt: null,
+      },
+    ),
+    {
+      code: transferredCode,
+      holderName: "Moved",
+      tier: "General Admission",
+      test: false,
+      status: "transferred",
+      checkedInAt: null,
+    },
+  );
+  for (const ticketCode of [voidCode, refundedCode, transferredCode]) {
+    const signed = await judgeOfflineScan({
+      raw: signTicket(ticketCode, eventId),
+      scannedAt: "2026-11-07T12:30:00.000Z",
+      pack: loaded,
+      queued: [],
+      now,
+    });
+    expect(signed.result).toBe("Invalid");
+    expect(signed.queued).toHaveLength(0);
+    const typed = await judgeOfflineScan({
+      raw: ticketCode,
+      scannedAt: "2026-11-07T12:30:00.000Z",
+      pack: loaded,
+      queued: [],
+      now,
+    });
+    expect(typed.result).toBe("Invalid");
+    expect(typed.queued).toHaveLength(0);
+  }
+  const missing = await judgeOfflineScan({
+    raw: signTicket(missingCode, eventId),
+    scannedAt: "2026-11-07T12:30:00.000Z",
+    pack: loaded,
+    queued: [],
+    now,
+  });
+  expect(missing.result).toBe(OFFLINE_LIST_MISS);
+  expect(missing.result).not.toBe("Valid");
+  expect(missing.queued).toHaveLength(0);
+  expect(JSON.stringify(loaded)).not.toContain(secret);
+});
+
+it("reports a used ticket as already checked in, in IST", async () => {
+  const now = Date.parse("2026-11-07T12:00:00.000Z");
+  const ready = pack(now);
+  const used = withTicket(ready, {
+    code: "TK-01Z01-03",
+    holderName: "Ben",
+    tier: "General Admission",
+    test: false,
+    status: "used",
+    checkedInAt: "2026-11-07T12:30:00.000Z",
+  });
+  const scan = await judgeOfflineScan({
+    raw: signTicket("TK-01Z01-03", eventId),
+    scannedAt: "2026-11-07T13:00:00.000Z",
+    pack: used,
+    queued: [],
+    now,
+  });
+  expect(scan.result).toBe("Already checked in at 7 Nov 2026, 6:00 PM IST");
+  expect(scan.queued).toHaveLength(0);
 });

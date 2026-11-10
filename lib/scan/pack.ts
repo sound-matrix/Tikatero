@@ -4,16 +4,10 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { eventSigningKey } from "@/lib/tickets/qr";
 import { DEVICE_ID, EVENT_ID } from "./codes";
 import { plainDatabaseError } from "./errors";
+import type { OfflineTicket } from "./offline";
 
 export const OFFLINE_PACK_MS = 12 * 60 * 60 * 1000;
-
-export type OfflineTicket = {
-  code: string;
-  holderName: string;
-  tier: string;
-  test: boolean;
-  checkedInAt: string | null;
-};
+const TICKET_PAGE = 1000;
 
 export type OfflinePack = {
   eventId: string;
@@ -64,13 +58,40 @@ export async function issueOfflinePack(input: {
     .maybeSingle();
   if (eventError || !event) return { error: "Offline check-in isn't available for this event." };
 
-  const { data: tickets, error: ticketError } = await client
-    .from("tickets")
-    .select("code, holder_name, status, used_at, ticket_type_id, order_id")
-    .eq("event_id", input.eventId)
-    .order("code")
-    .limit(2000);
-  if (ticketError || !tickets) return { error: "Offline check-in isn't available for this event." };
+  const tickets: {
+    code: string;
+    holder_name: string | null;
+    status: string;
+    used_at: string | null;
+    ticket_type_id: string;
+    order_id: string;
+  }[] = [];
+  const seen = new Set<string>();
+  for (let from = 0; ; from += TICKET_PAGE) {
+    const { data, error } = await client
+      .from("tickets")
+      .select("code, holder_name, status, used_at, ticket_type_id, order_id")
+      .eq("event_id", input.eventId)
+      .order("code", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, from + TICKET_PAGE - 1);
+    if (error || !data)
+      return {
+        error: "Offline check-in isn't available for this event. Stay online to scan.",
+      };
+    let added = 0;
+    for (const row of data) {
+      if (seen.has(row.code)) continue;
+      seen.add(row.code);
+      tickets.push(row);
+      added += 1;
+    }
+    if (data.length < TICKET_PAGE) break;
+    if (added === 0)
+      return {
+        error: "Offline check-in isn't available for this event. Stay online to scan.",
+      };
+  }
 
   const typeIds = [...new Set(tickets.map((ticket) => ticket.ticket_type_id))];
   const orderIds = [...new Set(tickets.map((ticket) => ticket.order_id))];
@@ -110,6 +131,7 @@ export async function issueOfflinePack(input: {
         holderName: ticket.holder_name?.trim() || "Guest",
         tier: typeName.get(ticket.ticket_type_id) || "Ticket",
         test: testOrder.get(ticket.order_id) === true,
+        status: ticket.status,
         checkedInAt: ticket.status === "used" ? ticket.used_at : null,
       })),
     },
