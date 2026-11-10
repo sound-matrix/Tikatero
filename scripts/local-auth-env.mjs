@@ -21,6 +21,7 @@ writeFileSync(
     `NEXT_PUBLIC_SUPABASE_ANON_KEY=${values.ANON_KEY}`,
     `SUPABASE_SERVICE_ROLE_KEY=${values.SERVICE_ROLE_KEY}`,
     "AUTH_E2E_REQUIRED=1",
+    "TICKET_QR_SECRET=local-test-ticket-qr-secret-32chars",
     "KYC_MODE=mock",
     "CASHFREE_ENV=mock",
     "PAYMENTS_ALLOW_MOCK=true",

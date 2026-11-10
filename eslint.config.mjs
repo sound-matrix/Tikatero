@@ -8,7 +8,7 @@ const eslintConfig = defineConfig([
   ...nextTs,
   prettier,
   {
-    files: ["public/ticket-sw.js"],
+    files: ["public/ticket-sw.js", "public/scan-sw.js"],
     languageOptions: {
       globals: {
         self: "readonly",

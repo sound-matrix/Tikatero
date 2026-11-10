@@ -57,6 +57,30 @@ describe("role routing uses profiles and actual memberships", () => {
     expect(routeRedirect(account("staff"), "/admin/events")).toBeNull();
     expect(routeRedirect(account("organiser", ["approved"]), "/console/events")).toBeNull();
   });
+  it("lets door staff open only their scanner", () => {
+    const eventId = "c1300003-0000-4000-8000-000000000001";
+    const other = "c1300003-0000-4000-8000-000000000002";
+    const door: Account = {
+      ...account(),
+      assignments: [{ eventId, role: "door" }],
+    };
+    const manager: Account = {
+      ...account(),
+      assignments: [{ eventId, role: "manager" }],
+    };
+    expect(landingPath(door)).toBe(`/console/events/${eventId}/scan`);
+    expect(routeRedirect(door, `/console/events/${eventId}/scan`)).toBeNull();
+    expect(routeRedirect(door, "/console/events")).toBeNull();
+    expect(routeRedirect(door, "/console/payouts")).toBe(`/console/events/${eventId}/scan`);
+    expect(routeRedirect(door, `/console/events/${eventId}/team`)).toBe(
+      `/console/events/${eventId}/scan`,
+    );
+    expect(routeRedirect(door, `/console/events/${other}/scan`)).toBe(
+      `/console/events/${eventId}/scan`,
+    );
+    expect(routeRedirect(manager, `/console/events/${eventId}/team`)).toBeNull();
+    expect(routeRedirect(account("staff", [], false), "/console")).toBe("/admin");
+  });
   it("blocks every protected surface and does not loop on the block page", () => {
     for (const path of [
       "/login",

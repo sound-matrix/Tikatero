@@ -271,6 +271,74 @@ export type Database = {
           },
         ];
       };
+      scan_devices: {
+        Row: {
+          created_at: string;
+          device_id: string;
+          event_id: string;
+          id: string;
+          revoked_at: string | null;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          device_id: string;
+          event_id: string;
+          id?: string;
+          revoked_at?: string | null;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          device_id?: string;
+          event_id?: string;
+          id?: string;
+          revoked_at?: string | null;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      team_invites: {
+        Row: {
+          accepted_at: string | null;
+          created_at: string;
+          email: string;
+          event_id: string;
+          expires_at: string;
+          id: string;
+          invited_by: string;
+          revoked_at: string | null;
+          role: Database["public"]["Enums"]["team_role"];
+          token_hash: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          accepted_at?: string | null;
+          created_at?: string;
+          email: string;
+          event_id: string;
+          expires_at: string;
+          id?: string;
+          invited_by: string;
+          revoked_at?: string | null;
+          role: Database["public"]["Enums"]["team_role"];
+          token_hash: string;
+        };
+        Update: {
+          accepted_at?: string | null;
+          created_at?: string;
+          email?: string;
+          event_id?: string;
+          expires_at?: string;
+          id?: string;
+          invited_by?: string;
+          revoked_at?: string | null;
+          role?: Database["public"]["Enums"]["team_role"];
+          token_hash?: string;
+        };
+        Relationships: [];
+      };
       events: {
         Row: {
           address: string | null;
@@ -1489,6 +1557,46 @@ export type Database = {
         Args: { code: string; gate: string; sig: string };
         Returns: Database["public"]["Enums"]["scan_result"];
       };
+      scan_redeem: {
+        Args: {
+          ticket_code: string;
+          event_id: string;
+          device_id: string;
+          scanned_at: string;
+          staff_user_id: string;
+        };
+        Returns: string;
+      };
+      scan_progress: {
+        Args: { p_event_id: string; p_user_id: string };
+        Returns: { checked_in: number; total: number }[];
+      };
+      authorise_scan_device: {
+        Args: { p_event_id: string; p_user_id: string; p_device_id: string };
+        Returns: undefined;
+      };
+      revoke_scan_device: {
+        Args: { p_device: string; p_actor: string };
+        Returns: undefined;
+      };
+      create_team_invite: {
+        Args: {
+          p_event_id: string;
+          p_email: string;
+          p_role: string;
+          p_actor: string;
+          p_token_hash: string;
+        };
+        Returns: string;
+      };
+      accept_team_invite: {
+        Args: { p_token_hash: string; p_user_id: string };
+        Returns: string;
+      };
+      remove_event_team_member: {
+        Args: { p_member: string; p_actor: string };
+        Returns: undefined;
+      };
     };
     Enums: {
       event_status: "draft" | "pending" | "published" | "unpublished" | "ended" | "cancelled";
@@ -1500,7 +1608,7 @@ export type Database = {
         "created" | "pending" | "paid" | "failed" | "refunded" | "partially_refunded" | "expired";
       payout_status: "scheduled" | "settled" | "failed" | "on_hold";
       refund_status: "requested" | "approved" | "rejected" | "processed" | "failed";
-      scan_result: "ok" | "duplicate" | "invalid" | "wrong_event";
+      scan_result: "ok" | "duplicate" | "invalid" | "wrong_event" | "test";
       team_role: "owner" | "manager" | "door";
       ticket_status: "valid" | "used" | "void" | "transferred" | "refunded";
       user_role: "attendee" | "organiser" | "staff" | "admin";
@@ -1631,7 +1739,7 @@ export const Constants = {
       ],
       payout_status: ["scheduled", "settled", "failed", "on_hold"],
       refund_status: ["requested", "approved", "rejected", "processed", "failed"],
-      scan_result: ["ok", "duplicate", "invalid", "wrong_event"],
+      scan_result: ["ok", "duplicate", "invalid", "wrong_event", "test"],
       team_role: ["owner", "manager", "door"],
       ticket_status: ["valid", "used", "void", "transferred", "refunded"],
       user_role: ["attendee", "organiser", "staff", "admin"],

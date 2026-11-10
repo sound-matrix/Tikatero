@@ -14,6 +14,7 @@ export async function SurfaceGuard({
   const { account } = await requireAccount();
   if (surface === "admin" && !["staff", "admin"].includes(account.profile.role))
     redirect(landingPath(account));
-  if (surface === "console" && !account.organisers.length) redirect(landingPath(account));
+  if (surface === "console" && !account.organisers.length && !(account.assignments ?? []).length)
+    redirect(landingPath(account));
   return children;
 }
