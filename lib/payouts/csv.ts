@@ -36,10 +36,15 @@ export type StaffSalesCsvRow = {
   buyerTotalPaise: number;
 };
 
+/** Spreadsheet apps treat these as formulas when they begin a cell. */
+const formulaPrefix = /^[=+\-@\t\r]/;
+
 function cell(value: string | number | null) {
   const text = value === null ? "" : String(value);
   assertNoSecretText(text);
-  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+  const formula = formulaPrefix.test(text);
+  const safe = formula ? `'${text}` : text;
+  return formula || /[",\r\n]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
 }
 
 function inr(paise: number) {
