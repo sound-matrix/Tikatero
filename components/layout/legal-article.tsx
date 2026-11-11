@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { LegalSlug } from "@/lib/legal";
 import { legalPages } from "@/lib/legal";
 
@@ -12,6 +13,15 @@ export function LegalArticle({ slug }: { slug: LegalSlug }) {
           {paragraph}
         </p>
       ))}
+      {"support" in page ? (
+        <p className="mt-4 text-base leading-7 text-ink">
+          {page.support.before}{" "}
+          <Link href="/contact" className="font-semibold text-teal underline underline-offset-2">
+            {page.support.link}
+          </Link>
+          {page.support.after}
+        </p>
+      ) : null}
     </main>
   );
 }

@@ -6,6 +6,8 @@ export const footerLinks = [
   { href: "/legal/privacy", label: "Privacy" },
   { href: "/legal/refunds", label: "Refunds" },
   { href: "/help", label: "Help" },
+  { href: "/contact", label: "Contact Us" },
+  { href: "/pricing", label: "Pricing" },
 ] as const;
 
 export const helpParagraphs = [
@@ -27,6 +29,11 @@ export const legalPages = {
       "Organisers list the event and choose the refund rule. That rule is shown on the event page before you pay. Sound Matrix provides the Tikatero service. The organiser is responsible for putting on the event.",
       "If an event is cancelled, paid bookings are refunded in full to the original payment method. Test bookings are labelled as tests and no money is sent to a bank.",
     ],
+    support: {
+      before: "To",
+      link: "contact support",
+      after: " about these terms, send a message. We will reply to your email.",
+    },
   },
   privacy: {
     title: "Privacy",
@@ -50,6 +57,11 @@ export const legalPages = {
       "If an event is cancelled, every paid booking that has not already been refunded in full is refunded in full to the original payment method.",
       "Once a ticket is refunded it cannot be scanned at the door. A test refund is labelled as a test, and no money is sent to a bank.",
     ],
+    support: {
+      before: "To",
+      link: "contact support",
+      after: " about a refund or cancellation, send a message. We will reply to your email.",
+    },
   },
 } as const;
 

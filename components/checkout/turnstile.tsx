@@ -12,18 +12,26 @@ declare global {
     };
   }
 }
-export function Turnstile({ siteKey, generation }: { siteKey: string; generation: number }) {
+export function Turnstile({
+  siteKey,
+  generation,
+  action = "checkout",
+}: {
+  siteKey: string;
+  generation: number;
+  action?: string;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
   useEffect(() => {
     if (!ready || !ref.current || !window.turnstile) return;
     const widget = window.turnstile.render(ref.current, {
       sitekey: siteKey,
-      action: "checkout",
+      action,
       size: "flexible",
     });
     return () => window.turnstile?.remove(widget);
-  }, [ready, siteKey, generation]);
+  }, [ready, siteKey, generation, action]);
   return (
     <>
       <Script

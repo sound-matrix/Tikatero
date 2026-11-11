@@ -145,6 +145,39 @@ export type Database = {
           },
         ];
       };
+      contact_messages: {
+        Row: {
+          id: string;
+          created_at: string;
+          name: string;
+          email: string;
+          phone: string | null;
+          topic: string;
+          order_ref: string | null;
+          message: string;
+          ip_hash: string;
+          status: string;
+          emailed_at: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          id?: string;
+          created_at?: string;
+          name: string;
+          email: string;
+          phone?: string | null;
+          topic: string;
+          order_ref?: string | null;
+          message: string;
+          ip_hash: string;
+          status?: string;
+          emailed_at?: string | null;
+        };
+        Update: {
+          emailed_at?: string | null;
+        };
+        Relationships: [];
+      };
       email_log: {
         Row: {
           created_at: string;
@@ -1578,6 +1611,10 @@ export type Database = {
       };
       admin_note_account_refusal: {
         Args: { p_id: string; p_action: string };
+        Returns: string;
+      };
+      admin_mark_contact_replied: {
+        Args: { p_id: string };
         Returns: string;
       };
       consume_rate_limit: {

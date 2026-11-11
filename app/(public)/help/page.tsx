@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Button } from "@/components/ui/button";
 import { helpParagraphs } from "@/lib/legal";
 
 export const metadata: Metadata = {
@@ -14,6 +15,9 @@ export default function HelpPage() {
           {paragraph}
         </p>
       ))}
+      <Button href="/contact" variant="primary" className="mt-8">
+        Still need help? Contact us
+      </Button>
     </main>
   );
 }

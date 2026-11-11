@@ -20,6 +20,7 @@ it("rejects server variable names, modern secrets, service-role JWTs and exact e
       "TURNSTILE_SECRET_KEY",
       "CRON_SECRET",
       "TICKET_QR_SECRET",
+      "CONTACT_TO_EMAIL",
       "cashfree-private-test-sentinel",
       "resend-private-test-sentinel",
       "re_synthetic_test_value_12345678",
