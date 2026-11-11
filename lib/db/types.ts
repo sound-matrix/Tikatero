@@ -1576,6 +1576,10 @@ export type Database = {
         Args: { p_id: string; p_reason: string };
         Returns: string;
       };
+      admin_note_account_refusal: {
+        Args: { p_id: string; p_action: string };
+        Returns: string;
+      };
       consume_rate_limit: {
         Args: { p_key: string; p_limit: number; p_window_seconds: number };
         Returns: boolean;

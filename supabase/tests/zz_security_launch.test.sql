@@ -53,14 +53,17 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"a1600001-0000-4000-8000-000000000001","role":"authenticated"}', true);
 select set_config('request.jwt.claim.sub', 'a1600001-0000-4000-8000-000000000001', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
-select ok(
-  (select public.admin_account_action('a1600002-0000-4000-8000-000000000002', 'block', 'Please stop')) is null,
+select throws_ok(
+  $$select public.admin_account_action('a1600002-0000-4000-8000-000000000002', 'block', 'Please stop')$$,
+  '42501',
+  'Staff accounts cannot be blocked from here.',
   'staff cannot block another staff account'
 );
 select ok(
   (select blocked_at is null from public.profiles where id = 'a1600002-0000-4000-8000-000000000002'),
   'colleague stays active'
 );
+select public.admin_note_account_refusal('a1600002-0000-4000-8000-000000000002', 'block');
 select ok(
   exists (
     select 1 from public.audit_log
@@ -72,18 +75,25 @@ select ok(
   ),
   'blocking a staff account is audited'
 );
-select ok(
-  (select public.admin_account_action('a1600003-0000-4000-8000-000000000003', 'suspend', 'Review')) is null,
+select throws_ok(
+  $$select public.admin_account_action('a1600003-0000-4000-8000-000000000003', 'suspend', 'Review')$$,
+  '42501',
+  'Staff accounts cannot be blocked from here.',
   'staff cannot suspend an admin'
 );
-select ok(
-  (select public.admin_account_action('a1600003-0000-4000-8000-000000000003', 'unblock', '')) is null,
+select throws_ok(
+  $$select public.admin_account_action('a1600003-0000-4000-8000-000000000003', 'unblock', '')$$,
+  '42501',
+  'Staff accounts cannot be blocked from here.',
   'staff cannot unblock an admin'
 );
-select ok(
-  (select public.admin_account_action('a1600001-0000-4000-8000-000000000001', 'block', 'Myself')) is null,
+select throws_ok(
+  $$select public.admin_account_action('a1600001-0000-4000-8000-000000000001', 'block', 'Myself')$$,
+  '42501',
+  'You cannot restrict your own account',
   'staff cannot restrict their own account'
 );
+select public.admin_note_account_refusal('a1600001-0000-4000-8000-000000000001', 'block');
 select ok(
   exists (
     select 1 from public.audit_log

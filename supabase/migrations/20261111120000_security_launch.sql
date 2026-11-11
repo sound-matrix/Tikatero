@@ -4,42 +4,9 @@
 
 -- ---------------------------------------------------------------------------
 -- Staff cannot block, suspend, or unblock staff or admin accounts.
--- The refusal is saved and the account is left unchanged. Returning null keeps
--- that audit row; the plain-English sentence is the audit reason.
+-- The RPC raises and does not change the row. The audit row is written by
+-- admin_note_account_refusal, which commits on its own call.
 -- ---------------------------------------------------------------------------
-
-create or replace function admin_private.record_account_refusal(
-  p_actor uuid,
-  p_target uuid,
-  p_action text,
-  p_reason text
-) returns void
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  if p_actor is null or p_target is null or p_action not in ('block', 'suspend', 'unblock', 'self') then
-    return;
-  end if;
-  insert into public.audit_log (actor_id, action, entity, entity_id, before, after, reason)
-  values (
-    p_actor,
-    case when p_action = 'self' then 'account_self_refused' else 'account_staff_refused' end,
-    'profiles',
-    p_target,
-    '{"refused":true}'::jsonb,
-    jsonb_build_object('refused', true, 'attempt', p_action),
-    case
-      when p_action = 'self' then 'You cannot restrict your own account'
-      else 'Staff accounts cannot be blocked from here.'
-    end
-  );
-end;
-$$;
-
-revoke all on function admin_private.record_account_refusal(uuid, uuid, text, text)
-  from public, anon, authenticated, service_role;
 
 create or replace function admin_private.account_action(p_id uuid, p_action text, p_reason text)
 returns uuid
@@ -58,14 +25,12 @@ begin
     raise exception 'Choose an account action';
   end if;
   if p_id = actor then
-    perform admin_private.record_account_refusal(actor, p_id, 'self', reason);
-    return null;
+    raise exception 'You cannot restrict your own account' using errcode = '42501';
   end if;
   select * into profile from public.profiles where id = p_id for update;
   if not found then raise exception 'Account not found'; end if;
   if profile.role in ('staff', 'admin') then
-    perform admin_private.record_account_refusal(actor, p_id, p_action, reason);
-    return null;
+    raise exception 'Staff accounts cannot be blocked from here.' using errcode = '42501';
   end if;
   if p_action <> 'unblock' and reason is null then
     raise exception 'A reason is required';
@@ -138,6 +103,65 @@ begin
   return new;
 end;
 $$;
+
+-- Staff-only follow-up. Inserts the refusal audit and does not change the account.
+create function admin_private.note_account_refusal(p_id uuid, p_action text)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  actor uuid := admin_private.require_staff();
+  target public.user_role;
+  kind text;
+  log_id uuid;
+begin
+  if p_id is null or p_action is null or p_action not in ('block', 'suspend', 'unblock') then
+    return null;
+  end if;
+  if p_id = actor then
+    kind := 'self';
+  else
+    select role into target from public.profiles where id = p_id;
+    if target is null or target not in ('staff', 'admin') then
+      return null;
+    end if;
+    kind := p_action;
+  end if;
+  insert into public.audit_log (actor_id, action, entity, entity_id, before, after, reason)
+  values (
+    actor,
+    case when kind = 'self' then 'account_self_refused' else 'account_staff_refused' end,
+    'profiles',
+    p_id,
+    '{"refused":true}'::jsonb,
+    jsonb_build_object('refused', true, 'attempt', kind),
+    case
+      when kind = 'self' then 'You cannot restrict your own account'
+      else 'Staff accounts cannot be blocked from here.'
+    end
+  )
+  returning id into log_id;
+  return log_id;
+end;
+$$;
+
+create function public.admin_note_account_refusal(p_id uuid, p_action text)
+returns uuid
+language sql
+security invoker
+set search_path = ''
+as $$
+  select admin_private.note_account_refusal(p_id, p_action);
+$$;
+
+revoke all on function admin_private.note_account_refusal(uuid, text),
+  public.admin_note_account_refusal(uuid, text)
+  from public, anon, authenticated, service_role;
+grant execute on function admin_private.note_account_refusal(uuid, text),
+  public.admin_note_account_refusal(uuid, text)
+  to authenticated;
 
 -- A live payout account could not be created. No bank numbers or documents.
 create function admin_private.note_vendor_failure(p_id uuid, p_reason text)
