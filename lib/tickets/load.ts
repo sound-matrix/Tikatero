@@ -13,6 +13,8 @@ export type LoadedTicket = {
   orderId: string;
   pdfKey: string | null;
   qrPayload: string | null;
+  admitted: boolean;
+  ticketStatus: string;
 };
 
 type Row = {
@@ -26,7 +28,7 @@ type Row = {
   ticket_type_id: string;
 };
 
-async function orderBundle(orderId: string) {
+async function orderBundle(orderId: string, statuses: readonly string[] = ["paid"]) {
   const client = createServiceClient();
   const { data: order, error } = await client
     .from("orders")
@@ -34,7 +36,7 @@ async function orderBundle(orderId: string) {
     .eq("id", orderId)
     .maybeSingle();
   if (error) throw new Error("Your ticket could not be loaded.");
-  if (!order || order.status !== "paid") return null;
+  if (!order || !statuses.includes(order.status)) return null;
   const [
     { data: tickets, error: ticketError },
     { data: event, error: eventError },
@@ -91,7 +93,7 @@ export async function loadTicket(code: string, token?: string): Promise<LoadedTi
     .maybeSingle();
   if (error) throw new Error("Your ticket could not be loaded.");
   if (!ticket) return null;
-  const bundle = await orderBundle(ticket.order_id);
+  const bundle = await orderBundle(ticket.order_id, ["paid", "partially_refunded", "refunded"]);
   if (!bundle) return null;
   const allowed = await ticketAccessAllowed({
     code: ticket.code,
@@ -101,17 +103,22 @@ export async function loadTicket(code: string, token?: string): Promise<LoadedTi
     accessTokenHash: bundle.order.access_token_hash,
   });
   if (!allowed) return null;
+  const admitted = ticket.status === "valid" || ticket.status === "used";
   let qrPayload: string | null = null;
-  try {
-    qrPayload = signTicket(ticket.code, ticket.event_id);
-  } catch {
-    qrPayload = null;
+  if (admitted) {
+    try {
+      qrPayload = signTicket(ticket.code, ticket.event_id);
+    } catch {
+      qrPayload = null;
+    }
   }
   return {
     facts: factsFor(ticket, bundle),
     orderId: bundle.order.id,
     pdfKey: ticket.pdf_key,
     qrPayload,
+    admitted,
+    ticketStatus: ticket.status,
   };
 }
 
@@ -129,7 +136,7 @@ export async function loadOrderTickets(orderId: string) {
 
 export async function loadTicketPdf(code: string, token?: string) {
   const loaded = await loadTicket(code, token);
-  if (!loaded) return null;
+  if (!loaded?.admitted) return null;
   const bundle = await orderBundle(loaded.orderId);
   if (!bundle || !loaded.qrPayload) return { loaded, pdf: null as Buffer | null };
   const [logoBytes, qr] = await Promise.all([

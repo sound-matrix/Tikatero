@@ -17,10 +17,23 @@ export type PaymentResult = {
   currency: string;
   paymentId?: string;
 };
+export type ProviderRefund = {
+  refundId: string;
+  orderId: string;
+  amountPaise: number;
+  reversalPaise: number;
+  vendorId: string | null;
+  note: string;
+};
+export type ProviderRefundResult = {
+  cfRefundId: string;
+  status: "processed" | "pending" | "failed";
+};
 export interface PaymentProvider {
   mode: "mock" | "cashfree";
   create(order: ProviderOrder, origin: string): Promise<{ sessionId: string }>;
   get(order: ProviderOrder): Promise<PaymentResult>;
+  refund(input: ProviderRefund): Promise<ProviderRefundResult>;
 }
 /** Only the provider boundary uses rupee decimals. The ledger remains integer paise. */
 export function rupees(paise: number) {
@@ -60,6 +73,31 @@ export function cashfreeBody(order: ProviderOrder, origin: string) {
     },
     order_splits: [{ vendor: order.vendor_id, amount: rupees(order.organiser_share_paise) }],
   };
+}
+/** Easy Split refund. The buyer amount is what they paid; the vendor amount is the reversed organiser share. */
+export function cashfreeRefundBody(input: ProviderRefund) {
+  if (!Number.isSafeInteger(input.amountPaise) || input.amountPaise <= 0)
+    throw new Error("Invalid refund amount.");
+  if (
+    !Number.isSafeInteger(input.reversalPaise) ||
+    input.reversalPaise < 0 ||
+    input.reversalPaise > input.amountPaise
+  )
+    throw new Error("Invalid refund split.");
+  const note = input.note.replace(/[\u0000-\u001f]/g, "").slice(0, 100);
+  const body: {
+    refund_id: string;
+    refund_amount: number;
+    refund_note: string;
+    refund_splits?: { vendor_id: string; amount: number }[];
+  } = {
+    refund_id: input.refundId,
+    refund_amount: rupees(input.amountPaise),
+    refund_note: note || "Refund",
+  };
+  if (input.vendorId && input.reversalPaise > 0)
+    body.refund_splits = [{ vendor_id: input.vendorId, amount: rupees(input.reversalPaise) }];
+  return body;
 }
 /** Verify before JSON parsing, using the exact raw bytes and constant-time comparison. */
 export function verifyWebhook(

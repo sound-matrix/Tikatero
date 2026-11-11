@@ -15,6 +15,17 @@ export type MyTicket = {
   isTest: boolean;
   past: boolean;
   href: string;
+  status: "valid" | "used" | "void" | "transferred" | "refunded";
+  statusLabel: string;
+  canEnter: boolean;
+};
+
+const statusLabels: Record<string, string> = {
+  valid: "Valid",
+  used: "Used",
+  void: "Void. Not valid for entry.",
+  transferred: "Transferred",
+  refunded: "Refunded. Not valid for entry.",
 };
 
 export async function loadMyTickets(buyerId: string): Promise<MyTicket[]> {
@@ -23,7 +34,7 @@ export async function loadMyTickets(buyerId: string): Promise<MyTicket[]> {
     .from("orders")
     .select("id, is_test, event_id")
     .eq("buyer_id", buyerId)
-    .eq("status", "paid");
+    .in("status", ["paid", "refunded", "partially_refunded"]);
   if (error) throw new Error("Your tickets could not be loaded.");
   if (!orders?.length) return [];
   const orderIds = orders.map((order) => order.id);
@@ -60,6 +71,9 @@ export async function loadMyTickets(buyerId: string): Promise<MyTicket[]> {
         isTest: order.is_test,
         past: ended,
         href: `/t/${ticket.code}`,
+        status: ticket.status,
+        statusLabel: statusLabels[ticket.status] ?? ticket.status,
+        canEnter: ticket.status === "valid" || ticket.status === "used",
       };
     })
     .filter((ticket): ticket is MyTicket => ticket !== null)
