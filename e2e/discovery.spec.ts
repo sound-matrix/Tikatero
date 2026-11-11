@@ -62,7 +62,7 @@ test.describe("Attendee discovery", () => {
     await expect(footer.getByRole("link", { name: "Privacy" })).toBeVisible();
     await expect(footer.getByRole("link", { name: "Refunds" })).toBeVisible();
     await expect(footer.getByRole("link", { name: "Help" })).toBeVisible();
-    await expect(footer).not.toContainText(/GSTIN|CIN|LLP|Ongole|Andhra/i);
+    await expect(footer).not.toContainText(/GSTIN|\bCIN\b|\bLLP\b|Ongole|Andhra/i);
     await page.getByRole("link", { name: "Book", exact: true }).filter({ visible: true }).click();
     await expect(page.getByRole("heading", { name: "Choose your tickets" })).toBeVisible();
     await page.goto("/");

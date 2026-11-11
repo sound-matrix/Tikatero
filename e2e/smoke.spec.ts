@@ -22,7 +22,7 @@ test("home loads and the Tikatero logo is visible", async ({ page }) => {
   await expect(footer.getByRole("link", { name: "Privacy" })).toBeVisible();
   await expect(footer.getByRole("link", { name: "Refunds" })).toBeVisible();
   await expect(footer.getByRole("link", { name: "Help" })).toBeVisible();
-  await expect(footer).not.toContainText(/GSTIN|CIN|LLP|Ongole|Andhra/i);
+  await expect(footer).not.toContainText(/GSTIN|\bCIN\b|\bLLP\b|Ongole|Andhra/i);
 });
 
 test("login sends the same security headers", async ({ request }) => {
