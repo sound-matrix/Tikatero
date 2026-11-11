@@ -32,16 +32,14 @@ async function application(ownerId: string) {
     id = crypto.randomUUID();
   expect(
     (
-      await client
-        .from("organisers")
-        .insert({
-          id,
-          owner_id: ownerId,
-          display_name: "Riverfront Live",
-          legal_name: "Alex Shah",
-          slug: `admin-cms-${id}`,
-          kyc_status: "auto_passed",
-        })
+      await client.from("organisers").insert({
+        id,
+        owner_id: ownerId,
+        display_name: "Riverfront Live",
+        legal_name: "Alex Shah",
+        slug: `admin-cms-${id}`,
+        kyc_status: "auto_passed",
+      })
     ).error,
   ).toBeNull();
   const { data, error } = await client
@@ -201,6 +199,19 @@ test.describe("Admin CMS", () => {
       .eq("id", org.id)
       .single();
     expect(flags).toEqual({ payouts_on_hold: true, sales_paused: true });
+  });
+  test("staff cannot block another staff account", async ({ page }) => {
+    test.setTimeout(90_000);
+    const staff = await user("staff", "Block Reviewer");
+    const colleague = await user("staff", "Colleague Reviewer");
+    await login(page, staff.email);
+    await page.goto(`/admin/accounts?q=${encodeURIComponent(colleague.email)}`);
+    await expect(
+      page.getByRole("heading", { name: "Colleague Reviewer", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText("Staff accounts cannot be blocked from here.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Block", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Suspend", exact: true })).toHaveCount(0);
   });
   test("request docs and reject preserve organiser notes and use existing emails", async ({
     page,

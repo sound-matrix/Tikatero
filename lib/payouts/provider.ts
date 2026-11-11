@@ -1,7 +1,7 @@
 import "server-only";
 import { PaymentsNotConfiguredError } from "@/lib/payments";
 import { productionPaymentLock } from "@/lib/payments/model";
-import { mockVendorId } from "./model";
+import { LIVE_VENDOR_UNAVAILABLE, mockVendorId } from "./model";
 
 export interface SplitVendor {
   mode: "mock" | "cashfree";
@@ -58,9 +58,11 @@ export class CashfreeSplit implements SplitVendor {
     if (!response.ok) throw new SplitError();
   }
   async ensureVendor(organiserId: string): Promise<{ vendorId: string }> {
-    // Full account numbers are not stored. Do not invent a vendor or log the organiser id.
-    if (!organiserId) throw new Error("Organiser could not be loaded.");
-    throw new Error("A live payout account needs the verified bank account. Nothing was saved.");
+    // Full account numbers are not stored. Do not invent a vendor, save a mock id, or log anything.
+    if (!organiserId || organiserId.startsWith("mock_vendor_")) {
+      throw new Error(LIVE_VENDOR_UNAVAILABLE);
+    }
+    throw new Error(LIVE_VENDOR_UNAVAILABLE);
   }
   async setSettlementHold(vendorId: string, hold: boolean) {
     if (!/^[\w-]{1,64}$/.test(vendorId) || vendorId.startsWith("mock_vendor_"))

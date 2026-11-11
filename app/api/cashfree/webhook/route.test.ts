@@ -1,10 +1,11 @@
 import { createHmac } from "node:crypto";
 import { expect, it, vi, beforeEach } from "vitest";
 vi.mock("server-only", () => ({}));
-const { service, transition, maybeSingle } = vi.hoisted(() => ({
+const { service, transition, maybeSingle, rpc } = vi.hoisted(() => ({
   service: vi.fn(),
   transition: vi.fn(),
   maybeSingle: vi.fn(),
+  rpc: vi.fn(),
 }));
 vi.mock("@/lib/supabase/service", () => ({ createServiceClient: service }));
 vi.mock("@/lib/checkout/store", () => ({ transition }));
@@ -12,7 +13,11 @@ import { POST } from "./route";
 beforeEach(() => {
   vi.stubEnv("CASHFREE_WEBHOOK_SECRET", "synthetic-secret");
   vi.clearAllMocks();
-  service.mockReturnValue({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle }) }) }) });
+  rpc.mockResolvedValue({ data: true, error: null });
+  service.mockReturnValue({
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle }) }) }),
+    rpc,
+  });
   maybeSingle.mockResolvedValue({
     data: { id: "11000000-0000-4000-8000-000000000001", total_paise: 100000 },
   });
@@ -52,9 +57,16 @@ function request(body: string, valid = true) {
 it("returns 401 before touching the DB for tampered signatures", async () => {
   expect((await POST(request(JSON.stringify(payload), false))).status).toBe(401);
   expect(service).not.toHaveBeenCalled();
+  expect(rpc).not.toHaveBeenCalled();
   expect(transition).not.toHaveBeenCalled();
 });
-it("uses the same dedupe key for repeated delivery; only persists an allowlist", async () => {
+it("rate-limits a signed webhook before parsing it into a payment", async () => {
+  rpc.mockResolvedValue({ data: false, error: null });
+  expect((await POST(request(JSON.stringify(payload)))).status).toBe(429);
+  expect(transition).not.toHaveBeenCalled();
+  expect(maybeSingle).not.toHaveBeenCalled();
+});
+it("uses the same dedupe key for a replayed paid webhook; only persists an allowlist", async () => {
   const body = JSON.stringify(payload);
   await POST(request(body));
   await POST(request(body));

@@ -4,7 +4,8 @@ import { requireAccount } from "@/lib/auth/account";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatInr, formatIst } from "@/lib/format";
-import { payoutWindowCopy } from "@/lib/payouts/model";
+import { activePricing } from "@/lib/pricing/data";
+import { payoutWindowCopy, payoutWindowDays } from "@/lib/payouts/model";
 
 export const metadata: Metadata = { title: "Payouts" };
 
@@ -32,6 +33,7 @@ async function Payouts() {
     .order("created_at", { ascending: false })
     .limit(200);
   if (error) throw new Error("Your payouts could not be loaded. Try again.");
+  const pricing = await activePricing();
   const rows = data ?? [];
   const testMode = rows.some((row) => row.is_test);
   const toPay = rows
@@ -44,7 +46,8 @@ async function Payouts() {
           <p className="mb-2 text-sm font-bold uppercase tracking-widest text-teal">Payouts</p>
           <h1 className="text-3xl font-extrabold">Money from ticket sales</h1>
           <p className="mt-2 max-w-2xl text-muted">
-            {payoutWindowCopy(2)} Amounts include GST and are shown in India time.
+            {payoutWindowCopy(payoutWindowDays(pricing.payout_days))} Amounts include GST and are
+            shown in India time.
           </p>
         </div>
         <Button href="/console/payouts/export" variant="primary">

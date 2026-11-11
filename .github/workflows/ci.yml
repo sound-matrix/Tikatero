@@ -42,6 +42,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm check:migrations
       - run: pnpm exec playwright install --with-deps chromium
       - run: node scripts/local-auth-env.mjs
       - run: node scripts/discovery-fixture.mjs

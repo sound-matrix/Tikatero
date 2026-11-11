@@ -21,8 +21,17 @@ Names and placeholders are in `.env.example`. No payment keys enter client asset
   still book.
 - `CASHFREE_APP_ID`, `CASHFREE_SECRET_KEY`: server credentials for the selected account.
 - `CASHFREE_WEBHOOK_SECRET`: optional distinct signing key; falls back to the PG secret.
-- `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`: configure both together. Without the
-  secret the server logs a configuration-only skip note. Hostname and action must match.
+- `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`: configure both together. Paid checkout
+  on live production fails closed with "Online payments are not available yet" when either
+  key is missing. Preview, local development, and the explicit production mock switch
+  (`PAYMENTS_ALLOW_MOCK=true` with `CASHFREE_ENV=mock`) skip Turnstile only when the secret
+  is absent. When the secret is set, hostname and action must match. Tokens are not logged.
+  The protected route is the checkout server action for `/e/[slug]/checkout`. Login OTP,
+  refund requests, and data exports are rate limited instead. `/api/cashfree/webhook`
+  verifies the signature before any rate-limit write. `/api/cron/payments` stays gated on
+  `CRON_SECRET`. HTML responses send Content-Security-Policy (no `unsafe-eval`),
+  Referrer-Policy, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and HSTS.
+  Serverless functions run only in Mumbai (`bom1`).
 - `CRON_SECRET`: bearer authentication for `/api/cron/payments`. Do not commit the value.
 - `PAYMENTS_ALLOW_MOCK`: exactly `true`, together with `CASHFREE_ENV=mock`, enables the
   mock provider in production. Mock orders are always stored with `is_test=true`.
@@ -104,3 +113,15 @@ then races duplicate webhooks and pollers across the ten successful orders.
 Playwright uses unique local fixtures for success, failure, free RSVP and paused
 organisers, plus buyer isolation and desktop/mobile screenshots. CI runs these
 against an isolated Supabase stack. Never point fixture scripts at production.
+
+## Schema migrations
+
+`pnpm check:migrations` (CI database job) compares every `supabase/migrations/*.sql`
+prefix with `supabase_migrations.schema_migrations` on the local database. Production
+uses the same comparison in the Supabase SQL editor:
+
+```sql
+select version from supabase_migrations.schema_migrations order by version;
+```
+
+Do not rewrite applied history. New files stay additive and after `20261110140100`.

@@ -4,6 +4,8 @@ import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { requestTime } from "@/lib/discovery/data";
 import { checkoutData } from "@/lib/checkout/store";
+import { turnstileRequired } from "@/lib/checkout/security";
+import { PAYMENTS_UNAVAILABLE } from "@/lib/payments/model";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { formatIst } from "@/lib/format";
 import { refundText } from "@/lib/discovery/model";
@@ -18,6 +20,12 @@ async function Checkout({ params }: { params: Promise<{ slug: string }> }) {
   const data = await checkoutData((await params).slug);
   if (!data) notFound();
   const { event, tiers, version, disabled, mode } = data;
+  const turnstileReady = Boolean(
+    process.env.TURNSTILE_SITE_KEY && process.env.TURNSTILE_SECRET_KEY,
+  );
+  const unavailable =
+    disabled ||
+    (!event.is_free && turnstileRequired() && !turnstileReady ? PAYMENTS_UNAVAILABLE : "");
   return (
     <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <Link className="text-sm font-semibold text-muted underline" href={`/e/${event.slug}`}>
@@ -28,10 +36,10 @@ async function Checkout({ params }: { params: Promise<{ slug: string }> }) {
         {event.starts_at ? formatIst(event.starts_at) : ""} · {event.venue_name}
       </p>
       <p className="mt-2 text-sm text-muted">{refundText(event.refund_policy)}</p>
-      {disabled ? (
+      {unavailable ? (
         <section className="mt-8 rounded-2xl border border-line p-8">
           <h2 className="text-xl font-bold">Booking unavailable</h2>
-          <p className="mt-3 text-muted">{disabled}</p>
+          <p className="mt-3 text-muted">{unavailable}</p>
         </section>
       ) : (
         <CheckoutForm
@@ -40,7 +48,7 @@ async function Checkout({ params }: { params: Promise<{ slug: string }> }) {
           version={version}
           feePayer={event.fee_payer}
           isFree={event.is_free}
-          siteKey={process.env.TURNSTILE_SITE_KEY ?? ""}
+          siteKey={turnstileReady ? (process.env.TURNSTILE_SITE_KEY ?? "") : ""}
           useCashfree={mode === "cashfree"}
           testMode={mode === "mock" || process.env.CASHFREE_ENV !== "production"}
           now={now}

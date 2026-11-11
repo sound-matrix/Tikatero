@@ -2,11 +2,14 @@ import { notFound } from "next/navigation";
 import { requireAccount } from "@/lib/auth/account";
 import { salesCsv } from "@/lib/payouts/csv";
 import { loadEventSales } from "@/lib/payouts/read";
+import { allowRequest } from "@/lib/security/rate-limit";
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const { client } = await requireAccount();
+  const { client, account } = await requireAccount();
+  if (!(await allowRequest("export-user", account.profile.id, 10, 3600)))
+    return new Response("Too many downloads. Please wait an hour and try again.", { status: 429 });
   const sales = await loadEventSales(client, id);
   if (!sales) notFound();
   const body = salesCsv(

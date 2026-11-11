@@ -13,6 +13,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check:no-secrets": "node scripts/check-no-secrets.mjs",
+    "check:migrations": "node scripts/check-schema-migrations.mjs",
     "test:auth": "playwright test e2e/auth.spec.ts"
   },
   "dependencies": {

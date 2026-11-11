@@ -30,10 +30,21 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
       if (error || !data)
         return { error: "Too many booking attempts. Please wait 10 minutes and try again." };
     }
-    await verifyTurnstile(values.turnstile, new URL(origin).hostname);
     const data = await checkoutData(values.slug);
     if (!data) return { error: "This event is not accepting bookings." };
     if (data.disabled) return { error: data.disabled };
+    try {
+      await verifyTurnstile(values.turnstile, new URL(origin).hostname, {
+        livePayment: !data.event.is_free,
+      });
+    } catch (error) {
+      return {
+        error:
+          error instanceof Error && error.message === PAYMENTS_UNAVAILABLE
+            ? PAYMENTS_UNAVAILABLE
+            : "Please complete the security check and try again.",
+      };
+    }
     const lines = values.lines.map((line) => {
       const tier = data.tiers.find((t) => t.id === line.id);
       if (!tier) throw new Error("Choose a valid ticket tier.");

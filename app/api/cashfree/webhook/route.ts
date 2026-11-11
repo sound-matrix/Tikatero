@@ -6,6 +6,7 @@ import { transition } from "@/lib/checkout/store";
 import { applySettlement, settlementCommand } from "@/lib/payouts/settle";
 import { applyRefundWebhook } from "@/lib/refunds/complete";
 import { refundWebhookCommand } from "@/lib/refunds/webhook";
+import { allowRequest, requestIpFrom } from "@/lib/security/rate-limit";
 const schema = z.object({
   type: z.enum([
     "PAYMENT_SUCCESS_WEBHOOK",
@@ -38,6 +39,8 @@ export async function POST(request: Request) {
     )
   )
     return new Response(null, { status: 401 });
+  if (!(await allowRequest("webhook", requestIpFrom(request), 120, 60)))
+    return new Response(null, { status: 429 });
   try {
     const json = JSON.parse(raw);
     const settlement = settlementCommand(json);

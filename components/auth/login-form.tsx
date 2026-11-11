@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { createClient } from "@/lib/supabase/browser";
+import { requestSignInCode, verifySignInCode } from "@/app/(public)/login/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -20,12 +20,8 @@ export function LoginForm({ linkError }: { linkError: boolean }) {
     setBusy(true);
     setMessage("");
     try {
-      const client = createClient();
-      const { error } = await client.auth.signInWithOtp({
-        email: email.trim(),
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-      });
-      if (error) setMessage("We could not send your email. Please wait a minute and try again.");
+      const result = await requestSignInCode(email);
+      if (result.error) setMessage(result.error);
       else {
         setSent(true);
         setMessage(
@@ -48,13 +44,8 @@ export function LoginForm({ linkError }: { linkError: boolean }) {
     setBusy(true);
     setMessage("");
     try {
-      const { error } = await createClient().auth.verifyOtp({
-        email: email.trim(),
-        token,
-        type: "email",
-      });
-      if (error)
-        setMessage("That code is incorrect or has expired. Try again or request a new email.");
+      const result = await verifySignInCode(email, token);
+      if (result.error) setMessage(result.error);
       else {
         // A document navigation discards any anonymous prefetched RSC/session state.
         // eslint-disable-next-line @next/next/no-location-assign-relative-destination

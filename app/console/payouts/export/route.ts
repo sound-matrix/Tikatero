@@ -1,5 +1,6 @@
 import { requireAccount } from "@/lib/auth/account";
 import { payoutsCsv } from "@/lib/payouts/csv";
+import { allowRequest } from "@/lib/security/rate-limit";
 
 const labels: Record<string, string> = {
   scheduled: "To be paid",
@@ -10,6 +11,8 @@ const labels: Record<string, string> = {
 
 export async function GET() {
   const { client, account } = await requireAccount();
+  if (!(await allowRequest("export-user", account.profile.id, 10, 3600)))
+    return new Response("Too many downloads. Please wait an hour and try again.", { status: 429 });
   const ids = new Set(account.organisers.map((org) => org.id));
   const { data, error } = await client
     .from("payouts")

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAccount } from "@/lib/auth/account";
+import { allowRequest } from "@/lib/security/rate-limit";
 import { parseHundredths } from "@/lib/pricing/settings";
 import { createServiceClient } from "@/lib/supabase/service";
 import { settleOpenedRefund, type OpenedRefund } from "./complete";
@@ -25,8 +26,16 @@ async function settle(opened: OpenedRefund) {
   await settleOpenedRefund(opened);
 }
 
+const REFUND_LIMIT = "Too many refund attempts. Please wait 10 minutes and try again.";
+
+async function refundAllowed(userId: string) {
+  return allowRequest("refund", userId, 20, 600);
+}
+
 export async function requestBuyerRefund(formData: FormData) {
-  const { client } = await requireAccount();
+  const { client, account } = await requireAccount();
+  if (!(await refundAllowed(account.profile.id)))
+    redirect(`/me?refund_error=${encodeURIComponent(REFUND_LIMIT)}`);
   const orderId = uuid(formData.get("order_id"));
   if (!orderId) redirect("/me?refund_error=Choose%20a%20booking.");
   const { data, error } = await client.rpc("refund_action", {
@@ -54,13 +63,15 @@ export async function requestBuyerRefund(formData: FormData) {
 }
 
 export async function reviewRefund(formData: FormData) {
-  const { client } = await requireAccount();
+  const { client, account } = await requireAccount();
   const refundId = uuid(formData.get("refund_id"));
   const eventId = uuid(formData.get("event_id"));
   const action = formData.get("decision") === "reject" ? "reject" : "approve";
   const asStaff = formData.get("as") === "staff";
   const back = asStaff ? `/admin/events/${eventId}` : `/console/events/${eventId}`;
   if (!refundId || !eventId) redirect("/console");
+  if (!(await refundAllowed(account.profile.id)))
+    redirect(`${back}?refund_error=${encodeURIComponent(REFUND_LIMIT)}`);
   const { data, error } = await client.rpc("refund_action", {
     p_action: action,
     p_order_id: null,
@@ -86,12 +97,14 @@ export async function reviewRefund(formData: FormData) {
 }
 
 export async function issueRefund(formData: FormData) {
-  const { client } = await requireAccount();
+  const { client, account } = await requireAccount();
   const orderId = uuid(formData.get("order_id"));
   const eventId = uuid(formData.get("event_id"));
   const asStaff = formData.get("as") === "staff";
   const back = asStaff ? `/admin/events/${eventId}` : `/console/events/${eventId}`;
   if (!orderId || !eventId) redirect("/console");
+  if (!(await refundAllowed(account.profile.id)))
+    redirect(`${back}?refund_error=${encodeURIComponent(REFUND_LIMIT)}`);
   let amount: number;
   try {
     amount = parseHundredths(String(formData.get("amount_rupees") ?? ""));
@@ -144,11 +157,13 @@ function paymentsReady(isTest: boolean) {
 }
 
 export async function cancelEventRefunds(formData: FormData) {
-  const { client } = await requireAccount();
+  const { client, account } = await requireAccount();
   const eventId = uuid(formData.get("event_id"));
   const asStaff = formData.get("as") === "staff";
   const back = asStaff ? `/admin/events/${eventId}` : `/console/events/${eventId}`;
   if (!eventId) redirect("/console");
+  if (!(await refundAllowed(account.profile.id)))
+    redirect(`${back}?refund_error=${encodeURIComponent(REFUND_LIMIT)}`);
   const reason = String(formData.get("reason") ?? "")
     .trim()
     .slice(0, 300);

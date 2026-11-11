@@ -1,8 +1,11 @@
 import { requireStaff } from "@/lib/admin/access";
 import { staffSalesCsv } from "@/lib/payouts/csv";
+import { allowRequest } from "@/lib/security/rate-limit";
 
 export async function GET() {
-  const { client } = await requireStaff();
+  const { client, account } = await requireStaff();
+  if (!(await allowRequest("export-user", account.profile.id, 10, 3600)))
+    return new Response("Too many downloads. Please wait an hour and try again.", { status: 429 });
   const { data, error } = await client.rpc("admin_gateway_reconciliation");
   if (error) return new Response("Gateway costs could not be exported.", { status: 503 });
   const body = staffSalesCsv(
