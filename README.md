@@ -59,6 +59,15 @@ Environment names only (put values in the host’s secret store):
 - `RESEND_API_KEY` (existing name)
 - `EMAIL_FROM` (new; a sender on your verified domain)
 - `EMAIL_REPLY_TO` (new; optional reply address)
+- `CONTACT_TO_EMAIL` (server only; inbox for the public contact form; leave empty in this repo)
+
+The public `/contact` form saves each message in `contact_messages`. When
+`RESEND_API_KEY`, `EMAIL_FROM`, and `CONTACT_TO_EMAIL` are set, the server emails
+that inbox and sets the visitor as reply-to. The destination address is never
+shown on the site, in errors, or in the browser bundle. If those values are
+missing, or Resend does not accept the email, the message stays saved and the
+visitor still sees success. Turnstile runs on this form only when both Turnstile
+keys are set. Live paid checkout still fails closed without Turnstile.
 
 Use the existing `NEXT_PUBLIC_SITE_URL` as the production HTTPS site origin for
 absolute logo and button URLs. It contains no secret. The shared email layout

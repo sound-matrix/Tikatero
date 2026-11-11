@@ -43,7 +43,19 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm check:migrations
-      - run: pnpm exec playwright install --with-deps chromium
+      - name: Install Playwright Chromium
+        run: |
+          set -eu
+          for attempt in 1 2 3; do
+            if pnpm exec playwright install chromium; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Playwright Chromium install failed after 3 attempts."
+              exit 1
+            fi
+            sleep $((attempt * 15))
+          done
       - run: node scripts/local-auth-env.mjs
       - run: node scripts/discovery-fixture.mjs
       - run: node scripts/checkout-concurrency.mjs
