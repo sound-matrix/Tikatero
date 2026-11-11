@@ -11,6 +11,7 @@ it("sends a strict baseline without unsafe-eval", () => {
   expect(policy).toContain("frame-ancestors 'none'");
   expect(policy).toContain("https://challenges.cloudflare.com");
   expect(policy).toContain("https://sdk.cashfree.com");
+  expect(policy).toContain("https://*.r2.cloudflarestorage.com");
   expect(policy).toContain("https://media.example.test");
   expect(policy).toContain("http://127.0.0.1:54321");
   expect(policy).toContain("ws://127.0.0.1:54321");

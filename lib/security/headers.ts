@@ -29,6 +29,7 @@ export function contentSecurityPolicy(input: SecurityHeaderInput = {}) {
     ...cashfree,
     "https://*.supabase.co",
     "wss://*.supabase.co",
+    "https://*.r2.cloudflarestorage.com",
   ];
   if (supabase) {
     connect.push(supabase.origin);

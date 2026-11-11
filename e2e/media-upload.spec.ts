@@ -4,7 +4,7 @@ const sample = readFileSync("public/brand/tikatero-logo-horizontal.jpg");
 const entity = "00000000-0000-4000-8000-000000000000";
 const key = `poster/${entity}/f1111111-1111-4111-8111-111111111111.jpg`;
 const signed = {
-  url: "https://uploads.example.test/file",
+  url: "https://example.r2.cloudflarestorage.com/file",
   key,
   publicUrl: `https://media.example.test/${key}`,
   mime: "image/jpeg",
@@ -20,7 +20,7 @@ test("upload component previews an image and reports progress and completion", a
     await route.fulfill({ status: 200, json: signed });
   });
   let transferred = 0;
-  await page.route("https://uploads.example.test/**", async (route) => {
+  await page.route("https://example.r2.cloudflarestorage.com/**", async (route) => {
     if (route.request().method() === "PUT")
       transferred = route.request().postDataBuffer()?.byteLength ?? 0;
     await route.fulfill({
