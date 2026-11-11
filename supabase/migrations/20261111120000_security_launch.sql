@@ -2,34 +2,10 @@
 -- Closes staff-on-staff blocks, direct organiser-control updates, and the public
 -- sales-open helper. Paused organisers stay hidden from discovery.
 
-create extension if not exists dblink with schema extensions;
-
--- dblink is only for refusal audits that must survive the error's rollback.
--- Browser roles should not open a second connection. Some Supabase-owned
--- helpers (dblink_connect_u) cannot be revoked by the migration role.
-do $$
-declare
-  fn oid;
-begin
-  for fn in
-    select p.oid
-    from pg_proc as p
-    join pg_namespace as n on n.oid = p.pronamespace
-    where n.nspname = 'extensions' and p.proname like 'dblink%'
-  loop
-    begin
-      execute format('revoke all on function %s from public, anon, authenticated', fn::regprocedure);
-    exception
-      when insufficient_privilege then
-        null;
-    end;
-  end loop;
-end
-$$;
-
 -- ---------------------------------------------------------------------------
 -- Staff cannot block, suspend, or unblock staff or admin accounts.
--- The refusal is audited even though the change itself rolls back.
+-- The refusal is saved and the account is left unchanged. Returning null keeps
+-- that audit row; the plain-English sentence is the audit reason.
 -- ---------------------------------------------------------------------------
 
 create or replace function admin_private.record_account_refusal(
@@ -42,53 +18,23 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
-declare
-  safe_action text;
-  note text;
-  statement text;
-  conn text := 'dbname=' || current_database() || ' connect_timeout=2';
 begin
   if p_actor is null or p_target is null or p_action not in ('block', 'suspend', 'unblock', 'self') then
     return;
   end if;
-  safe_action := case
-    when p_action = 'self' then 'account_self_refused'
-    else 'account_staff_refused'
-  end;
-  note := admin_private.safe_note(p_reason);
-  statement := format(
-    'insert into public.audit_log (actor_id, action, entity, entity_id, before, after, reason) values (%L::uuid, %L, %L, %L::uuid, %L::jsonb, %L::jsonb, %L)',
+  insert into public.audit_log (actor_id, action, entity, entity_id, before, after, reason)
+  values (
     p_actor,
-    safe_action,
+    case when p_action = 'self' then 'account_self_refused' else 'account_staff_refused' end,
     'profiles',
     p_target,
-    '{"refused":true}',
-    jsonb_build_object('refused', true, 'attempt', p_action)::text,
-    note
+    '{"refused":true}'::jsonb,
+    jsonb_build_object('refused', true, 'attempt', p_action),
+    case
+      when p_action = 'self' then 'You cannot restrict your own account'
+      else 'Staff accounts cannot be blocked from here.'
+    end
   );
-  begin
-    perform extensions.dblink_connect('tikatero_audit', conn);
-    perform extensions.dblink_exec('tikatero_audit', 'set lock_timeout = ''2s''');
-    perform extensions.dblink_exec('tikatero_audit', statement);
-    perform extensions.dblink_disconnect('tikatero_audit');
-  exception
-    when others then
-      begin
-        perform extensions.dblink_disconnect('tikatero_audit');
-      exception
-        when others then null;
-      end;
-      insert into public.audit_log (actor_id, action, entity, entity_id, before, after, reason)
-      values (
-        p_actor,
-        safe_action,
-        'profiles',
-        p_target,
-        '{"refused":true}'::jsonb,
-        jsonb_build_object('refused', true, 'attempt', p_action),
-        note
-      );
-  end;
 end;
 $$;
 
@@ -113,13 +59,13 @@ begin
   end if;
   if p_id = actor then
     perform admin_private.record_account_refusal(actor, p_id, 'self', reason);
-    raise exception 'You cannot restrict your own account' using errcode = '42501';
+    return null;
   end if;
   select * into profile from public.profiles where id = p_id for update;
   if not found then raise exception 'Account not found'; end if;
   if profile.role in ('staff', 'admin') then
     perform admin_private.record_account_refusal(actor, p_id, p_action, reason);
-    raise exception 'Staff accounts cannot be blocked from here.' using errcode = '42501';
+    return null;
   end if;
   if p_action <> 'unblock' and reason is null then
     raise exception 'A reason is required';

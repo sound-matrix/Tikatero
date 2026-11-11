@@ -96,7 +96,7 @@ export async function reviewKyc(_state: ActionState, form: FormData): Promise<Ac
   return followUp ? { ...result, success: `${result.success} ${followUp}` } : result;
 }
 export async function changeAccount(_state: ActionState, form: FormData): Promise<ActionState> {
-  const { client } = await requireStaff();
+  const { client, account } = await requireStaff();
   const id = text(form, "id"),
     action = text(form, "action"),
     reason = text(form, "reason");
@@ -108,7 +108,26 @@ export async function changeAccount(_state: ActionState, form: FormData): Promis
     p_action: action,
     p_reason: reason.slice(0, 1000),
   });
-  if (error || !data) return { error: error?.message || "The account could not be updated." };
+  if (error) return { error: error.message || "The account could not be updated." };
+  if (!data) {
+    const { data: log } = await client
+      .from("audit_log")
+      .select("action, reason")
+      .eq("entity", "profiles")
+      .eq("entity_id", id)
+      .eq("actor_id", account.profile.id)
+      .in("action", ["account_staff_refused", "account_self_refused"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return {
+      error:
+        log?.reason ||
+        (log?.action === "account_self_refused"
+          ? "You cannot restrict your own account"
+          : "Staff accounts cannot be blocked from here."),
+    };
+  }
   refresh();
   return action === "unblock" ? { success: "Account unblocked." } : deliver(data);
 }

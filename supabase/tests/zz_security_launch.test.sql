@@ -1,30 +1,12 @@
 begin;
 select plan(30);
 
--- Profiles must be committed. A refusal audit uses a second connection, which
--- cannot see rows from this test transaction, and audit_log.actor_id is a foreign key.
-do $$
-begin
-  begin
-    perform extensions.dblink_disconnect('launch_fixture');
-  exception
-    when others then null;
-  end;
-  perform extensions.dblink_connect('launch_fixture', 'dbname=' || current_database());
-  perform extensions.dblink_exec(
-    'launch_fixture',
-    'insert into auth.users (id, email) values
-      (''a1600001-0000-4000-8000-000000000001'', ''launch-staff@example.test''),
-      (''a1600002-0000-4000-8000-000000000002'', ''launch-colleague@example.test''),
-      (''a1600003-0000-4000-8000-000000000003'', ''launch-admin@example.test''),
-      (''a1600004-0000-4000-8000-000000000004'', ''launch-attendee@example.test''),
-      (''a1600005-0000-4000-8000-000000000005'', ''launch-owner@example.test'')
-     on conflict (id) do nothing'
-  );
-  perform extensions.dblink_disconnect('launch_fixture');
-end
-$$;
-
+insert into auth.users (id, email) values
+  ('a1600001-0000-4000-8000-000000000001', 'launch-staff@example.test'),
+  ('a1600002-0000-4000-8000-000000000002', 'launch-colleague@example.test'),
+  ('a1600003-0000-4000-8000-000000000003', 'launch-admin@example.test'),
+  ('a1600004-0000-4000-8000-000000000004', 'launch-attendee@example.test'),
+  ('a1600005-0000-4000-8000-000000000005', 'launch-owner@example.test');
 update public.profiles set role = 'staff' where id = 'a1600001-0000-4000-8000-000000000001';
 update public.profiles set role = 'staff' where id = 'a1600002-0000-4000-8000-000000000002';
 update public.profiles set role = 'admin' where id = 'a1600003-0000-4000-8000-000000000003';
@@ -71,10 +53,8 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"a1600001-0000-4000-8000-000000000001","role":"authenticated"}', true);
 select set_config('request.jwt.claim.sub', 'a1600001-0000-4000-8000-000000000001', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
-select throws_ok(
-  $$select public.admin_account_action('a1600002-0000-4000-8000-000000000002', 'block', 'Please stop')$$,
-  '42501',
-  'Staff accounts cannot be blocked from here.',
+select ok(
+  (select public.admin_account_action('a1600002-0000-4000-8000-000000000002', 'block', 'Please stop')) is null,
   'staff cannot block another staff account'
 );
 select ok(
@@ -88,25 +68,20 @@ select ok(
       and entity_id = 'a1600002-0000-4000-8000-000000000002'
       and actor_id = 'a1600001-0000-4000-8000-000000000001'
       and after->>'attempt' = 'block'
+      and reason = 'Staff accounts cannot be blocked from here.'
   ),
   'blocking a staff account is audited'
 );
-select throws_ok(
-  $$select public.admin_account_action('a1600003-0000-4000-8000-000000000003', 'suspend', 'Review')$$,
-  '42501',
-  'Staff accounts cannot be blocked from here.',
+select ok(
+  (select public.admin_account_action('a1600003-0000-4000-8000-000000000003', 'suspend', 'Review')) is null,
   'staff cannot suspend an admin'
 );
-select throws_ok(
-  $$select public.admin_account_action('a1600003-0000-4000-8000-000000000003', 'unblock', '')$$,
-  '42501',
-  'Staff accounts cannot be blocked from here.',
+select ok(
+  (select public.admin_account_action('a1600003-0000-4000-8000-000000000003', 'unblock', '')) is null,
   'staff cannot unblock an admin'
 );
-select throws_ok(
-  $$select public.admin_account_action('a1600001-0000-4000-8000-000000000001', 'block', 'Myself')$$,
-  '42501',
-  'You cannot restrict your own account',
+select ok(
+  (select public.admin_account_action('a1600001-0000-4000-8000-000000000001', 'block', 'Myself')) is null,
   'staff cannot restrict their own account'
 );
 select ok(
@@ -114,6 +89,7 @@ select ok(
     select 1 from public.audit_log
     where action = 'account_self_refused'
       and entity_id = 'a1600001-0000-4000-8000-000000000001'
+      and reason = 'You cannot restrict your own account'
   ),
   'self-block attempt is audited'
 );
