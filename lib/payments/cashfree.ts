@@ -1,9 +1,12 @@
 import "server-only";
 import {
   cashfreeBody,
+  cashfreeRefundBody,
   providerPaise,
   type PaymentProvider,
   type ProviderOrder,
+  type ProviderRefund,
+  type ProviderRefundResult,
   type PaymentResult,
 } from "./model";
 export const CASHFREE_API_VERSION = "2026-01-01";
@@ -74,5 +77,23 @@ export class Cashfree implements PaymentProvider {
       amount: providerPaise(result.order_amount),
       currency: result.order_currency,
     };
+  }
+  async refund(input: ProviderRefund): Promise<ProviderRefundResult> {
+    const result = await this.request(`/orders/${encodeURIComponent(input.orderId)}/refunds`, {
+      method: "POST",
+      headers: { "x-idempotency-key": input.refundId },
+      body: JSON.stringify(cashfreeRefundBody(input)),
+    });
+    const id = result.cf_refund_id;
+    if (
+      (typeof id !== "string" && typeof id !== "number") ||
+      providerPaise(result.refund_amount) !== input.amountPaise
+    )
+      throw new Error("Refund service returned an invalid refund.");
+    const status = String(result.refund_status ?? "").toUpperCase();
+    const cfRefundId = String(id);
+    if (status === "SUCCESS") return { cfRefundId, status: "processed" };
+    if (status === "PENDING" || status === "ONHOLD") return { cfRefundId, status: "pending" };
+    return { cfRefundId, status: "failed" };
   }
 }

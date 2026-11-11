@@ -1,5 +1,12 @@
 import { expect, it } from "vitest";
-import { calendarIcs, mapsLink, seatLabel, ticketFacts, TICKET_TERMS } from "./present";
+import {
+  calendarIcs,
+  mapsLink,
+  seatLabel,
+  ticketEntryNotice,
+  ticketFacts,
+  TICKET_TERMS,
+} from "./present";
 
 const source = {
   code: "TK-01Z01-01",
@@ -51,4 +58,11 @@ it("writes a calendar file in UTC with escaped text", () => {
   expect(ics).toContain("SUMMARY:Diwali\\, Dhamaka");
   expect(ics.replace(/\r\n /g, "")).toContain(TICKET_TERMS);
   expect(ics.startsWith("BEGIN:VCALENDAR")).toBe(true);
+});
+
+it("names a void or transferred ticket without calling it refunded", () => {
+  expect(ticketEntryNotice("refunded")).toBe("Refunded. Not valid for entry.");
+  expect(ticketEntryNotice("void")).toBe("Void. Not valid for entry.");
+  expect(ticketEntryNotice("transferred")).toBe("Transferred");
+  expect(ticketEntryNotice("void")).not.toMatch(/refunded/i);
 });

@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { TicketOffline } from "@/components/tickets/ticket-offline";
-import { BRIGHTNESS_HINT, TICKET_TERMS, seatLabel } from "@/lib/tickets/present";
+import { BRIGHTNESS_HINT, TICKET_TERMS, seatLabel, ticketEntryNotice } from "@/lib/tickets/present";
 import { loadTicket, ticketSvg } from "@/lib/tickets/load";
 
 export const metadata = { title: "Your ticket", robots: { index: false, follow: false } };
@@ -34,7 +34,13 @@ async function Ticket({
         </p>
       )}
       <article className="rounded-3xl border border-line bg-white p-5 shadow-sm">
-        <p className="text-sm font-bold tracking-wide text-teal">Show this QR at the door</p>
+        {ticket.admitted ? (
+          <p className="text-sm font-bold tracking-wide text-teal">Show this QR at the door</p>
+        ) : (
+          <p className="rounded-xl bg-soft p-4 text-center font-bold text-ink">
+            {ticketEntryNotice(ticket.ticketStatus)}
+          </p>
+        )}
         <h1 className="mt-3 text-3xl font-extrabold text-ink">{facts.eventTitle}</h1>
         <p className="mt-3 text-lg">{facts.whenLabel}</p>
         <p className="mt-1 text-muted">{facts.gatesLabel}</p>
@@ -49,7 +55,7 @@ async function Ticket({
         <p className="mt-2 text-lg">{facts.holderName}</p>
         <p className="text-muted">{seatLabel(facts.seq, facts.total)}</p>
         <p className="mt-4 font-mono text-xl font-bold tracking-wide">{facts.code}</p>
-        {svg ? (
+        {ticket.admitted && svg ? (
           // Inline SVG stays inside the cached page, so the QR still shows offline.
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -57,25 +63,31 @@ async function Ticket({
             src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}
             className="mx-auto mt-6 h-72 w-72 max-w-full"
           />
-        ) : (
+        ) : ticket.admitted ? (
           <p className="mt-6 rounded-xl bg-soft p-4 text-center">
             This ticket can’t be displayed yet. Please try again soon.
           </p>
+        ) : null}
+        {ticket.admitted && (
+          <>
+            <p className="mt-4 text-center text-muted">{BRIGHTNESS_HINT}</p>
+            <p className="mt-3 text-center text-sm text-muted">{TICKET_TERMS}</p>
+          </>
         )}
-        <p className="mt-4 text-center text-muted">{BRIGHTNESS_HINT}</p>
-        <p className="mt-3 text-center text-sm text-muted">{TICKET_TERMS}</p>
       </article>
-      <div className="mt-5 grid gap-3">
-        <Button href={`/t/${facts.code}/pdf${suffix}`} variant="primary">
-          Download PDF
-        </Button>
-        {facts.mapsUrl && (
-          <Button href={facts.mapsUrl} target="_blank" rel="noopener noreferrer">
-            Open in Maps
+      {ticket.admitted && (
+        <div className="mt-5 grid gap-3">
+          <Button href={`/t/${facts.code}/pdf${suffix}`} variant="primary">
+            Download PDF
           </Button>
-        )}
-        <Button href={`/t/${facts.code}/calendar${suffix}`}>Add to calendar</Button>
-      </div>
+          {facts.mapsUrl && (
+            <Button href={facts.mapsUrl} target="_blank" rel="noopener noreferrer">
+              Open in Maps
+            </Button>
+          )}
+          <Button href={`/t/${facts.code}/calendar${suffix}`}>Add to calendar</Button>
+        </div>
+      )}
     </main>
   );
 }

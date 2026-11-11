@@ -5,7 +5,7 @@ export async function GET(request: Request, context: { params: Promise<{ code: s
   const { code } = await context.params;
   const token = new URL(request.url).searchParams.get("t") ?? undefined;
   const ticket = await loadTicket(code, token);
-  if (!ticket) return new Response(null, { status: 404 });
+  if (!ticket?.admitted) return new Response(null, { status: 404 });
   return new Response(calendarIcs(ticket.facts), {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",

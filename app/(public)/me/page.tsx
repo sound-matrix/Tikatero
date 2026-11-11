@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { OrganiserForm } from "@/components/auth/organiser-form";
 import { signOut } from "./actions";
 import { loadMyTickets, type MyTicket } from "@/lib/tickets/mine";
+import { loadMyOrders } from "@/lib/refunds/account";
+import { requestBuyerRefund } from "@/lib/refunds/actions";
 
 function TicketList({
   title,
@@ -32,9 +34,14 @@ function TicketList({
               {ticket.vip ? " · VIP" : ""}
             </p>
             <p className="text-muted">{ticket.seat}</p>
-            <Button className="mt-4" href={ticket.href} variant="primary">
-              Open ticket
-            </Button>
+            <p className="mt-2 font-semibold">{ticket.statusLabel}</p>
+            {ticket.canEnter ? (
+              <Button className="mt-4" href={ticket.href} variant="primary">
+                Open ticket
+              </Button>
+            ) : (
+              <p className="mt-3 text-sm text-muted">This ticket cannot be used for entry.</p>
+            )}
           </Card>
         ))
       )}
@@ -42,10 +49,11 @@ function TicketList({
   );
 }
 
-async function AccountContent() {
+async function AccountContent({ notice, error }: { notice?: string; error?: string }) {
   const { account } = await requireAccount();
   const destination = landingPath(account);
   const tickets = await loadMyTickets(account.profile.id);
+  const orders = await loadMyOrders(account.profile.id);
   const upcoming = tickets.filter((ticket) => !ticket.past);
   const past = tickets.filter((ticket) => ticket.past).reverse();
   return (
@@ -54,6 +62,52 @@ async function AccountContent() {
       <p className="text-muted">
         Welcome{account.profile.full_name ? `, ${account.profile.full_name}` : " to Tikatero"}.
       </p>
+      {notice && <p className="font-semibold text-teal">{notice}</p>}
+      {error && (
+        <p className="font-semibold text-danger" role="alert">
+          {error}
+        </p>
+      )}
+      <section className="space-y-3" data-testid="my-orders">
+        <h2 className="text-xl font-bold">Your orders</h2>
+        {orders.length === 0 ? (
+          <p className="text-muted">You don’t have any orders yet.</p>
+        ) : (
+          orders.map((order) => (
+            <Card key={order.id}>
+              <h3 className="text-lg font-bold">{order.eventTitle}</h3>
+              {order.isTest && <p className="font-bold text-gold-ink">Test booking</p>}
+              <p className="mt-1 text-muted">{order.whenLabel}</p>
+              <p className="mt-2 font-semibold">
+                {order.totalLabel} · {order.statusLabel}
+              </p>
+              <p className="text-muted">Paid {order.paidLabel}</p>
+              <p className="mt-2 text-sm text-muted">{order.policyText}</p>
+              {order.refunds.map((refund) => (
+                <p
+                  key={refund.id}
+                  className="mt-3 rounded-xl bg-soft p-3"
+                  data-testid="refund-status"
+                >
+                  {refund.amountLabel} · {refund.whenLabel}. {refund.copy}
+                </p>
+              ))}
+              {order.canRequest ? (
+                <form action={requestBuyerRefund} className="mt-4">
+                  <input type="hidden" name="order_id" value={order.id} />
+                  <Button type="submit" variant="primary">
+                    Request a refund
+                  </Button>
+                </form>
+              ) : (
+                order.requestReason && (
+                  <p className="mt-3 text-sm text-muted">{order.requestReason}</p>
+                )
+              )}
+            </Card>
+          ))
+        )}
+      </section>
       <TicketList
         title="Upcoming tickets"
         tickets={upcoming}
@@ -84,10 +138,28 @@ async function AccountContent() {
     </main>
   );
 }
-export default function MePage() {
+export default function MePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ refund?: string; refund_error?: string }>;
+}) {
   return (
     <Suspense fallback={<p className="p-8">Loading your account…</p>}>
-      <AccountContent />
+      <MeNotice searchParams={searchParams} />
     </Suspense>
+  );
+}
+
+async function MeNotice({
+  searchParams,
+}: {
+  searchParams: Promise<{ refund?: string; refund_error?: string }>;
+}) {
+  const query = await searchParams;
+  return (
+    <AccountContent
+      notice={query.refund === "updated" ? "Your refund has been updated." : undefined}
+      error={query.refund_error}
+    />
   );
 }

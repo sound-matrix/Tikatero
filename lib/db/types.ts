@@ -1028,8 +1028,11 @@ export type Database = {
           approved_by: string | null;
           cf_refund_id: string | null;
           created_at: string;
+          gateway_shortfall_paise: number;
           id: string;
           order_id: string;
+          organiser_reversal_paise: number;
+          processed_at: string | null;
           reason: string | null;
           requested_by: string | null;
           status: Database["public"]["Enums"]["refund_status"];
@@ -1040,8 +1043,11 @@ export type Database = {
           approved_by?: string | null;
           cf_refund_id?: string | null;
           created_at?: string;
+          gateway_shortfall_paise?: number;
           id?: string;
           order_id: string;
+          organiser_reversal_paise?: number;
+          processed_at?: string | null;
           reason?: string | null;
           requested_by?: string | null;
           status?: Database["public"]["Enums"]["refund_status"];
@@ -1051,8 +1057,11 @@ export type Database = {
           approved_by?: string | null;
           cf_refund_id?: string | null;
           created_at?: string;
+          gateway_shortfall_paise?: number;
           id?: string;
           order_id?: string;
+          organiser_reversal_paise?: number;
+          processed_at?: string | null;
           reason?: string | null;
           requested_by?: string | null;
           status?: Database["public"]["Enums"]["refund_status"];
@@ -1080,6 +1089,44 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      refund_tickets: {
+        Row: { refund_id: string; ticket_id: string };
+        ComputedFields: never;
+        Insert: { refund_id: string; ticket_id: string };
+        Update: { refund_id?: string; ticket_id?: string };
+        Relationships: [];
+      };
+      payout_refund_exceptions: {
+        Row: {
+          amount_paise: number;
+          created_at: string;
+          id: string;
+          order_id: string;
+          payout_id: string | null;
+          reason: string;
+          refund_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          amount_paise: number;
+          created_at?: string;
+          id?: string;
+          order_id: string;
+          payout_id?: string | null;
+          reason: string;
+          refund_id: string;
+        };
+        Update: {
+          amount_paise?: number;
+          created_at?: string;
+          id?: string;
+          order_id?: string;
+          payout_id?: string | null;
+          reason?: string;
+          refund_id?: string;
+        };
+        Relationships: [];
       };
       scans: {
         Row: {
@@ -1646,6 +1693,35 @@ export type Database = {
           is_test: boolean;
         }[];
       };
+      refund_action: {
+        Args: {
+          p_action: string;
+          p_order_id: string | null;
+          p_refund_id: string | null;
+          p_amount: number | null;
+          p_ticket_ids: string[] | null;
+          p_reason: string | null;
+          p_as: string | null;
+          p_confirm: boolean | null;
+        };
+        Returns: Json;
+      };
+      cancel_event_refunds: {
+        Args: {
+          p_event_id: string;
+          p_reason: string;
+          p_as: string | null;
+          p_confirm: boolean | null;
+        };
+        Returns: Json;
+      };
+      finish_refund: {
+        Args: { p_refund_id: string; p_cf_refund_id: string; p_outcome: string };
+        Returns: Json;
+      };
+      export_my_account: { Args: Record<PropertyKey, never>; Returns: Json };
+      account_deletion_status: { Args: Record<PropertyKey, never>; Returns: Json };
+      delete_my_account: { Args: Record<PropertyKey, never>; Returns: Json };
       apply_payout_settlement: {
         Args: {
           p_event_id: string;
@@ -1667,7 +1743,7 @@ export type Database = {
       kyc_status: "draft" | "submitted" | "auto_passed" | "needs_docs" | "approved" | "rejected";
       order_status:
         "created" | "pending" | "paid" | "failed" | "refunded" | "partially_refunded" | "expired";
-      payout_status: "scheduled" | "settled" | "failed" | "on_hold";
+      payout_status: "scheduled" | "settled" | "failed" | "on_hold" | "cancelled";
       refund_status: "requested" | "approved" | "rejected" | "processed" | "failed";
       scan_result: "ok" | "duplicate" | "invalid" | "wrong_event" | "test";
       team_role: "owner" | "manager" | "door";
@@ -1798,7 +1874,7 @@ export const Constants = {
         "partially_refunded",
         "expired",
       ],
-      payout_status: ["scheduled", "settled", "failed", "on_hold"],
+      payout_status: ["scheduled", "settled", "failed", "on_hold", "cancelled"],
       refund_status: ["requested", "approved", "rejected", "processed", "failed"],
       scan_result: ["ok", "duplicate", "invalid", "wrong_event", "test"],
       team_role: ["owner", "manager", "door"],

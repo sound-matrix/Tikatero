@@ -13,6 +13,7 @@ const labels: Record<string, string> = {
   settled: "Paid",
   failed: "Could not be paid",
   on_hold: "On hold",
+  cancelled: "Not paid · refunded",
 };
 
 async function Payouts() {

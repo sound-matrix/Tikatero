@@ -56,7 +56,13 @@ test.describe("Attendee discovery", () => {
       "href",
       /\/e\/sample-music-night$/,
     );
-    await expect(page.getByRole("contentinfo")).toHaveText("© Sound Matrix");
+    const footer = page.getByRole("contentinfo");
+    await expect(footer).toContainText("© Sound Matrix");
+    await expect(footer.getByRole("link", { name: "Terms" })).toBeVisible();
+    await expect(footer.getByRole("link", { name: "Privacy" })).toBeVisible();
+    await expect(footer.getByRole("link", { name: "Refunds" })).toBeVisible();
+    await expect(footer.getByRole("link", { name: "Help" })).toBeVisible();
+    await expect(footer).not.toContainText(/GSTIN|CIN|LLP|Ongole|Andhra/i);
     await page.getByRole("link", { name: "Book", exact: true }).filter({ visible: true }).click();
     await expect(page.getByRole("heading", { name: "Choose your tickets" })).toBeVisible();
     await page.goto("/");

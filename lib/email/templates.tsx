@@ -121,11 +121,14 @@ const definitions: {
     build: (d) =>
       notice(
         "Your refund has been processed",
-        "Your refund has been sent to your original payment method. Your bank or payment provider controls when it appears in your account.",
+        d.testRefund
+          ? "This was a test refund. No money was sent to a bank."
+          : "Your refund has been sent to your original payment method. Your bank or payment provider controls when it appears in your account.",
         [
           detail("Event", d.eventTitle),
           detail("Refund reference", d.refundRef),
           detail("Refund amount", formatINR(d.amountPaise)),
+          ...(d.testRefund ? [detail("Payment", "Test refund. No money was sent to a bank.")] : []),
         ],
         "View your account",
         "/me",

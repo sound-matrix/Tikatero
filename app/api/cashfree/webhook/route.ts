@@ -4,6 +4,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { verifyWebhook, providerPaise } from "@/lib/payments/model";
 import { transition } from "@/lib/checkout/store";
 import { applySettlement, settlementCommand } from "@/lib/payouts/settle";
+import { applyRefundWebhook } from "@/lib/refunds/complete";
+import { refundWebhookCommand } from "@/lib/refunds/webhook";
 const schema = z.object({
   type: z.enum([
     "PAYMENT_SUCCESS_WEBHOOK",
@@ -42,6 +44,18 @@ export async function POST(request: Request) {
     if (settlement?.error === "invalid") return new Response(null, { status: 400 });
     if (settlement) {
       await applySettlement(settlement);
+      return Response.json({ received: true });
+    }
+    const refund = refundWebhookCommand(json);
+    if (refund?.error === "invalid") return new Response(null, { status: 400 });
+    if (refund) {
+      try {
+        await applyRefundWebhook(refund);
+      } catch (error) {
+        if (error instanceof Error && error.message === "invalid")
+          return new Response(null, { status: 400 });
+        return new Response(null, { status: 503 });
+      }
       return Response.json({ received: true });
     }
     if (

@@ -13,7 +13,12 @@ export type TemplateData = {
   event_reminder: EmailBase & { event: EventDetails };
   event_changed: EmailBase & { event: EventDetails; changes: string };
   event_cancelled: EmailBase & { eventTitle: string; reason: string };
-  refund_processed: EmailBase & { eventTitle: string; refundRef: string; amountPaise: number };
+  refund_processed: EmailBase & {
+    eventTitle: string;
+    refundRef: string;
+    amountPaise: number;
+    testRefund?: boolean;
+  };
   kyc_submitted: EmailBase & { organiserName: string };
   kyc_needs_docs: EmailBase & { organiserName: string; requestedDocs: string[] };
   kyc_approved: EmailBase & { organiserName: string };

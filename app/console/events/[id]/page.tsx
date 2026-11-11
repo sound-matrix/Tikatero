@@ -6,11 +6,20 @@ import { requireAccount } from "@/lib/auth/account";
 import { SalesFigures } from "@/components/console/sales-view";
 import { Button } from "@/components/ui/button";
 import { loadEventSales } from "@/lib/payouts/read";
+import { loadRefundDesk } from "@/lib/refunds/desk";
+import { RefundDeskView } from "@/components/refunds/refund-desk";
 
 export const metadata: Metadata = { title: "Event sales" };
 
-async function EventSales({ params }: { params: Promise<{ id: string }> }) {
+async function EventSales({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ refund?: string; refund_error?: string }>;
+}) {
   const { id } = await params;
+  const query = await searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const { client, account } = await requireAccount();
   const sales = await loadEventSales(client, id);
@@ -19,10 +28,19 @@ async function EventSales({ params }: { params: Promise<{ id: string }> }) {
     if (assignment?.role === "door") redirect(`/console/events/${id}/scan`);
     notFound();
   }
+  const desk = await loadRefundDesk(client, id);
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 md:px-8">
       <p className="text-sm font-bold uppercase tracking-widest text-teal">Event sales</p>
       <SalesFigures event={sales} detail />
+      {desk && (
+        <RefundDeskView
+          desk={desk}
+          asStaff={false}
+          notice={query.refund === "updated" ? "The refund has been updated." : undefined}
+          error={query.refund_error}
+        />
+      )}
       <div className="flex flex-wrap gap-3">
         <Button href={`/console/events/${id}/export`} variant="primary">
           Download sales CSV
@@ -44,7 +62,10 @@ async function EventSales({ params }: { params: Promise<{ id: string }> }) {
   );
 }
 
-export default function Page(props: { params: Promise<{ id: string }> }) {
+export default function Page(props: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ refund?: string; refund_error?: string }>;
+}) {
   return (
     <Suspense fallback={<p className="p-8">Loading sales…</p>}>
       <EventSales {...props} />
