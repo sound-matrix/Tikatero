@@ -5,7 +5,8 @@
 create extension if not exists dblink with schema extensions;
 
 -- dblink is only for refusal audits that must survive the error's rollback.
--- Browser roles cannot open a second connection.
+-- Browser roles should not open a second connection. Some Supabase-owned
+-- helpers (dblink_connect_u) cannot be revoked by the migration role.
 do $$
 declare
   fn oid;
@@ -16,7 +17,12 @@ begin
     join pg_namespace as n on n.oid = p.pronamespace
     where n.nspname = 'extensions' and p.proname like 'dblink%'
   loop
-    execute format('revoke all on function %s from public, anon, authenticated', fn::regprocedure);
+    begin
+      execute format('revoke all on function %s from public, anon, authenticated', fn::regprocedure);
+    exception
+      when insufficient_privilege then
+        null;
+    end;
   end loop;
 end
 $$;
