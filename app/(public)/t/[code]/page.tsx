@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { TicketOffline } from "@/components/tickets/ticket-offline";
-import { BRIGHTNESS_HINT, TICKET_TERMS, seatLabel } from "@/lib/tickets/present";
+import { BRIGHTNESS_HINT, TICKET_TERMS, seatLabel, ticketEntryNotice } from "@/lib/tickets/present";
 import { loadTicket, ticketSvg } from "@/lib/tickets/load";
 
 export const metadata = { title: "Your ticket", robots: { index: false, follow: false } };
@@ -38,7 +38,7 @@ async function Ticket({
           <p className="text-sm font-bold tracking-wide text-teal">Show this QR at the door</p>
         ) : (
           <p className="rounded-xl bg-soft p-4 text-center font-bold text-ink">
-            This ticket was refunded. It cannot be used for entry.
+            {ticketEntryNotice(ticket.ticketStatus)}
           </p>
         )}
         <h1 className="mt-3 text-3xl font-extrabold text-ink">{facts.eventTitle}</h1>

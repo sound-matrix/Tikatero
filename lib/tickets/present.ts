@@ -2,6 +2,18 @@ import { formatIst } from "@/lib/format";
 import { formatINR } from "@/lib/email/format";
 
 export const TICKET_TERMS = "Entry with valid QR only. Each QR scans once.";
+
+export const ticketStatusLabels: Record<string, string> = {
+  valid: "Valid",
+  used: "Used",
+  void: "Void. Not valid for entry.",
+  transferred: "Transferred",
+  refunded: "Refunded. Not valid for entry.",
+};
+
+export function ticketEntryNotice(status: string) {
+  return ticketStatusLabels[status] ?? "This ticket cannot be used for entry.";
+}
 export const BRIGHTNESS_HINT =
   "Turn your screen brightness up. After you open this page once, it also works offline.";
 

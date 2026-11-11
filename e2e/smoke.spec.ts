@@ -11,7 +11,10 @@ test("home loads and the Tikatero logo is visible", async ({ page }) => {
 
   const footer = page.getByRole("contentinfo");
   await expect(footer).toContainText("© Sound Matrix");
-  await expect(footer).toHaveText("© Sound Matrix");
+  await expect(footer.getByRole("link", { name: "Terms" })).toBeVisible();
+  await expect(footer.getByRole("link", { name: "Privacy" })).toBeVisible();
+  await expect(footer.getByRole("link", { name: "Refunds" })).toBeVisible();
+  await expect(footer.getByRole("link", { name: "Help" })).toBeVisible();
   await expect(footer).not.toContainText(/GSTIN|CIN|LLP|Ongole|Andhra/i);
 });
 

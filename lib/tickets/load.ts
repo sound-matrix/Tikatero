@@ -28,7 +28,9 @@ type Row = {
   ticket_type_id: string;
 };
 
-async function orderBundle(orderId: string, statuses: readonly string[] = ["paid"]) {
+const ticketOrderStatuses = ["paid", "partially_refunded", "refunded"] as const;
+
+async function orderBundle(orderId: string, statuses: readonly string[] = ticketOrderStatuses) {
   const client = createServiceClient();
   const { data: order, error } = await client
     .from("orders")
@@ -93,7 +95,7 @@ export async function loadTicket(code: string, token?: string): Promise<LoadedTi
     .maybeSingle();
   if (error) throw new Error("Your ticket could not be loaded.");
   if (!ticket) return null;
-  const bundle = await orderBundle(ticket.order_id, ["paid", "partially_refunded", "refunded"]);
+  const bundle = await orderBundle(ticket.order_id);
   if (!bundle) return null;
   const allowed = await ticketAccessAllowed({
     code: ticket.code,

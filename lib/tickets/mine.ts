@@ -2,7 +2,7 @@ import "server-only";
 
 import { createServiceClient } from "@/lib/supabase/service";
 import { formatIst } from "@/lib/format";
-import { seatLabel } from "./present";
+import { seatLabel, ticketStatusLabels } from "./present";
 
 export type MyTicket = {
   code: string;
@@ -18,14 +18,6 @@ export type MyTicket = {
   status: "valid" | "used" | "void" | "transferred" | "refunded";
   statusLabel: string;
   canEnter: boolean;
-};
-
-const statusLabels: Record<string, string> = {
-  valid: "Valid",
-  used: "Used",
-  void: "Void. Not valid for entry.",
-  transferred: "Transferred",
-  refunded: "Refunded. Not valid for entry.",
 };
 
 export async function loadMyTickets(buyerId: string): Promise<MyTicket[]> {
@@ -72,7 +64,7 @@ export async function loadMyTickets(buyerId: string): Promise<MyTicket[]> {
         past: ended,
         href: `/t/${ticket.code}`,
         status: ticket.status,
-        statusLabel: statusLabels[ticket.status] ?? ticket.status,
+        statusLabel: ticketStatusLabels[ticket.status] ?? ticket.status,
         canEnter: ticket.status === "valid" || ticket.status === "used",
       };
     })
