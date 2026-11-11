@@ -190,6 +190,20 @@ it.each([
   expect(holdCall()?.[1]).toMatchObject({ p_provider: "mock", p_is_test: true });
 });
 
+it("fails closed for live production checkout when Turnstile is not configured", async () => {
+  vi.stubEnv("NODE_ENV", "production");
+  vi.stubEnv("VERCEL_ENV", "production");
+  vi.stubEnv("CASHFREE_ENV", "production");
+  vi.stubEnv("CASHFREE_APP_ID", "app");
+  vi.stubEnv("CASHFREE_SECRET_KEY", "secret");
+  vi.stubEnv("TURNSTILE_SECRET_KEY", "");
+  vi.stubEnv("PAYMENTS_ALLOW_MOCK", "");
+  useEvent("prod-no-turnstile", false);
+  const result = await submitCheckout(booking("prod-no-turnstile", false));
+  expect(result).toEqual({ error: PAYMENTS_UNAVAILABLE });
+  expect(holdCall()).toBeUndefined();
+});
+
 it("still books a free event when production payments are not configured", async () => {
   vi.stubEnv("NODE_ENV", "production");
   vi.stubEnv("VERCEL_ENV", "production");

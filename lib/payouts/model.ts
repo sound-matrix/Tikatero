@@ -98,10 +98,28 @@ export function expectedPayoutAt(input: {
   return addIstWorkingDays(input.paidAt, 1 + input.payoutDays);
 }
 
+/** Stored pricing_versions.payout_days, or 2 when that row has no usable value. */
+export function payoutWindowDays(stored: number | null | undefined) {
+  if (typeof stored !== "number" || !Number.isInteger(stored) || stored < 0 || stored > 365)
+    return 2;
+  return stored;
+}
+
 export function payoutWindowCopy(payoutDays: number) {
-  const days = Number.isInteger(payoutDays) && payoutDays >= 0 ? payoutDays : 2;
+  const days = payoutWindowDays(payoutDays);
   const noun = days === 1 ? "day" : "days";
   return `Usually paid within ${days} ${noun} of settlement.`;
+}
+
+export const LIVE_VENDOR_UNAVAILABLE = "A live payout account cannot be created yet.";
+
+/** Staff-facing sentence. Never returns provider bodies, account numbers, or secrets. */
+export function vendorFollowUp(error: unknown) {
+  const message = error instanceof Error ? error.message : "";
+  if (message === "The bank account name does not match the organiser name.") return message;
+  if (message === "Verification settings need attention. Please contact support.") return message;
+  if (message === LIVE_VENDOR_UNAVAILABLE) return message;
+  return LIVE_VENDOR_UNAVAILABLE;
 }
 
 export function organiserControlError(

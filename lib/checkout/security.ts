@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { PAYMENTS_UNAVAILABLE, productionPaymentLock } from "@/lib/payments/model";
 import type { CheckoutOrder } from "./model";
 export const tokenHash = (token: string) => createHash("sha256").update(token).digest("hex");
 function orderCookie(path: string) {
@@ -66,19 +67,46 @@ export async function ownOrder(id: string): Promise<CheckoutOrder | null> {
     absorbed_gateway_paise: null,
   };
 }
-export async function verifyTurnstile(token: string, hostname: string) {
-  const secret = process.env.TURNSTILE_SECRET_KEY;
+/**
+ * Live production checkout must verify Turnstile. Preview, local development,
+ * and the explicit production mock switch may skip only when the secret is absent.
+ */
+export function turnstileRequired(
+  env: {
+    NODE_ENV?: string;
+    VERCEL_ENV?: string;
+    PAYMENTS_ALLOW_MOCK?: string;
+    CASHFREE_ENV?: string;
+  } = process.env,
+) {
+  if (!productionPaymentLock(env)) return false;
+  return !(env.PAYMENTS_ALLOW_MOCK === "true" && env.CASHFREE_ENV === "mock");
+}
+
+/** Tokens are not logged. */
+export async function verifyTurnstile(
+  token: string,
+  hostname: string,
+  options: { livePayment: boolean },
+) {
+  const secret = process.env.TURNSTILE_SECRET_KEY?.trim() ?? "";
   if (!secret) {
-    console.info("Checkout: Turnstile skipped; secret is not configured.");
+    if (options.livePayment && turnstileRequired()) throw new Error(PAYMENTS_UNAVAILABLE);
     return;
   }
+  if (!token || token.length > 2048)
+    throw new Error("Please complete the security check and try again.");
   const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
     method: "POST",
     body: new URLSearchParams({ secret, response: token }),
     signal: AbortSignal.timeout(10000),
     cache: "no-store",
   });
-  const result = await response.json();
+  const result = (await response.json()) as {
+    success?: boolean;
+    hostname?: string;
+    action?: string;
+  };
   if (
     !response.ok ||
     result.success !== true ||

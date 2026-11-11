@@ -74,6 +74,7 @@ async function Accounts({
               id={user.id}
               blocked={!!user.blocked_at}
               self={user.id === account.profile.id}
+              staffAccount={user.role === "staff" || user.role === "admin"}
             />
             {orgs
               ?.filter((o) => o.owner_id === user.id)

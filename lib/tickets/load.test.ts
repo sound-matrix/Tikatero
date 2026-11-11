@@ -114,3 +114,19 @@ it("does not serve a QR or PDF for a refunded ticket", async () => {
   expect(loaded?.qrPayload).toBeNull();
   expect(await loadTicketPdf(code)).toBeNull();
 });
+
+it("does not serve a QR or PDF for a void or transferred ticket", async () => {
+  for (const status of ["void", "transferred"]) {
+    state.ticketStatus = status;
+    const loaded = await loadTicket(code);
+    expect(loaded?.qrPayload).toBeNull();
+    expect(await loadTicketPdf(code)).toBeNull();
+  }
+});
+
+it("regenerates the same ticket PDF on a repeated fetch", async () => {
+  const first = await loadTicketPdf(code);
+  const second = await loadTicketPdf(code);
+  expect(first?.pdf?.subarray(0, 5).toString()).toBe("%PDF-");
+  expect(second?.pdf?.equals(first!.pdf!)).toBe(true);
+});

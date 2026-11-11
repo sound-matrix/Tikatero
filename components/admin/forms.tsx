@@ -103,12 +103,17 @@ export function AccountForm({
   id,
   blocked,
   self,
+  staffAccount,
 }: {
   id: string;
   blocked: boolean;
   self: boolean;
+  staffAccount: boolean;
 }) {
   const [state, action, pending] = useActionState(changeAccount, {});
+  if (staffAccount) {
+    return <p>Staff accounts cannot be blocked from here.</p>;
+  }
   return (
     <>
       <form action={action} className="space-y-3">

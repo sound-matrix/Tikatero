@@ -1,11 +1,16 @@
-import { Suspense } from "react";
+import { cache, Suspense } from "react";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
+import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { TicketOffline } from "@/components/tickets/ticket-offline";
 import { BRIGHTNESS_HINT, TICKET_TERMS, seatLabel, ticketEntryNotice } from "@/lib/tickets/present";
 import { loadTicket, ticketSvg } from "@/lib/tickets/load";
 
-export const metadata = { title: "Your ticket", robots: { index: false, follow: false } };
+const ticketForRequest = cache(async (code: string, token?: string) => {
+  await connection();
+  return loadTicket(code, token);
+});
 
 function tokenFrom(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -20,7 +25,7 @@ async function Ticket({
 }) {
   const [{ code }, query] = await Promise.all([params, searchParams]);
   const token = tokenFrom(query.t);
-  const ticket = await loadTicket(code, token);
+  const ticket = await ticketForRequest(code, token);
   if (!ticket) notFound();
   const suffix = token ? `?t=${encodeURIComponent(token)}` : "";
   const svg = ticket.qrPayload ? await ticketSvg(ticket.qrPayload) : null;
@@ -92,12 +97,25 @@ async function Ticket({
   );
 }
 
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ code: string }>;
+  searchParams: Promise<{ t?: string | string[] }>;
+}): Promise<Metadata> {
+  const [{ code }, query] = await Promise.all([params, searchParams]);
+  const ticket = await ticketForRequest(code, tokenFrom(query.t));
+  if (!ticket) notFound();
+  return { title: "Your ticket", robots: { index: false, follow: false } };
+}
+
 export default function Page(props: {
   params: Promise<{ code: string }>;
   searchParams: Promise<{ t?: string | string[] }>;
 }) {
   return (
-    <Suspense fallback={<p className="p-8">Loading your ticket…</p>}>
+    <Suspense fallback={<p className="p-8">Loading…</p>}>
       <Ticket {...props} />
     </Suspense>
   );

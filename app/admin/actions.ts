@@ -9,6 +9,7 @@ import {
   OWN_ORGANISER_CONTROL,
   organiserControlError,
   settlementHoldPlan,
+  vendorFollowUp,
 } from "@/lib/payouts/model";
 import { notifyPayoutHeld } from "@/lib/payouts/notify";
 import { splitProvider } from "@/lib/payouts/provider";
@@ -67,7 +68,7 @@ export async function reviewKyc(_state: ActionState, form: FormData): Promise<Ac
           ? "This application changed. Reload before reviewing."
           : error?.message || "The decision could not be saved.",
     };
-  let hookFailed = false;
+  let followUp = "";
   if (decision === "approved") {
     const { data: app } = await client
       .from("kyc_applications")
@@ -76,15 +77,23 @@ export async function reviewKyc(_state: ActionState, form: FormData): Promise<Ac
       .single();
     try {
       if (app) await onOrganiserApproved(app.organiser_id);
-    } catch {
-      hookFailed = true;
+    } catch (error) {
+      followUp = vendorFollowUp(error);
+      if (app) {
+        try {
+          await client.rpc("admin_note_vendor_failure", {
+            p_id: app.organiser_id,
+            p_reason: followUp,
+          });
+        } catch {
+          /* Approval stands. The note is best-effort and contains no bank details. */
+        }
+      }
     }
   }
   refresh();
   const result = await deliver(data);
-  return hookFailed
-    ? { ...result, success: `${result.success} Approval follow-up needs attention.` }
-    : result;
+  return followUp ? { ...result, success: `${result.success} ${followUp}` } : result;
 }
 export async function changeAccount(_state: ActionState, form: FormData): Promise<ActionState> {
   const { client } = await requireStaff();
@@ -99,7 +108,21 @@ export async function changeAccount(_state: ActionState, form: FormData): Promis
     p_action: action,
     p_reason: reason.slice(0, 1000),
   });
-  if (error || !data) return { error: error?.message || "The account could not be updated." };
+  if (error) {
+    const message = error.message || "The account could not be updated.";
+    if (
+      message.includes("Staff accounts cannot be blocked from here.") ||
+      message.includes("You cannot restrict your own account")
+    ) {
+      try {
+        await client.rpc("admin_note_account_refusal", { p_id: id, p_action: action });
+      } catch {
+        /* The account was not changed. The audit note is best-effort. */
+      }
+    }
+    return { error: message };
+  }
+  if (!data) return { error: "The account could not be updated." };
   refresh();
   return action === "unblock" ? { success: "Account unblocked." } : deliver(data);
 }

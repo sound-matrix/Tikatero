@@ -1,7 +1,7 @@
 import "server-only";
 import { matchThreshold } from "@/lib/kyc/model";
 import { createServiceClient } from "@/lib/supabase/service";
-import { matchingKycName } from "./model";
+import { LIVE_VENDOR_UNAVAILABLE, matchingKycName } from "./model";
 import { splitProvider } from "./provider";
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -50,8 +50,18 @@ export async function ensureSplitVendor(organiserId: string) {
   }
   if (!matchingKycName(bankName, kycName, threshold))
     throw new Error("The bank account name does not match the organiser name.");
-  const provider = splitProvider();
+  let provider;
+  try {
+    provider = splitProvider();
+  } catch {
+    throw new Error(LIVE_VENDOR_UNAVAILABLE);
+  }
+  if (provider.mode !== "mock") {
+    await provider.ensureVendor(organiserId);
+    throw new Error(LIVE_VENDOR_UNAVAILABLE);
+  }
   const created = await provider.ensureVendor(organiserId);
+  if (!created.vendorId.startsWith("mock_vendor_")) throw new Error(LIVE_VENDOR_UNAVAILABLE);
   const { error: saveError } = await service
     .from("organisers")
     .update({ cashfree_vendor_id: created.vendorId })

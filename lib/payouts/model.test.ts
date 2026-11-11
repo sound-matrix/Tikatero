@@ -9,7 +9,10 @@ import {
   organiserControlError,
   OWN_ORGANISER_CONTROL,
   payoutDecision,
+  LIVE_VENDOR_UNAVAILABLE,
   payoutWindowCopy,
+  payoutWindowDays,
+  vendorFollowUp,
   platformNet,
   settlementHoldPlan,
   assertPositivePaise,
@@ -36,6 +39,13 @@ describe("expected payout date", () => {
   });
   it("says payout within the saved number of days, in plain English", () => {
     expect(payoutWindowCopy(2)).toBe("Usually paid within 2 days of settlement.");
+    expect(payoutWindowCopy(payoutWindowDays(4))).toBe("Usually paid within 4 days of settlement.");
+    expect(payoutWindowCopy(payoutWindowDays(null))).toBe(
+      "Usually paid within 2 days of settlement.",
+    );
+    expect(payoutWindowCopy(1)).toBe("Usually paid within 1 day of settlement.");
+    expect(vendorFollowUp(new Error("boom"))).toBe(LIVE_VENDOR_UNAVAILABLE);
+    expect(vendorFollowUp(new Error("bank account 123456789012"))).toBe(LIVE_VENDOR_UNAVAILABLE);
   });
 });
 
