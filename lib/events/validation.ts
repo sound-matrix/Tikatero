@@ -66,7 +66,7 @@ function requireValue(ok: unknown, message: string): asserts ok {
 }
 function imageKey(value: string, kind: "poster" | "guest_photo", id: string) {
   requireValue(
-    !value || new RegExp(`^${kind}/${id}/[0-9a-f-]{36}\\.(jpg|png|webp)$`, "i").test(value),
+    !value || new RegExp(`^media/${kind}/${id}/[0-9a-f-]{36}\\.(jpg|png|webp)$`, "i").test(value),
     "Please upload an image for this event.",
   );
 }

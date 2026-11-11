@@ -130,7 +130,9 @@ export function EventWizard({
   function imageUrl(key: string) {
     if (
       !mediaBase ||
-      !new RegExp(`^(poster|guest_photo)/${id}/[0-9a-f-]{36}\\.(jpg|png|webp)$`, "i").test(key)
+      !new RegExp(`^media/(poster|guest_photo)/${id}/[0-9a-f-]{36}\\.(jpg|png|webp)$`, "i").test(
+        key,
+      )
     )
       return null;
     return new URL(key, mediaBase).href;

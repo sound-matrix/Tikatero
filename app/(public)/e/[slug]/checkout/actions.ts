@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { createServiceClient } from "@/lib/supabase/service";
 import { checkoutSchema, type CheckoutResult, type CheckoutOrder } from "@/lib/checkout/model";
 import { checkoutData, providerOrder, transition } from "@/lib/checkout/store";
-import { grantOrderAccess, tokenHash, verifyTurnstile } from "@/lib/checkout/security";
+import { grantOrderAccess, tokenHash, verifyCheckoutRecaptcha } from "@/lib/checkout/security";
 import { computePricing } from "@/lib/pricing/compute";
 import { paymentProvider, PaymentsNotConfiguredError } from "@/lib/payments";
 import { orderIsTest, PAYMENTS_UNAVAILABLE, type PaymentProvider } from "@/lib/payments/model";
@@ -34,7 +34,7 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
     if (!data) return { error: "This event is not accepting bookings." };
     if (data.disabled) return { error: data.disabled };
     try {
-      await verifyTurnstile(values.turnstile, new URL(origin).hostname, {
+      await verifyCheckoutRecaptcha(values.recaptcha, {
         livePayment: !data.event.is_free,
       });
     } catch (error) {
@@ -42,7 +42,7 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
         error:
           error instanceof Error && error.message === PAYMENTS_UNAVAILABLE
             ? PAYMENTS_UNAVAILABLE
-            : "Please complete the security check and try again.",
+            : "We couldn't confirm you're not a robot. Please try again.",
       };
     }
     const lines = values.lines.map((line) => {

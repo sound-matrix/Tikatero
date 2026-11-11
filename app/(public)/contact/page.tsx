@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { ContactForm } from "@/components/contact/contact-form";
-import { contactTurnstileSiteKey } from "@/lib/contact/turnstile";
+import { connection } from "next/server";
+import { recaptchaSiteKey } from "@/lib/security/recaptcha";
 
 export const metadata: Metadata = {
   title: "Contact us",
@@ -9,8 +10,8 @@ export const metadata: Metadata = {
 };
 
 async function ContactBody() {
-  const turnstileSiteKey = await contactTurnstileSiteKey();
-  return <ContactForm turnstileSiteKey={turnstileSiteKey} />;
+  await connection();
+  return <ContactForm siteKey={recaptchaSiteKey()} />;
 }
 
 export default function ContactPage() {

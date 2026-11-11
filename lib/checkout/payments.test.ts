@@ -95,7 +95,7 @@ function booking(slug: string, isFree: boolean) {
     consent: true as const,
     lines: [{ id: tierId, qty: 1 }],
     attendees: [],
-    turnstile: "",
+    recaptcha: "",
   };
 }
 
@@ -106,7 +106,7 @@ function holdCall() {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
-  vi.stubEnv("TURNSTILE_SECRET_KEY", "");
+  vi.stubEnv("RECAPTCHA_SECRET_KEY", "");
   vi.stubEnv("NEXT_PUBLIC_SITE_URL", "http://localhost:3000");
   mock.from.mockImplementation((table: string) =>
     query(() => {
@@ -190,16 +190,16 @@ it.each([
   expect(holdCall()?.[1]).toMatchObject({ p_provider: "mock", p_is_test: true });
 });
 
-it("fails closed for live production checkout when Turnstile is not configured", async () => {
+it("fails closed for live production checkout when reCAPTCHA is not configured", async () => {
   vi.stubEnv("NODE_ENV", "production");
   vi.stubEnv("VERCEL_ENV", "production");
   vi.stubEnv("CASHFREE_ENV", "production");
   vi.stubEnv("CASHFREE_APP_ID", "app");
   vi.stubEnv("CASHFREE_SECRET_KEY", "secret");
-  vi.stubEnv("TURNSTILE_SECRET_KEY", "");
+  vi.stubEnv("RECAPTCHA_SECRET_KEY", "");
   vi.stubEnv("PAYMENTS_ALLOW_MOCK", "");
-  useEvent("prod-no-turnstile", false);
-  const result = await submitCheckout(booking("prod-no-turnstile", false));
+  useEvent("prod-no-recaptcha", false);
+  const result = await submitCheckout(booking("prod-no-recaptcha", false));
   expect(result).toEqual({ error: PAYMENTS_UNAVAILABLE });
   expect(holdCall()).toBeUndefined();
 });
@@ -216,4 +216,51 @@ it("still books a free event when production payments are not configured", async
   const result = await submitCheckout(booking("prod-free", true));
   expect(result.url).toMatch(/^\/orders\/[0-9a-f-]+\/status$/);
   expect(holdCall()?.[1]).toMatchObject({ p_provider: "free", p_is_test: false });
+});
+
+it.each(["NEXT_PUBLIC_RECAPTCHA_SITE_KEY", "RECAPTCHA_SECRET_KEY"])(
+  "live checkout creates no buyer/order/hold when %s is missing",
+  async (missing) => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("CASHFREE_ENV", "production");
+    vi.stubEnv("CASHFREE_APP_ID", "test-app");
+    vi.stubEnv("CASHFREE_SECRET_KEY", "test-secret");
+    vi.stubEnv("PAYMENTS_ALLOW_MOCK", "");
+    vi.stubEnv("NEXT_PUBLIC_RECAPTCHA_SITE_KEY", "site");
+    vi.stubEnv("RECAPTCHA_SECRET_KEY", "test-secret");
+    vi.stubEnv(missing, "");
+    useEvent("missing-key", false);
+    expect(await submitCheckout(booking("missing-key", false))).toEqual({
+      error: PAYMENTS_UNAVAILABLE,
+    });
+    expect(holdCall()).toBeUndefined();
+    expect(mock.createUser).not.toHaveBeenCalled();
+  },
+);
+it.each([0.1, 0.49])("low score %s creates no buyer/order/hold", async (score) => {
+  vi.stubEnv("NODE_ENV", "production");
+  vi.stubEnv("VERCEL_ENV", "production");
+  vi.stubEnv("CASHFREE_ENV", "production");
+  vi.stubEnv("CASHFREE_APP_ID", "test-app");
+  vi.stubEnv("CASHFREE_SECRET_KEY", "test-secret");
+  vi.stubEnv("NEXT_PUBLIC_RECAPTCHA_SITE_KEY", "site");
+  vi.stubEnv("RECAPTCHA_SECRET_KEY", "test-secret");
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockResolvedValue(
+        Response.json({ success: true, hostname: "tikatero.com", action: "checkout", score }),
+      ),
+  );
+  try {
+    useEvent("low-score", false);
+    const result = await submitCheckout({ ...booking("low-score", false), recaptcha: "token" });
+    expect(result.error).toBe("We couldn't confirm you're not a robot. Please try again.");
+    expect(holdCall()).toBeUndefined();
+    expect(mock.createUser).not.toHaveBeenCalled();
+  } finally {
+    vi.unstubAllGlobals();
+  }
 });

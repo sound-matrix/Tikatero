@@ -5,7 +5,7 @@ import path from "node:path";
 import { createServiceClient } from "@/lib/supabase/service";
 import { emailSiteUrl } from "@/lib/email/templates";
 import { send } from "@/lib/email/send";
-import { privateStorageConfigured, putPrivatePdf } from "@/lib/r2";
+import { privateStorageConfigured, putPrivatePdf } from "@/lib/storage";
 import { signTicket, signTicketLink, ticketQrPng } from "./qr";
 import { ticketFacts } from "./present";
 

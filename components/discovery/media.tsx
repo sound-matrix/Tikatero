@@ -6,7 +6,7 @@ export function mediaUrl(key: string | null) {
   if (
     !base ||
     !key ||
-    !/^(poster|guest_photo)\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.(jpg|png|webp)$/.test(key) ||
+    !/^media\/(poster|guest_photo)\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.(jpg|png|webp)$/.test(key) ||
     key.includes("..")
   )
     return null;

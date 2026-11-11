@@ -3,6 +3,7 @@ export type UploadKind = (typeof uploadKinds)[number];
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 export const UPLOAD_TTL_SECONDS = 300;
+export const UPLOAD_CHUNK_BYTES = 3 * 1024 * 1024;
 export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const extensions = {
   "image/jpeg": "jpg",
@@ -18,6 +19,7 @@ export type SignedUpload = {
   publicUrl?: string;
   expiresIn: number;
   mime: UploadMime;
+  headers?: Record<string, string>;
 };
 
 export class UploadError extends Error {
@@ -79,7 +81,7 @@ export function validateUpload(value: unknown): UploadInput {
 export function buildUploadKey(input: UploadInput, id = crypto.randomUUID()): string {
   const valid = validateUpload(input);
   if (!UUID_PATTERN.test(id)) throw new UploadError("A file name could not be created.");
-  return `${valid.kind}/${valid.entityId}/${id.toLowerCase()}.${extensions[valid.mime]}`;
+  return `${valid.kind === "kyc_doc" ? "" : "media/"}${valid.kind}/${valid.entityId}/${id.toLowerCase()}.${extensions[valid.mime]}`;
 }
 
 export function validatePrivateKey(key: unknown): asserts key is string {

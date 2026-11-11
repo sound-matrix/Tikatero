@@ -11,12 +11,32 @@ export default defineConfig({
   use: {
     baseURL: "http://127.0.0.1:3000",
   },
-  webServer: {
-    command: process.env.CI ? "pnpm start --port 3000" : "pnpm dev --port 3000",
-    url: "http://127.0.0.1:3000",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: process.env.CI ? "pnpm start --port 3000" : "pnpm dev --port 3000",
+      url: "http://127.0.0.1:3000",
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+    ...(process.env.CI && process.env.NEXT_PUBLIC_SUPABASE_URL
+      ? [
+          {
+            command: "pnpm start --port 3001",
+            url: "http://127.0.0.1:3001",
+            timeout: 120_000,
+            env: {
+              VERCEL_ENV: "production",
+              CASHFREE_ENV: "production",
+              CASHFREE_APP_ID: "local-test-app",
+              CASHFREE_SECRET_KEY: "local-test-secret",
+              PAYMENTS_ALLOW_MOCK: "false",
+              NEXT_PUBLIC_RECAPTCHA_SITE_KEY: "",
+              RECAPTCHA_SECRET_KEY: "",
+            },
+          },
+        ]
+      : []),
+  ],
   projects: [
     {
       name: "chromium",

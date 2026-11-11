@@ -4,8 +4,9 @@ import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { requestTime } from "@/lib/discovery/data";
 import { checkoutData } from "@/lib/checkout/store";
-import { turnstileRequired } from "@/lib/checkout/security";
+import { recaptchaRequired } from "@/lib/checkout/security";
 import { PAYMENTS_UNAVAILABLE } from "@/lib/payments/model";
+import { recaptchaSiteKey } from "@/lib/security/recaptcha";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { formatIst } from "@/lib/format";
 import { refundText } from "@/lib/discovery/model";
@@ -20,12 +21,11 @@ async function Checkout({ params }: { params: Promise<{ slug: string }> }) {
   const data = await checkoutData((await params).slug);
   if (!data) notFound();
   const { event, tiers, version, disabled, mode } = data;
-  const turnstileReady = Boolean(
-    process.env.TURNSTILE_SITE_KEY && process.env.TURNSTILE_SECRET_KEY,
-  );
+  const siteKey = recaptchaSiteKey();
+  const recaptchaReady = Boolean(siteKey);
   const unavailable =
     disabled ||
-    (!event.is_free && turnstileRequired() && !turnstileReady ? PAYMENTS_UNAVAILABLE : "");
+    (!event.is_free && recaptchaRequired() && !recaptchaReady ? PAYMENTS_UNAVAILABLE : "");
   return (
     <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
       <Link className="text-sm font-semibold text-muted underline" href={`/e/${event.slug}`}>
@@ -48,7 +48,7 @@ async function Checkout({ params }: { params: Promise<{ slug: string }> }) {
           version={version}
           feePayer={event.fee_payer}
           isFree={event.is_free}
-          siteKey={turnstileReady ? (process.env.TURNSTILE_SITE_KEY ?? "") : ""}
+          siteKey={siteKey}
           useCashfree={mode === "cashfree"}
           testMode={mode === "mock" || process.env.CASHFREE_ENV !== "production"}
           now={now}

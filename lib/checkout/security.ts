@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PAYMENTS_UNAVAILABLE, productionPaymentLock } from "@/lib/payments/model";
+import { recaptchaSiteKey, verifyRecaptcha, RECAPTCHA_RETRY } from "@/lib/security/recaptcha";
 import type { CheckoutOrder } from "./model";
 export const tokenHash = (token: string) => createHash("sha256").update(token).digest("hex");
 function orderCookie(path: string) {
@@ -68,10 +69,10 @@ export async function ownOrder(id: string): Promise<CheckoutOrder | null> {
   };
 }
 /**
- * Live production checkout must verify Turnstile. Preview, local development,
+ * Live production checkout must verify reCAPTCHA. Preview, local development,
  * and the explicit production mock switch may skip only when the secret is absent.
  */
-export function turnstileRequired(
+export function recaptchaRequired(
   env: {
     NODE_ENV?: string;
     VERCEL_ENV?: string;
@@ -83,35 +84,11 @@ export function turnstileRequired(
   return !(env.PAYMENTS_ALLOW_MOCK === "true" && env.CASHFREE_ENV === "mock");
 }
 
-/** Tokens are not logged. */
-export async function verifyTurnstile(
-  token: string,
-  hostname: string,
-  options: { livePayment: boolean },
-) {
-  const secret = process.env.TURNSTILE_SECRET_KEY?.trim() ?? "";
-  if (!secret) {
-    if (options.livePayment && turnstileRequired()) throw new Error(PAYMENTS_UNAVAILABLE);
+/** Preserve free/mock operation when keys are absent; live production fails closed. */
+export async function verifyCheckoutRecaptcha(token: string, options: { livePayment: boolean }) {
+  if (!recaptchaSiteKey()) {
+    if (options.livePayment && recaptchaRequired()) throw new Error(PAYMENTS_UNAVAILABLE);
     return;
   }
-  if (!token || token.length > 2048)
-    throw new Error("Please complete the security check and try again.");
-  const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-    method: "POST",
-    body: new URLSearchParams({ secret, response: token }),
-    signal: AbortSignal.timeout(10000),
-    cache: "no-store",
-  });
-  const result = (await response.json()) as {
-    success?: boolean;
-    hostname?: string;
-    action?: string;
-  };
-  if (
-    !response.ok ||
-    result.success !== true ||
-    result.hostname !== hostname ||
-    result.action !== "checkout"
-  )
-    throw new Error("Please complete the security check and try again.");
+  if (!(await verifyRecaptcha(token, "checkout"))) throw new Error(RECAPTCHA_RETRY);
 }

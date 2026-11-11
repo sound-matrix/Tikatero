@@ -1,10 +1,9 @@
 import type { NextConfig } from "next";
 import { securityHeaders } from "./lib/security/headers";
-import { parsePublicBaseUrl } from "./lib/uploads/public-base";
+import { storagePublicBase } from "./lib/uploads/public-base";
 
-const publicMediaBase = process.env.R2_PUBLIC_BASE_URL
-  ? parsePublicBaseUrl(process.env.R2_PUBLIC_BASE_URL)
-  : null;
+const mediaBase = storagePublicBase(process.env.NEXT_PUBLIC_SUPABASE_URL);
+const publicMediaBase = mediaBase ? new URL(mediaBase) : null;
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
@@ -13,10 +12,13 @@ const nextConfig: NextConfig = {
   // event URLs must return HTTP 404, including to ordinary browsers.
   htmlLimitedBots: /.*/,
   images: {
+    dangerouslyAllowLocalIP:
+      process.env.VERCEL_ENV !== "production" &&
+      ["127.0.0.1", "localhost"].includes(publicMediaBase?.hostname ?? ""),
     remotePatterns: publicMediaBase
       ? [
           {
-            protocol: "https",
+            protocol: publicMediaBase.protocol === "https:" ? "https" : "http",
             hostname: publicMediaBase.hostname,
             port: publicMediaBase.port,
             pathname: `${publicMediaBase.pathname}**`,
@@ -33,7 +35,6 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: securityHeaders({
           supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
-          mediaHost: publicMediaBase?.host,
         }),
       },
     ];

@@ -15,7 +15,7 @@ Notifications reuse the existing email sender and templates with an audit-ID ide
 
 ## Environment
 
-No environment variable names added. Existing Supabase, email and R2 configuration is reused. No live database migration is applied by this PR.
+No environment variable names added. Existing Supabase, email and Supabase Storage configuration is reused. No live database migration is applied by this PR.
 
 ## Screenshots
 

@@ -1,6 +1,5 @@
 export type SecurityHeaderInput = {
   supabaseUrl?: string;
-  mediaHost?: string;
 };
 
 const cashfree = [
@@ -25,11 +24,10 @@ export function contentSecurityPolicy(input: SecurityHeaderInput = {}) {
   const supabase = originOf(input.supabaseUrl);
   const connect = [
     "'self'",
-    "https://challenges.cloudflare.com",
+    "https://www.google.com/recaptcha/",
     ...cashfree,
     "https://*.supabase.co",
     "wss://*.supabase.co",
-    "https://*.r2.cloudflarestorage.com",
   ];
   if (supabase) {
     connect.push(supabase.origin);
@@ -37,15 +35,15 @@ export function contentSecurityPolicy(input: SecurityHeaderInput = {}) {
     connect.push(`${ws}//${supabase.host}`);
   }
   const images = ["'self'", "data:", "blob:", "https://tile.openstreetmap.org"];
-  if (input.mediaHost) images.push(`https://${input.mediaHost}`);
+  if (supabase) images.push(supabase.origin);
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://sdk.cashfree.com`,
+    `script-src 'self' 'unsafe-inline' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/ https://sdk.cashfree.com`,
     "style-src 'self' 'unsafe-inline'",
     `img-src ${images.join(" ")}`,
     "font-src 'self'",
     `connect-src ${connect.join(" ")}`,
-    `frame-src https://challenges.cloudflare.com ${cashfree.join(" ")}`,
+    `frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/ ${cashfree.join(" ")}`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

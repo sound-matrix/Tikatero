@@ -2,7 +2,7 @@
 
 Guest checkout lives at `/e/[slug]/checkout`; old `/book` links redirect there.
 No browser writes orders or payment state. The server validates quantities and
-consent, rate-limits hashed IP/email keys in Postgres, validates Turnstile when
+consent, rate-limits hashed IP/email keys in Postgres, validates reCAPTCHA v3 when
 configured, reloads ticket prices and computes integer paise using PR 10's engine.
 The hold RPC checks the pinned version, fee payer, free flag and tier prices again
 under inventory locks. A concurrent price change asks the buyer to refresh.
@@ -21,11 +21,14 @@ Names and placeholders are in `.env.example`. No payment keys enter client asset
   still book.
 - `CASHFREE_APP_ID`, `CASHFREE_SECRET_KEY`: server credentials for the selected account.
 - `CASHFREE_WEBHOOK_SECRET`: optional distinct signing key; falls back to the PG secret.
-- `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`: configure both together. Paid checkout
+- `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`, `RECAPTCHA_SECRET_KEY`: configure both together. Paid checkout
   on live production fails closed with "Online payments are not available yet" when either
   key is missing. Preview, local development, and the explicit production mock switch
-  (`PAYMENTS_ALLOW_MOCK=true` with `CASHFREE_ENV=mock`) skip Turnstile only when the secret
-  is absent. When the secret is set, hostname and action must match. Tokens are not logged.
+  (`PAYMENTS_ALLOW_MOCK=true` with `CASHFREE_ENV=mock`) skip reCAPTCHA v3 when either key
+  is absent. When both keys exist, verification checks success, the `checkout` action,
+  hostname (`tikatero.com` or `www.tikatero.com`; `*.vercel.app` only outside Vercel
+  production), and a score of at least 0.5. `RECAPTCHA_MIN_SCORE` can override that
+  threshold with a number from 0 to 1. Network errors and timeouts fail closed. Tokens are not logged.
   The protected route is the checkout server action for `/e/[slug]/checkout`. Login OTP,
   refund requests, and data exports are rate limited instead. `/api/cashfree/webhook`
   verifies the signature before any rate-limit write. `/api/cron/payments` stays gated on

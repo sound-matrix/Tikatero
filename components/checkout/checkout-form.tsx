@@ -1,6 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
-import { Turnstile } from "./turnstile";
+import { RecaptchaScript, RecaptchaNotice, recaptchaToken } from "@/components/recaptcha";
 import Script from "next/script";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -32,7 +32,6 @@ export function CheckoutForm({
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
-  const [widgetGeneration, setWidgetGeneration] = useState(0);
   const router = useRouter();
   const lines = tiers.map((t) => ({
     id: t.id,
@@ -50,6 +49,13 @@ export function CheckoutForm({
         const form = new FormData(e.currentTarget);
         start(async () => {
           setError("");
+          let token: string;
+          try {
+            token = await recaptchaToken(siteKey, "checkout");
+          } catch {
+            setError("We couldn't confirm you're not a robot. Please try again.");
+            return;
+          }
           const result = await submitCheckout({
             slug,
             quotedTotal: total.buyer_total,
@@ -63,7 +69,7 @@ export function CheckoutForm({
               .split("\n")
               .map((v) => v.trim())
               .filter(Boolean),
-            turnstile: String(form.get("cf-turnstile-response") ?? ""),
+            recaptcha: token,
           });
           if (result.payment && window.Cashfree) {
             try {
@@ -88,7 +94,6 @@ export function CheckoutForm({
           if (result.url) router.push(result.url);
           else {
             setError(result.error ?? "Please try again.");
-            setWidgetGeneration((v) => v + 1);
           }
         });
       }}
@@ -245,7 +250,7 @@ export function CheckoutForm({
             and this event’s refund policy.
           </span>
         </label>
-        {siteKey && <Turnstile siteKey={siteKey} generation={widgetGeneration} />}
+        <RecaptchaScript siteKey={siteKey} />
         {invalidShare && (
           <p role="alert" className="mt-4 text-sm text-danger">
             This ticket cannot be booked at its current price.
@@ -266,6 +271,7 @@ export function CheckoutForm({
               ? "Confirm RSVP"
               : `Pay ${publicPrice(total.buyer_total)}`}
         </button>
+        <RecaptchaNotice />
         {!isFree && (
           <p className="mt-4 text-center text-sm font-semibold text-teal">
             🔒 Secure payment by Cashfree
