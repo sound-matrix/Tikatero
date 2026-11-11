@@ -7,7 +7,7 @@ test("home loads and the Tikatero logo is visible", async ({ page }) => {
   expect(headers["x-frame-options"]).toBe("DENY");
   expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
   expect(headers["content-security-policy"]).toContain("frame-ancestors 'none'");
-  expect(headers["content-security-policy"]).toContain("https://challenges.cloudflare.com");
+  expect(headers["content-security-policy"]).toContain("https://www.google.com/recaptcha/");
   expect(headers["content-security-policy"]).not.toContain("unsafe-eval");
   await expect(
     page.getByRole("heading", { name: "Find events near you — or anywhere in the world" }),

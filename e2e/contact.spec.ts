@@ -13,6 +13,9 @@ test("contact form, pricing, and footer links", async ({ page }) => {
   await expect(
     page.getByText(/reply to your email, usually within 1–2 working days/),
   ).toBeVisible();
+  await expect(
+    page.getByText("This site is protected by reCAPTCHA", { exact: false }),
+  ).toBeVisible();
   await expectNoHiddenAddress(page);
   await page.screenshot({ path: "test-results/contact-empty.png", fullPage: true });
 

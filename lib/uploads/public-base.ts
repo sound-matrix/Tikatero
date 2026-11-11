@@ -14,3 +14,25 @@ export function parsePublicBaseUrl(value: string): URL {
   url.pathname = url.pathname.replace(/\/+$/, "") + "/";
   return url;
 }
+
+/** Local Supabase is HTTP; deployed projects must use HTTPS. */
+export function storagePublicBase(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    const local = ["localhost", "127.0.0.1"].includes(url.hostname);
+    if (
+      (url.protocol !== "https:" && !(local && url.protocol === "http:")) ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash ||
+      !/^\/?$/.test(url.pathname) ||
+      url.hostname.includes("*")
+    )
+      return null;
+    return `${url.origin}/storage/v1/object/public/event-media/`;
+  } catch {
+    return null;
+  }
+}

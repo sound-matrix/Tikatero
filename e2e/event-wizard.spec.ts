@@ -96,7 +96,7 @@ test.describe("Organiser event wizard", () => {
     await expect(page.locator(".leaflet-container")).toBeVisible();
     await shot(page, info, 3);
     await next(page, "Give your event a poster");
-    await expect(page.getByText("Poster uploads are not available yet.")).toBeVisible();
+    await expect(page.getByLabel("Choose a photo")).toBeVisible();
     await shot(page, info, 4);
     await next(page, "VIPs & chief guests");
     await page.getByRole("link", { name: "Your events", exact: true }).click();

@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables } from "@/lib/db/types";
 import { categories, emptyValues, toIstInput, priceText, type Values } from "./model";
-import { parsePublicBaseUrl } from "@/lib/uploads/public-base";
+import { storagePublicBase } from "@/lib/uploads/public-base";
 export type Draft = {
   id: string;
   organiserId: string;
@@ -42,12 +42,12 @@ export function rowValues(
     mapsUrl: row.maps_url ?? "",
     lat: row.lat === null ? "" : String(row.lat),
     lng: row.lng === null ? "" : String(row.lng),
-    posterKey: row.poster_key ?? "",
+    posterKey: row.poster_key?.startsWith("media/") ? row.poster_key : "",
     guests: guests.map((g) => ({
       id: g.id,
       name: g.name,
       title: g.title ?? "",
-      photoKey: g.photo_key ?? "",
+      photoKey: g.photo_key?.startsWith("media/") ? g.photo_key : "",
       vip: g.is_vip,
     })),
     tiers: tiers.map((t) => ({
@@ -97,20 +97,8 @@ export async function readDraft(
   };
 }
 export function publicMediaBase() {
-  try {
-    return process.env.R2_PUBLIC_BASE_URL
-      ? parsePublicBaseUrl(process.env.R2_PUBLIC_BASE_URL).href
-      : null;
-  } catch {
-    return null;
-  }
+  return storagePublicBase(process.env.NEXT_PUBLIC_SUPABASE_URL);
 }
 export function uploadsReady() {
-  return !!(
-    process.env.R2_ACCOUNT_ID &&
-    process.env.R2_ACCESS_KEY_ID &&
-    process.env.R2_SECRET_ACCESS_KEY &&
-    process.env.R2_PUBLIC_BUCKET &&
-    publicMediaBase()
-  );
+  return Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() && publicMediaBase());
 }

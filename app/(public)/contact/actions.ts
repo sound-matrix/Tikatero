@@ -4,7 +4,7 @@ import { allowRequest, requestIp } from "@/lib/security/rate-limit";
 import { createServiceClient } from "@/lib/supabase/service";
 import { hashContactIp } from "@/lib/contact/ip";
 import { sendContactNotice } from "@/lib/contact/send";
-import { verifyContactTurnstile } from "@/lib/contact/turnstile";
+import { recaptchaSiteKey, verifyRecaptcha, RECAPTCHA_RETRY } from "@/lib/security/recaptcha";
 import { validateContact, type ContactField } from "@/lib/contact/validation";
 
 export type ContactFormState = {
@@ -34,9 +34,9 @@ export async function submitContact(
   });
   if (!parsed.ok) return { error: parsed.error, fields: parsed.fields };
 
-  const turnstile = field(form, "cf-turnstile-response");
-  if (!(await verifyContactTurnstile(turnstile))) {
-    return { error: "Please complete the security check and try again." };
+  const token = field(form, "recaptcha");
+  if (recaptchaSiteKey() && !(await verifyRecaptcha(token, "contact"))) {
+    return { error: RECAPTCHA_RETRY };
   }
 
   const ip = await requestIp();

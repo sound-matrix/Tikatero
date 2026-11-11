@@ -68,12 +68,12 @@ async function fill(page: import("@playwright/test").Page, slug: string, free = 
 }
 test.describe("Guest checkout", () => {
   test.skip(!configured, "Requires local Supabase.");
-  test("mock success confirms once and issues one ticket", async ({
-    page,
-    request,
-  }, info) => {
+  test("mock success confirms once and issues one ticket", async ({ page, request }, info) => {
     const { id, slug } = await fixture();
     await fill(page, slug);
+    await expect(
+      page.getByText("This site is protected by reCAPTCHA", { exact: false }),
+    ).toBeVisible();
     for (const [label, width, height] of [
       ["desktop", 1440, 1100],
       ["mobile", 390, 844],
@@ -108,9 +108,7 @@ test.describe("Guest checkout", () => {
         .single(),
     ).data;
     expect(paid!.consumed_at).toBeTruthy();
-    const tickets = check(
-      await client.from("tickets").select("code").eq("order_id", orderId),
-    ).data;
+    const tickets = check(await client.from("tickets").select("code").eq("order_id", orderId)).data;
     expect(tickets).toHaveLength(1);
     expect(tickets![0].code).toMatch(/^TK-[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{5}-01$/);
     await expect(page.getByRole("link", { name: "Ticket 1 of 1" })).toBeVisible();

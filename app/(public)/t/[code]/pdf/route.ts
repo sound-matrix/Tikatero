@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { privateStorageConfigured, signTicketPdf } from "@/lib/r2";
+import { privateStorageConfigured, signTicketPdf } from "@/lib/storage";
 import { loadTicketPdf } from "@/lib/tickets/load";
 
 export async function GET(request: Request, context: { params: Promise<{ code: string }> }) {

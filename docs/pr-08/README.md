@@ -1,6 +1,6 @@
 # PR 08 — Organiser event creation wizard
 
-The organiser console now has an eight-step event wizard, saved drafts, a resumable event list and publish controls. It reuses `events`, `event_guests`, `ticket_types` (the existing tier table), organiser memberships, the P4 logo and R2 image uploads.
+The organiser console now has an eight-step event wizard, saved drafts, a resumable event list and publish controls. It reuses `events`, `event_guests`, `ticket_types` (the existing tier table), organiser memberships, the P4 logo and Supabase Storage image uploads.
 
 Draft saves keep unfinished required fields; continuing validates the step. Every request is validated with Zod. A security-invoker RPC saves the event and child changes in one transaction, with membership checks, target locks, revision checks and slug collision suffixes. Guest and tier IDs stay stable. Sold tiers cannot be removed or repriced. Free events save zero-paise RSVP tiers.
 
@@ -19,7 +19,7 @@ Pending organisers can open event list/draft routes through the narrowly authori
 
 ## Environment
 
-No new environment variables. Existing Supabase and R2 configuration is reused. Without R2 configuration, poster/guest photo steps explain that uploads are unavailable and drafts can continue. No live database migration is applied by the PR.
+No new environment variables. Existing Supabase and Supabase Storage configuration is reused. Without Supabase Storage configuration, poster/guest photo steps explain that uploads are unavailable and drafts can continue. No live database migration is applied by the PR.
 
 ## Screenshots
 

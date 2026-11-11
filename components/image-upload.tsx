@@ -84,6 +84,7 @@ export function ImageUpload({ kind, entityId, label, onUpload }: ImageUploadProp
       await putFile(file, signed, setProgress, request.signal);
       setProgress(100);
       setStatus("done");
+      if (signed.publicUrl) setPreview(signed.publicUrl);
       // Do not hand presigned URLs to callers or store them as a permanent asset URL.
       result = { key: signed.key, ...(signed.publicUrl ? { publicUrl: signed.publicUrl } : {}) };
     } catch (issue) {

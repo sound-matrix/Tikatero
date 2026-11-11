@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { submitContact, type ContactFormState } from "@/app/(public)/contact/actions";
-import { Turnstile } from "@/components/checkout/turnstile";
+import { RecaptchaScript, RecaptchaNotice, recaptchaToken } from "@/components/recaptcha";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -10,8 +10,18 @@ import { contactTopics } from "@/lib/contact/topics";
 
 const initialState: ContactFormState = {};
 
-export function ContactForm({ turnstileSiteKey }: { turnstileSiteKey: string }) {
-  const [state, action, pending] = useActionState(submitContact, initialState);
+export function ContactForm({ siteKey }: { siteKey: string }) {
+  const [state, action, pending] = useActionState(
+    async (previous: ContactFormState, form: FormData): Promise<ContactFormState> => {
+      try {
+        form.set("recaptcha", await recaptchaToken(siteKey, "contact"));
+      } catch {
+        return { error: "We couldn't confirm you're not a robot. Please try again." };
+      }
+      return submitContact(previous, form);
+    },
+    initialState,
+  );
   const startedRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -108,9 +118,7 @@ export function ContactForm({ turnstileSiteKey }: { turnstileSiteKey: string }) 
           </p>
         )}
       </div>
-      {turnstileSiteKey ? (
-        <Turnstile siteKey={turnstileSiteKey} generation={0} action="contact" />
-      ) : null}
+      <RecaptchaScript siteKey={siteKey} />
       {state.error ? (
         <p role="alert" className="font-semibold text-danger">
           {state.error}
@@ -119,6 +127,7 @@ export function ContactForm({ turnstileSiteKey }: { turnstileSiteKey: string }) 
       <Button type="submit" variant="primary" className="w-full sm:w-auto" disabled={pending}>
         {pending ? "Sending…" : "Send message"}
       </Button>
+      <RecaptchaNotice />
     </form>
   );
 }

@@ -8,7 +8,7 @@ import {
   UPLOAD_TTL_SECONDS,
 } from "@/lib/uploads/policy";
 import { readUploadBody, uploadResponse, uploadFailure } from "@/lib/uploads/http";
-import { getSignedReadUrl } from "@/lib/r2";
+import { getSignedReadUrl } from "@/lib/storage";
 
 export async function POST(request: Request) {
   try {

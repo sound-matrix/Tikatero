@@ -51,7 +51,7 @@ const tickets = [
 ];
 
 vi.mock("@/lib/email/send", () => ({ send }));
-vi.mock("@/lib/r2", () => ({ privateStorageConfigured: () => false, putPrivatePdf: vi.fn() }));
+vi.mock("@/lib/storage", () => ({ privateStorageConfigured: () => false, putPrivatePdf: vi.fn() }));
 vi.mock("@/lib/tickets/pdf", () => ({ renderTicketPdf: async () => Buffer.from("%PDF-1.4") }));
 vi.mock("@/lib/tickets/qr", () => ({
   signTicket: (code: string) => `${code}.sig`,

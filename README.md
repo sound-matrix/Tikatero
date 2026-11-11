@@ -66,8 +66,8 @@ The public `/contact` form saves each message in `contact_messages`. When
 that inbox and sets the visitor as reply-to. The destination address is never
 shown on the site, in errors, or in the browser bundle. If those values are
 missing, or Resend does not accept the email, the message stays saved and the
-visitor still sees success. Turnstile runs on this form only when both Turnstile
-keys are set. Live paid checkout still fails closed without Turnstile.
+visitor still sees success. reCAPTCHA v3 runs on this form only when both reCAPTCHA v3
+keys are set. Live paid checkout still fails closed without reCAPTCHA v3.
 
 Use the existing `NEXT_PUBLIC_SITE_URL` as the production HTTPS site origin for
 absolute logo and button URLs. It contains no secret. The shared email layout
@@ -172,7 +172,7 @@ New env names (empty in `.env.example`):
 - `CASHFREE_SECURE_ID_ENV`
 
 Set `KYC_MODE` to `mock`, **or leave either Secure ID key unset**, to use the mock provider.
-This works without Cashfree or R2 credentials: the mock DigiLocker and selfie steps do not
+This works without Cashfree or Supabase Storage credentials: the mock DigiLocker and selfie steps do not
 upload files. Mock mode is clearly labelled and uses synthetic checks, including Aadhaar ending 1234. It never checks government records or moves money. Never use simulation as evidence for
 staff approval. Production submissions always flag non-skipped mock checks as `needs_docs`
 when `VERCEL_ENV=production`, even with explicit mock mode. A production Node build also holds
@@ -206,7 +206,7 @@ are placed in local storage or URLs.
 Offline Aadhaar XML is read transiently (under 1 MB, no XML entity expansion); only the last four
 from the UIDAI reference are kept, and the file is discarded. This is **not signature
 verification**, so it always needs manual review. QR document and selfie fallbacks reuse the
-existing `ImageUpload` with `kyc_doc`: JPG/PNG/WebP (also PDF for Aadhaar) in the private R2 bucket. Upload masked
+existing `ImageUpload` with `kyc_doc`: JPG/PNG/WebP (also PDF for Aadhaar) in the private Supabase Storage bucket. Upload masked
 Aadhaar documents only. Object keys are checked against the current organiser and remain
 private; the existing staff-only read route is unchanged. A still-image upload never claims to
 prove liveness. Live biometric capture is left behind the provider interface; the configured
@@ -229,3 +229,15 @@ resume, all mock steps, masked database results, pending status, locked publishi
 resubmission and missing-key email logs. Unit tests cover matching, masking, provider selection,
 Cashfree response minimisation, server-action ownership and state transitions. Screenshots are in
 [`docs/pr-06`](docs/pr-06/README.md).
+
+
+### reCAPTCHA v3 and media storage
+
+Configure `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` (public v3 key) and `RECAPTCHA_SECRET_KEY`
+(server only) together. Optional `RECAPTCHA_MIN_SCORE` defaults to 0.5. See
+[checkout security](docs/checkout.md) for production, preview and mock behaviour.
+Only checkout and contact load Google's script; each submission gets a fresh token.
+
+[Supabase Storage uploads](docs/STORAGE-UPLOADS.md) use the existing project URL and
+service-role key. Apply `20261111144606_supabase_storage.sql` through the normal
+migration process before enabling uploads. This PR does not apply hosted migrations.
