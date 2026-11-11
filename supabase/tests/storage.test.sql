@@ -1,4 +1,7 @@
 begin;
+-- Emulate the Storage API's session setting for metadata-only RLS fixtures.
+-- All rows are rolled back; application deletion still uses storage.remove().
+set local storage.allow_delete_query = 'true';
 select plan(16);
 select is((select public from storage.buckets where id = 'event-media'), true, 'event media is public');
 select is((select public from storage.buckets where id = 'private-files'), false, 'private files are private');
