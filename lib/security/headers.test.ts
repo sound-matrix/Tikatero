@@ -13,8 +13,25 @@ it("sends a strict baseline without unsafe-eval", () => {
   expect(policy).not.toContain("cloudflare");
   expect(policy).toContain("https://www.gstatic.com/recaptcha/");
   expect(policy).toContain("https://recaptcha.google.com/recaptcha/");
-  expect(policy).toContain(
-    "img-src 'self' data: blob: https://tile.openstreetmap.org http://127.0.0.1:54321",
+  const directives = Object.fromEntries(
+    policy.split("; ").map((directive) => {
+      const [name, ...sources] = directive.split(" ");
+      return [name, sources];
+    }),
+  );
+  expect(directives["script-src"]).toContain("https://maps.googleapis.com");
+  expect(directives["script-src"]).not.toContain("https://*.googleapis.com");
+  expect(directives["img-src"]).toEqual([
+    "'self'",
+    "data:",
+    "blob:",
+    "https://maps.gstatic.com",
+    "https://*.googleapis.com",
+    "https://*.ggpht.com",
+    "http://127.0.0.1:54321",
+  ]);
+  expect(directives["connect-src"]).toEqual(
+    expect.arrayContaining(["https://maps.googleapis.com", "https://places.googleapis.com"]),
   );
   expect(policy).toContain("http://127.0.0.1:54321");
   expect(policy).toContain("ws://127.0.0.1:54321");

@@ -1,7 +1,17 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import type { Map as LeafletMap, CircleMarker } from "leaflet";
-import "leaflet/dist/leaflet.css";
+
+import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { roundVenuePoint } from "@/lib/events/google-venue";
+import { useVenueGoogle } from "./venue-google";
+
+const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID?.trim() || "DEMO_MAP_ID";
+
+function validPoint(lat: string, lng: string) {
+  if (!lat.trim() || !lng.trim()) return null;
+  const point = { lat: Number(lat), lng: Number(lng) };
+  return Math.abs(point.lat) <= 90 && Math.abs(point.lng) <= 180 ? point : null;
+}
+
 export function VenueMap({
   lat,
   lng,
@@ -11,84 +21,97 @@ export function VenueMap({
   lng: string;
   onPick: (lat: string, lng: string) => void;
 }) {
-  const element = useRef<HTMLDivElement>(null),
-    map = useRef<LeafletMap | null>(null),
-    marker = useRef<CircleMarker | null>(null),
-    library = useRef<typeof import("leaflet") | null>(null),
-    pick = useRef(onPick);
-  const [ready, setReady] = useState(false),
-    [error, setError] = useState(false);
+  const { libraries, failed, onError } = useVenueGoogle();
+  const element = useRef<HTMLDivElement>(null);
+  const instance = useRef<google.maps.Map | null>(null);
+  const pin = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const [ready, setReady] = useState(false);
+
+  const pick = useEffectEvent((point: google.maps.LatLngLiteral) => {
+    const rounded = roundVenuePoint(point);
+    onPick(rounded.lat, rounded.lng);
+  });
+  const fail = useEffectEvent(() => onError());
+
   useEffect(() => {
-    pick.current = onPick;
-  }, [onPick]);
-  useEffect(() => {
-    let cancelled = false;
-    import("leaflet")
-      .then((L) => {
-        if (cancelled || !element.current) return;
-        library.current = L;
-        const instance = L.map(element.current).setView([20.5937, 78.9629], 4);
-        map.current = instance;
-        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          maxZoom: 19,
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-          referrerPolicy: "strict-origin-when-cross-origin",
-        }).addTo(instance);
-        instance.on("click", (e) => pick.current(e.latlng.lat.toFixed(6), e.latlng.lng.toFixed(6)));
-        setReady(true);
-      })
-      .catch(() => setError(true));
-    return () => {
-      cancelled = true;
-      map.current?.remove();
-      map.current = null;
-    };
-  }, []);
-  useEffect(() => {
-    const instance = map.current,
-      L = library.current;
-    if (!ready || !instance || !L) return;
-    if (
-      lat !== "" &&
-      lng !== "" &&
-      Number.isFinite(Number(lat)) &&
-      Number.isFinite(Number(lng)) &&
-      Math.abs(Number(lat)) <= 90 &&
-      Math.abs(Number(lng)) <= 180
-    ) {
-      const point: [number, number] = [Number(lat), Number(lng)];
-      if (marker.current) marker.current.setLatLng(point);
-      else
-        marker.current = L.circleMarker(point, {
-          radius: 10,
-          color: "#0E9F9A",
-          fillColor: "#F25C54",
-          fillOpacity: 1,
-          weight: 3,
-        }).addTo(instance);
-      instance.setView(point, Math.max(instance.getZoom(), 13));
-    } else {
-      marker.current?.remove();
-      marker.current = null;
+    if (!libraries || failed || !element.current) return;
+    const container = element.current;
+    const { Map, RenderingType } = libraries.maps;
+    const { AdvancedMarkerElement, PinElement } = libraries.marker;
+    const listeners: google.maps.MapsEventListener[] = [];
+    let timeout: number | undefined;
+    try {
+      const map = new Map(container, {
+        center: { lat: 20.5937, lng: 78.9629 },
+        zoom: 4,
+        mapId,
+        renderingType: RenderingType.RASTER,
+        clickableIcons: false,
+        streetViewControl: false,
+        mapTypeControl: false,
+        fullscreenControl: false,
+      });
+      instance.current = map;
+      const marker = new AdvancedMarkerElement({ gmpDraggable: true, title: "Venue pin" });
+      marker.append(
+        new PinElement({ background: "#0E9F9A", borderColor: "#087570", glyphColor: "#FFFFFF" }),
+      );
+      pin.current = marker;
+      timeout = window.setTimeout(() => fail(), 12_000);
+      listeners.push(
+        map.addListener("tilesloaded", () => {
+          window.clearTimeout(timeout);
+          setReady(true);
+        }),
+        map.addListener("click", (event: google.maps.MapMouseEvent) => {
+          if (event.latLng) pick(event.latLng.toJSON());
+        }),
+        marker.addListener("dragend", (event: google.maps.MapMouseEvent) => {
+          if (event.latLng) pick(event.latLng.toJSON());
+        }),
+      );
+    } catch {
+      fail();
     }
-  }, [lat, lng, ready]);
+    return () => {
+      window.clearTimeout(timeout);
+      listeners.forEach((listener) => listener.remove());
+      if (pin.current) pin.current.map = null;
+      pin.current = null;
+      instance.current = null;
+      container.replaceChildren();
+    };
+  }, [libraries, failed]);
+
+  useEffect(() => {
+    const map = instance.current;
+    const marker = pin.current;
+    if (!map || !marker) return;
+    const point = validPoint(lat, lng);
+    if (!point) {
+      marker.map = null;
+      return;
+    }
+    marker.position = point;
+    marker.map = map;
+    map.setCenter(point);
+    if ((map.getZoom() ?? 0) < 13) map.setZoom(13);
+  }, [lat, lng, libraries]);
+
+  if (failed || !libraries) return null;
   return (
     <div className="space-y-2">
       <div
         ref={element}
-        aria-label="Venue map. Click to choose a pin, or enter coordinates below."
-        className="relative z-0 h-72 w-full rounded-xl border border-line"
+        role="region"
+        aria-label="Venue map"
+        aria-busy={!ready}
+        className="relative h-72 w-full overflow-hidden rounded-xl border border-line"
       />
-      {error ? (
-        <p role="status" className="text-sm text-muted">
-          The map could not load. You can still paste a Maps link or enter coordinates below.
-        </p>
-      ) : (
-        <p className="text-sm text-muted">
-          Tap the map to place your venue pin. You can also enter latitude and longitude below.
-        </p>
-      )}
+      <p className="text-sm text-muted">
+        Tap the map or drag the pin to fine-tune the location. You can also edit the coordinates
+        below.
+      </p>
     </div>
   );
 }

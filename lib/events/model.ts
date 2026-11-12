@@ -175,12 +175,14 @@ export function isGoogleMapsUrl(value: string) {
     return false;
   }
 }
+export function mapsPointUrl(lat: string, lng: string) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`;
+}
 export function openMaps(
   values: Pick<Values, "lat" | "lng" | "mapsUrl" | "venue" | "address" | "city">,
 ) {
-  if (values.lat && values.lng)
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${values.lat},${values.lng}`)}`;
   if (isGoogleMapsUrl(values.mapsUrl)) return values.mapsUrl;
+  if (values.lat && values.lng) return mapsPointUrl(values.lat, values.lng);
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([values.venue, values.address, values.city].filter(Boolean).join(", "))}`;
 }
 export function statusLabel(

@@ -6,6 +6,7 @@ import {
   toIstInput,
   mapsCoordinates,
   isGoogleMapsUrl,
+  openMaps,
   emptyValues,
 } from "./model";
 import {
@@ -58,6 +59,15 @@ it("extracts map coordinates without following short links or arbitrary URLs", (
   expect(mapsCoordinates("https://maps.app.goo.gl/example")).toBeNull();
   expect(isGoogleMapsUrl("https://google.com.evil.test/maps")).toBe(false);
   expect(isGoogleMapsUrl("javascript:alert(1)")).toBe(false);
+});
+it.each([
+  "https://maps.google.com/?cid=123456789",
+  "https://www.google.com/maps/place/Taj+Krishna/@17.4,78.4,15z",
+])("uses a Google place link before falling back to coordinates (%s)", (mapsUrl) => {
+  const venue = { ...emptyValues(), lat: "17.4", lng: "78.4" };
+  expect(isGoogleMapsUrl(mapsUrl)).toBe(true);
+  expect(openMaps({ ...venue, mapsUrl })).toBe(mapsUrl);
+  expect(openMaps(venue)).toBe("https://www.google.com/maps/search/?api=1&query=17.4%2C78.4");
 });
 it("validates missing fields on continue, but rejects unsafe optional values even for drafts", () => {
   const v = emptyValues();
