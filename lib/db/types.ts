@@ -1031,6 +1031,8 @@ export type Database = {
           id: string;
           phone: string | null;
           role: Database["public"]["Enums"]["user_role"];
+          signup_intent: string | null;
+          welcome_email_sent_at: string | null;
         };
         ComputedFields: never;
         Insert: {
@@ -1042,6 +1044,8 @@ export type Database = {
           id: string;
           phone?: string | null;
           role?: Database["public"]["Enums"]["user_role"];
+          signup_intent?: string | null;
+          welcome_email_sent_at?: string | null;
         };
         Update: {
           block_reason?: string | null;
@@ -1052,6 +1056,8 @@ export type Database = {
           id?: string;
           phone?: string | null;
           role?: Database["public"]["Enums"]["user_role"];
+          signup_intent?: string | null;
+          welcome_email_sent_at?: string | null;
         };
         Relationships: [];
       };

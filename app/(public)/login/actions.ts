@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { allowRequest, requestIp } from "@/lib/security/rate-limit";
+import { signupIntent } from "@/lib/auth/signup-intent";
 
 const LIMITED = "Too many sign-in attempts. Please wait 10 minutes and try again.";
 const UNAVAILABLE = "Sign-in is temporarily unavailable. Please try again.";
@@ -24,9 +25,11 @@ function siteOrigin() {
   return "http://127.0.0.1:3000";
 }
 
-export async function requestSignInCode(emailInput: string) {
+export async function requestSignInCode(emailInput: string, intentInput?: string) {
   const email = emailOf(emailInput);
   if (!email) return { error: "Enter the email address for your account." };
+  const parsed = signupIntent.safeParse(intentInput ?? "attendee");
+  if (!parsed.success) return { error: "Choose how you want to use Tikatero." };
   const ip = await requestIp();
   const [byIp, byEmail] = await Promise.all([
     allowRequest("login-send-ip", ip, 30, 600),
@@ -37,7 +40,10 @@ export async function requestSignInCode(emailInput: string) {
     const client = await createClient();
     const { error } = await client.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${siteOrigin()}/auth/callback` },
+      options: {
+        emailRedirectTo: `${siteOrigin()}/auth/callback`,
+        data: { signup_intent: parsed.data },
+      },
     });
     if (error)
       return { error: "We could not send your email. Please wait a minute and try again." };

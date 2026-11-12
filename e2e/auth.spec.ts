@@ -61,6 +61,9 @@ test.describe("Supabase role routing", () => {
         expect(orgError).toBeNull();
       }
       await page.goto("/login");
+      await page
+        .getByRole("button", { name: "Already have an account? Just enter your email" })
+        .click();
       await page.getByLabel("Email", { exact: true }).fill(email);
       await page.getByRole("button", { name: "Email me a code or sign-in link" }).click();
       await expect(page.getByLabel("6-digit code")).toBeVisible();
@@ -147,6 +150,89 @@ test.describe("Supabase role routing", () => {
     await expect(page).toHaveURL(/\/login\?error=link$/);
     await expect(page.getByRole("status").filter({ hasText: "expired" })).toBeVisible();
   });
+});
+
+test.describe("first verified signup", () => {
+  test.skip(!configured, "Local Supabase is needed.");
+  const users: string[] = [];
+  const admin = () =>
+    createClient<Database>(url!, key!, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  test.afterAll(async () => {
+    if (!configured) return;
+    const client = admin();
+    for (const id of users) {
+      await client.from("organisers").delete().eq("owner_id", id);
+      await client.auth.admin.deleteUser(id);
+    }
+  });
+
+  for (const intent of ["attendee", "organiser"] as const) {
+    test(`${intent} signs up and lands on the right page with one welcome log`, async ({
+      page,
+    }) => {
+      const client = admin();
+      const email = `welcome-${crypto.randomUUID()}@example.test`;
+      await page.goto(intent === "organiser" ? "/login?as=host" : "/login");
+      if (intent === "attendee")
+        await page.getByRole("button", { name: "I want to buy tickets" }).click();
+      else
+        await expect(page.getByRole("button", { name: "I want to host events" })).toHaveAttribute(
+          "aria-pressed",
+          "true",
+        );
+      await page.getByLabel("Email", { exact: true }).fill(email);
+      await page.getByRole("button", { name: "Email me a code or sign-in link" }).click();
+      await expect(page.getByLabel("6-digit code")).toBeVisible();
+      const { data: link, error: linkError } = await client.auth.admin.generateLink({
+        type: "magiclink",
+        email,
+      });
+      if (linkError || !link.properties.email_otp || !link.user)
+        throw new Error("Local OTP unavailable.");
+      const user = link.user;
+      users.push(user.id);
+      await page.getByLabel("6-digit code").fill(link.properties.email_otp);
+      await page.getByRole("button", { name: "Sign in", exact: true }).click();
+      const destination = intent === "organiser" ? "/console/pending" : "/me";
+      await expect(page).toHaveURL(new RegExp(`${destination}$`));
+      const { data: profile } = await client
+        .from("profiles")
+        .select("role, signup_intent, welcome_email_sent_at")
+        .eq("id", user.id)
+        .single();
+      expect(profile?.role).toBe("attendee");
+      expect(profile?.signup_intent).toBe(intent);
+      if (intent === "organiser") {
+        const { data: org } = await client
+          .from("organisers")
+          .select("kyc_status, display_name")
+          .eq("id", user.id)
+          .single();
+        expect(org).toMatchObject({ kyc_status: "draft", display_name: "" });
+      }
+      await expect
+        .poll(async () => {
+          const { data } = await client
+            .from("email_log")
+            .select("id")
+            .eq("entity_ref", `welcome:${user.id}`);
+          return data?.length;
+        })
+        .toBe(1);
+      await page.goto("/auth/complete");
+      await expect(page).toHaveURL(new RegExp(`${destination}$`));
+      const { data: logs } = await client
+        .from("email_log")
+        .select("template")
+        .eq("entity_ref", `welcome:${user.id}`);
+      expect(logs).toHaveLength(1);
+      expect(logs?.[0].template).toBe(
+        intent === "organiser" ? "welcome_organiser" : "welcome_attendee",
+      );
+    });
+  }
 });
 
 test("anonymous visitors cannot enter protected routes", async ({ page }) => {

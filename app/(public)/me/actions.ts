@@ -6,6 +6,7 @@ import { requireAccount } from "@/lib/auth/account";
 import { createClient } from "@/lib/supabase/server";
 import { landingPath } from "@/lib/auth/routing";
 import { profileValues } from "@/lib/auth/validation";
+import { createDraftOrganiser } from "@/lib/auth/organiser";
 
 export type FormState = { error?: string; success?: string };
 
@@ -32,15 +33,7 @@ export async function becomeOrganiser(_previous: FormState, data: FormData): Pro
   const displayName = String(data.get("display_name") ?? "").trim();
   if (!displayName || displayName.length > 100)
     return { error: "Enter an organiser name (up to 100 characters)." };
-  // Stable primary key makes retries/double submissions idempotent. The PR 2 trigger
-  // creates the owner membership in the same transaction. No privileged client needed.
-  const { error } = await client.from("organisers").insert({
-    id: account.profile.id,
-    owner_id: account.profile.id,
-    slug: `organiser-${account.profile.id}`,
-    display_name: displayName,
-    kyc_status: "draft",
-  });
+  const { error } = await createDraftOrganiser(client, account.profile.id, displayName);
   if (error) return { error: "Your organiser account could not be created. Please try again." };
   revalidatePath("/me");
   redirect("/console/pending");

@@ -69,3 +69,15 @@ it("allows the login screen for an anonymous visitor", async () => {
   const result = await proxy(new NextRequest("http://localhost/login"));
   expect(result.headers.get("location")).toBeNull();
 });
+it("lets a verified session reach the completion handler and preserves refreshed cookies", async () => {
+  mock.refresh = true;
+  mock.account.mockResolvedValue(attendee);
+  const result = await proxy(new NextRequest("http://localhost/auth/complete"));
+  expect(result.headers.get("location")).toBeNull();
+  expect(result.cookies.get("refreshed-session")?.value).toBe("test-session");
+});
+it("keeps anonymous visitors out of the completion handler", async () => {
+  mock.account.mockResolvedValue(null);
+  const result = await proxy(new NextRequest("http://localhost/auth/complete"));
+  expect(result.headers.get("location")).toBe("http://localhost/login");
+});
