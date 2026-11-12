@@ -8,6 +8,7 @@ import {
   assertVerificationRegion,
   autoResult,
   canEdit,
+  COUNTRY_LOCKED,
   editableSteps,
   matchThreshold,
   type Application,
@@ -191,6 +192,7 @@ export async function saveKycStep(_previous: FlowState, data: FormData): Promise
       p_submit: submit,
     };
     const { data: saved, error } = await createServiceClient().rpc("save_kyc_progress", args);
+    if (error?.message === COUNTRY_LOCKED) throw new KycError(COUNTRY_LOCKED);
     if (error || !saved?.[0])
       throw new KycError("Your changes could not be saved. Reload this page and try again.");
     application = applicationDto(saved[0]);

@@ -87,19 +87,17 @@ test("international organiser uploads ID, corrects requested documents and gets 
     await expect(owner.getByRole("heading", { name: "Your ID", exact: true })).toBeVisible();
     const number = "TESTID7429";
     await owner.getByLabel("Document type").selectOption("national_id");
-    await owner.getByLabel("Document number").fill(number);
     await owner.getByLabel("Expiry date").fill("2090-01-01");
     const front = owner.getByRole("region", { name: "Upload the front of your ID" });
     const back = owner.getByRole("region", { name: "Upload the back of your ID" });
-    await owner.getByRole("button", { name: "Save and continue" }).click();
-    await expect(owner.getByRole("alert")).toContainText("Upload the requested file first.");
-    await owner.getByLabel("Document number").fill(number);
-    await upload(front, "sample-front.png");
-    await upload(back, "sample-back.png");
-    // The raw number is never shown in a review screenshot.
-    await owner.getByLabel("Document number").fill("");
     await owner.screenshot({ path: testInfo.outputPath("intl-02-your-id.png"), fullPage: true });
     await owner.getByLabel("Document number").fill(number);
+    await upload(front, "sample-front.png");
+    await owner.getByRole("button", { name: "Save and continue" }).click();
+    await expect(
+      owner.getByRole("alert").filter({ hasText: "Upload the requested file first." }),
+    ).toBeVisible();
+    await upload(back, "sample-back.png");
     await owner.getByRole("button", { name: "Save and continue" }).click();
     await expect(
       owner.getByRole("heading", { name: "Selfie with your ID", exact: true }),

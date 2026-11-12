@@ -10,7 +10,7 @@ import {
 } from "@/lib/events/validation";
 import { toPaise } from "@/lib/events/model";
 import { hasInternationalKyc } from "@/lib/kyc/store";
-import { internationalPaidTicketError } from "@/lib/kyc/paid-tickets";
+import { INTERNATIONAL_PAID_TICKETS, internationalPaidTicketError } from "@/lib/kyc/paid-tickets";
 import { readDraft, type Draft } from "@/lib/events/store";
 import type { Json } from "@/lib/db/types";
 export type SaveResult = { error?: string; draft?: Draft };
@@ -72,6 +72,7 @@ export async function saveEvent(input: unknown): Promise<SaveResult> {
     p_data: payload,
     p_publish: data.publish,
   });
+  if (error?.message === INTERNATIONAL_PAID_TICKETS) return { error: INTERNATIONAL_PAID_TICKETS };
   if (error)
     return {
       error:
