@@ -49,6 +49,31 @@ const notice = (
 const definitions: {
   [K in TemplateName]: { label: string; build: (data: TemplateData[K]) => Notice };
 } = {
+  welcome_attendee: {
+    label: "Welcome to Tikatero",
+    build: () =>
+      notice(
+        "Welcome to Tikatero — find events near you",
+        "Your account is ready. Discover events, book tickets, and keep your bookings in one place.",
+        [],
+        "Find events",
+        "/events",
+      ),
+  },
+  welcome_organiser: {
+    label: "Welcome to Tikatero",
+    build: () =>
+      notice(
+        "Welcome — let's get you verified to sell tickets",
+        "Your organiser account is ready. Complete verification before you publish events or sell tickets.",
+        [
+          detail("In India", "PAN, Aadhaar, and bank account details"),
+          detail("Outside India", "Identity document — coming soon"),
+        ],
+        "Start verification",
+        "/console/onboarding",
+      ),
+  },
   order_confirmed: {
     label: "Order confirmed",
     build: (d) => {

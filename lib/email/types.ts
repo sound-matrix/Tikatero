@@ -1,6 +1,8 @@
 export type EmailBase = { recipientName?: string; actionPath?: string };
 export type EventDetails = { title: string; startsAt: string; venue: string };
 export type TemplateData = {
+  welcome_attendee: EmailBase;
+  welcome_organiser: EmailBase;
   order_confirmed: EmailBase & {
     event: EventDetails;
     orderRef: string;

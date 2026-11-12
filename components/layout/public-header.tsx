@@ -25,7 +25,7 @@ export function PublicHeader() {
           className="flex flex-1 items-center justify-end gap-5 text-sm font-semibold"
         >
           <Link href="/events">Find events</Link>
-          <Link href="/console">Host an event</Link>
+          <Link href="/login?as=host">Host an event</Link>
         </nav>
         <div className="hidden md:block">
           <Button href={inAccount ? "/me" : "/login"} variant="secondary">

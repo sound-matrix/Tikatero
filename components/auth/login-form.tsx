@@ -6,7 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 
-export function LoginForm({ linkError }: { linkError: boolean }) {
+export function LoginForm({
+  linkError,
+  initialHost,
+}: {
+  linkError: boolean;
+  initialHost: boolean;
+}) {
+  const [choice, setChoice] = useState<"attendee" | "organiser" | "existing" | null>(
+    initialHost ? "organiser" : null,
+  );
   const [email, setEmail] = useState("");
   const [token, setToken] = useState("");
   const [sent, setSent] = useState(false);
@@ -20,7 +29,10 @@ export function LoginForm({ linkError }: { linkError: boolean }) {
     setBusy(true);
     setMessage("");
     try {
-      const result = await requestSignInCode(email);
+      const result = await requestSignInCode(
+        email,
+        choice === "organiser" ? "organiser" : "attendee",
+      );
       if (result.error) setMessage(result.error);
       else {
         setSent(true);
@@ -60,20 +72,64 @@ export function LoginForm({ linkError }: { linkError: boolean }) {
 
   return (
     <Card className="mt-7">
+      {!sent && choice !== "existing" && (
+        <div className="mb-6">
+          <p className="mb-3 font-semibold text-ink">I want to…</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(
+              [
+                ["attendee", "I want to buy tickets"],
+                ["organiser", "I want to host events"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={choice === value}
+                onClick={() => setChoice(value)}
+                className={`min-h-20 rounded-xl border-2 p-4 text-left text-lg font-bold text-ink transition-colors ${choice === value ? "border-teal bg-teal/5" : "border-line hover:border-teal"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setChoice("existing")}
+            className="mt-4 text-left text-sm font-semibold text-teal underline"
+          >
+            Already have an account? Just enter your email
+          </button>
+        </div>
+      )}
+      {!sent && choice === "existing" && (
+        <div className="mb-5 text-sm">
+          <p className="text-muted">Already have an account? Just enter your email.</p>
+          <button
+            type="button"
+            onClick={() => setChoice(null)}
+            className="mt-2 font-semibold text-teal underline"
+          >
+            Go back to sign-up choices
+          </button>
+        </div>
+      )}
       <form onSubmit={send} className="space-y-4">
-        <Input
-          label="Email"
-          name="email"
-          type="email"
-          placeholder="you@example.com"
-          autoComplete="email"
-          maxLength={254}
-          required
-          value={email}
-          disabled={busy || sent}
-          onChange={(event) => setEmail(event.target.value)}
-        />
-        {!sent && (
+        {choice && (
+          <Input
+            label="Email"
+            name="email"
+            type="email"
+            placeholder="you@example.com"
+            autoComplete="email"
+            maxLength={254}
+            required
+            value={email}
+            disabled={busy || sent}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+        )}
+        {!sent && choice && (
           <Button type="submit" variant="primary" disabled={busy} className="w-full">
             {busy ? "Sending…" : "Email me a code or sign-in link"}
           </Button>

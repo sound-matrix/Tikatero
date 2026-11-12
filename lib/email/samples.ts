@@ -6,6 +6,8 @@ const event: EventDetails = {
 };
 const recipientName = "Alex";
 export const emailSamples: TemplateData = {
+  welcome_attendee: { recipientName },
+  welcome_organiser: { recipientName },
   order_confirmed: {
     recipientName,
     event,
