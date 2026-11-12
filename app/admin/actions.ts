@@ -72,11 +72,11 @@ export async function reviewKyc(_state: ActionState, form: FormData): Promise<Ac
   if (decision === "approved") {
     const { data: app } = await client
       .from("kyc_applications")
-      .select("organiser_id")
+      .select("organiser_id,region")
       .eq("id", id)
       .single();
     try {
-      if (app) await onOrganiserApproved(app.organiser_id);
+      if (app?.region === "IN") await onOrganiserApproved(app.organiser_id);
     } catch (error) {
       followUp = vendorFollowUp(error);
       if (app) {

@@ -1,3 +1,4 @@
+import { internationalStepLabels } from "@/lib/kyc/model";
 import type { Json } from "@/lib/db/types";
 export const waitingStatuses = ["auto_passed", "needs_docs", "submitted"] as const;
 export const stepLabels = {
@@ -8,6 +9,9 @@ export const stepLabels = {
   bank: "Bank account",
   selfie: "Selfie",
 } as const;
+export function reviewStepLabels(region?: "IN" | "INTL") {
+  return region === "INTL" ? internationalStepLabels : stepLabels;
+}
 export const statusLabels: Record<string, string> = {
   auto_passed: "Checks passed · awaiting review",
   needs_docs: "More documents needed",

@@ -5,10 +5,12 @@ import {
   waitingStatuses,
   statusLabels,
   isSimulated,
+  object,
   fieldClass,
   pageNumber,
   ageLabel,
 } from "@/lib/admin/model";
+import { countryFlag, countryName } from "@/lib/kyc/countries";
 import { formatIst } from "@/lib/format";
 import { AdminPage, Pager } from "@/components/admin/page";
 import { Card } from "@/components/ui/card";
@@ -16,17 +18,19 @@ import { Button } from "@/components/ui/button";
 async function Queue({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; page?: string }>;
+  searchParams: Promise<{ status?: string; page?: string; region?: string }>;
 }) {
   const { client } = await requireStaff();
   const params = await searchParams;
   const page = pageNumber(params.page);
   const status = waitingStatuses.find((s) => s === params.status);
-  const { data, error } = await client
+  const region = params.region === "IN" || params.region === "INTL" ? params.region : undefined;
+  const query = client
     .from("kyc_applications")
-    .select("id,organiser_id,status,step_progress,submitted_at")
+    .select("id,organiser_id,region,status,step_progress,submitted_at")
     .in("status", status ? [status] : [...waitingStatuses])
-    .not("submitted_at", "is", null)
+    .not("submitted_at", "is", null);
+  const { data, error } = await (region ? query.eq("region", region) : query)
     .order("submitted_at")
     .order("id")
     .range((page - 1) * 25, page * 25);
@@ -54,6 +58,14 @@ async function Queue({
             ))}
           </select>
         </label>
+        <label className="min-w-60 font-semibold">
+          Region
+          <select name="region" defaultValue={region ?? ""} className={`${fieldClass} mt-2`}>
+            <option value="">All regions</option>
+            <option value="IN">India</option>
+            <option value="INTL">Outside India</option>
+          </select>
+        </label>
         <Button type="submit">Apply filter</Button>
       </form>
       <Card className="overflow-x-auto p-0">
@@ -61,7 +73,7 @@ async function Queue({
           <caption className="sr-only">Applications waiting for staff review</caption>
           <thead className="bg-soft text-sm text-muted">
             <tr>
-              {["Organiser", "Status", "Submitted (IST)", "Waiting", ""].map((h, i) => (
+              {["Organiser", "Region", "Status", "Submitted (IST)", "Waiting", ""].map((h, i) => (
                 <th key={i} scope="col" className="p-4">
                   {h}
                 </th>
@@ -69,34 +81,49 @@ async function Queue({
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <tr key={row.id} className="border-t border-line">
-                <td className="p-4 font-semibold">
-                  {organisers?.find((o) => o.id === row.organiser_id)?.display_name ?? "Organiser"}
-                  {isSimulated(row.step_progress) && (
-                    <span className="mt-1 block text-xs font-semibold text-muted">
-                      Test mode — simulated
+            {rows.map((row) => {
+              const country = object(object(row.step_progress).intlDetails).country;
+              return (
+                <tr key={row.id} className="border-t border-line">
+                  <td className="p-4 font-semibold">
+                    {organisers?.find((o) => o.id === row.organiser_id)?.display_name ??
+                      "Organiser"}
+                    {isSimulated(row.step_progress) && (
+                      <span className="mt-1 block text-xs font-semibold text-muted">
+                        Test mode — simulated
+                      </span>
+                    )}
+                  </td>
+                  <td className="p-4">
+                    <span className="inline-block rounded-full bg-soft px-3 py-1 text-sm font-semibold">
+                      {row.region === "IN" ? "India" : "Outside India"}
+                      {row.region === "INTL" && typeof country === "string" && (
+                        <span className="block font-normal">
+                          <span aria-hidden="true">{countryFlag(country)}</span>{" "}
+                          {countryName(country)}
+                        </span>
+                      )}
                     </span>
-                  )}
-                </td>
-                <td className="p-4">
-                  <span className={row.status === "auto_passed" ? "text-teal" : "text-ink"}>
-                    {statusLabels[row.status]}
-                  </span>
-                </td>
-                <td className="p-4 text-sm">{formatIst(row.submitted_at!)}</td>
-                <td className="p-4 text-muted">{ageLabel(row.submitted_at)}</td>
-                <td className="p-4">
-                  <Link
-                    href={`/admin/kyc/${row.id}`}
-                    aria-label={`Review ${organisers?.find((o) => o.id === row.organiser_id)?.display_name ?? "organiser"}`}
-                    className="font-bold text-teal underline"
-                  >
-                    Review
-                  </Link>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="p-4">
+                    <span className={row.status === "auto_passed" ? "text-teal" : "text-ink"}>
+                      {statusLabels[row.status]}
+                    </span>
+                  </td>
+                  <td className="p-4 text-sm">{formatIst(row.submitted_at!)}</td>
+                  <td className="p-4 text-muted">{ageLabel(row.submitted_at)}</td>
+                  <td className="p-4">
+                    <Link
+                      href={`/admin/kyc/${row.id}`}
+                      aria-label={`Review ${organisers?.find((o) => o.id === row.organiser_id)?.display_name ?? "organiser"}`}
+                      className="font-bold text-teal underline"
+                    >
+                      Review
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         {!rows.length && <p className="p-8 text-muted">No applications waiting in this filter.</p>}
@@ -105,12 +132,14 @@ async function Queue({
         page={page}
         hasMore={(data?.length ?? 0) > 25}
         path="/admin/kyc"
-        params={{ status: status ?? "" }}
+        params={{ status: status ?? "", region: region ?? "" }}
       />
     </AdminPage>
   );
 }
-export default function Page(props: { searchParams: Promise<{ status?: string; page?: string }> }) {
+export default function Page(props: {
+  searchParams: Promise<{ status?: string; page?: string; region?: string }>;
+}) {
   return (
     <Suspense fallback={<p className="p-8">Loading verification queue…</p>}>
       <Queue {...props} />

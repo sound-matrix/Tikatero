@@ -503,6 +503,10 @@ export type Database = {
           face_match_score: number | null;
           gstin: string | null;
           id: string;
+          id_country: string | null;
+          id_doc_expiry: string | null;
+          id_doc_last4: string | null;
+          id_doc_type: string | null;
           liveness_score: number | null;
           organiser_id: string;
           pan_last4: string | null;
@@ -531,6 +535,10 @@ export type Database = {
           face_match_score?: number | null;
           gstin?: string | null;
           id?: string;
+          id_country?: string | null;
+          id_doc_expiry?: string | null;
+          id_doc_last4?: string | null;
+          id_doc_type?: string | null;
           liveness_score?: number | null;
           organiser_id: string;
           pan_last4?: string | null;
@@ -558,6 +566,10 @@ export type Database = {
           face_match_score?: number | null;
           gstin?: string | null;
           id?: string;
+          id_country?: string | null;
+          id_doc_expiry?: string | null;
+          id_doc_last4?: string | null;
+          id_doc_type?: string | null;
           liveness_score?: number | null;
           organiser_id?: string;
           pan_last4?: string | null;
@@ -1649,6 +1661,10 @@ export type Database = {
       is_event_team: {
         Args: { event_id: string; roles: Database["public"]["Enums"]["team_role"][] };
         Returns: boolean;
+      };
+      open_intl_kyc_document: {
+        Args: { p_id: string; p_slot: string };
+        Returns: string;
       };
       save_kyc_progress: {
         Args: {

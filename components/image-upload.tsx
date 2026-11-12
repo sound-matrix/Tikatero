@@ -5,7 +5,13 @@ import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { validateFile, type SignedUpload, type UploadKind } from "@/lib/uploads/policy";
+import {
+  isInternationalUpload,
+  isPrivateUpload,
+  validateFile,
+  type SignedUpload,
+  type UploadKind,
+} from "@/lib/uploads/policy";
 import { putFile } from "@/lib/uploads/client";
 
 type UploadResult = Pick<SignedUpload, "key" | "publicUrl">;
@@ -13,11 +19,29 @@ export type ImageUploadProps = {
   kind: UploadKind;
   entityId: string;
   label?: string;
+  applicationId?: string;
+  onSelect?: () => void;
   onUpload?: (result: UploadResult) => void;
 };
 
-export function ImageUpload({ kind, entityId, label, onUpload }: ImageUploadProps) {
-  const document = kind === "kyc_doc";
+export function ImageUpload({
+  kind,
+  entityId,
+  applicationId,
+  label,
+  onSelect,
+  onUpload,
+}: ImageUploadProps) {
+  const document = isPrivateUpload(kind);
+  const acceptsPdf = kind === "kyc_doc" || kind === "intl_id";
+  const formats =
+    kind === "intl_id"
+      ? "JPG, PNG or PDF · up to 10 MB"
+      : kind === "intl_selfie"
+        ? "JPG or PNG · up to 10 MB"
+        : document
+          ? "JPG, PNG, WebP or PDF · up to 10 MB"
+          : "JPG, PNG or WebP · up to 5 MB";
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
@@ -39,6 +63,7 @@ export function ImageUpload({ kind, entityId, label, onUpload }: ImageUploadProp
   const busy = status === "signing" || status === "uploading";
 
   function selectFile(selected: File | undefined) {
+    onSelect?.();
     setError("");
     setProgress(0);
     setStatus("idle");
@@ -66,7 +91,7 @@ export function ImageUpload({ kind, entityId, label, onUpload }: ImageUploadProp
       const response = await fetch("/api/uploads/sign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind, entityId, mime: file.type, size: file.size }),
+        body: JSON.stringify({ kind, entityId, applicationId, mime: file.type, size: file.size }),
         signal: request.signal,
       }).catch(() => {
         throw new Error(
@@ -108,9 +133,7 @@ export function ImageUpload({ kind, entityId, label, onUpload }: ImageUploadProp
       <h3 className="text-lg font-bold text-ink">
         {label ?? (document ? "Upload a verification document" : "Upload a photo")}
       </h3>
-      <p className="mt-2 text-sm text-muted">
-        {document ? "JPG, PNG, WebP or PDF · up to 10 MB" : "JPG, PNG or WebP · up to 5 MB"}
-      </p>
+      <p className="mt-2 text-sm text-muted">{formats}</p>
       <div className="mt-5 flex min-h-48 items-center justify-center overflow-hidden rounded-xl border border-dashed border-line bg-soft px-4 py-5">
         {preview ? (
           <Image
@@ -134,12 +157,16 @@ export function ImageUpload({ kind, entityId, label, onUpload }: ImageUploadProp
       </div>
       <div className="mt-5">
         <Input
-          label={document ? "Choose a photo or PDF" : "Choose a photo"}
+          label={acceptsPdf ? "Choose a photo or PDF" : "Choose a photo"}
           type="file"
           accept={
-            document
-              ? "image/jpeg,image/png,image/webp,application/pdf"
-              : "image/jpeg,image/png,image/webp"
+            kind === "intl_id"
+              ? "image/jpeg,image/png,application/pdf"
+              : kind === "intl_selfie"
+                ? "image/jpeg,image/png"
+                : acceptsPdf
+                  ? "image/jpeg,image/png,image/webp,application/pdf"
+                  : "image/jpeg,image/png,image/webp"
           }
           disabled={busy}
           onChange={(event) => {
@@ -163,7 +190,11 @@ export function ImageUpload({ kind, entityId, label, onUpload }: ImageUploadProp
                 : "Upload file"}
         </Button>
         <span className="text-sm font-semibold text-teal">
-          {document ? "Private · only Tikatero staff can open it" : "Secure upload"}
+          {isInternationalUpload(kind)
+            ? "Private · only Tikatero admins can open it"
+            : document
+              ? "Private · only Tikatero staff can open it"
+              : "Secure upload"}
         </span>
       </div>
       {(busy || status === "done") && (

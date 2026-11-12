@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { requireAccount } from "@/lib/auth/account";
 import { readDraft, publicMediaBase, uploadsReady } from "@/lib/events/store";
+import { hasInternationalKyc } from "@/lib/kyc/store";
 import { EventWizard } from "./event-wizard";
 import { Button } from "@/components/ui/button";
 export async function EventEditor({
@@ -39,11 +40,14 @@ export async function EventEditor({
     host.startsWith("127.0.0.1")
       ? "http"
       : "https";
+  const freeOnly = await hasInternationalKyc(client, organiserId);
   const requested = Number(params.step) - 1,
     initialStep =
-      Number.isInteger(requested) && requested >= 0 && requested <= 7 && draft
-        ? requested
-        : (draft?.step ?? 0);
+      freeOnly && draft && !draft.values.free
+        ? 0
+        : Number.isInteger(requested) && requested >= 0 && requested <= 7 && draft
+          ? requested
+          : (draft?.step ?? 0);
   return (
     <>
       {!draft && account.organisers.length > 1 && (
@@ -71,6 +75,7 @@ export async function EventEditor({
         organiserId={organiserId}
         organiserName={organiser.display_name}
         approved={organiser.kyc_status === "approved"}
+        freeOnly={freeOnly}
         paused={organiser.sales_paused}
         initial={draft}
         initialStep={initialStep}

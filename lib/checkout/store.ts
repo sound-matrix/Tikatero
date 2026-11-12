@@ -1,4 +1,6 @@
 import "server-only";
+import { internationalPaidTicketError } from "@/lib/kyc/paid-tickets";
+import { hasInternationalKyc } from "@/lib/kyc/store";
 import { cache } from "react";
 import { createServiceClient } from "@/lib/supabase/service";
 import { activePricing } from "@/lib/pricing/data";
@@ -27,6 +29,15 @@ export const checkoutData = cache(async (slug: string) => {
     activePricing(),
   ]);
   if (oe || te || !organiser) throw new Error("Checkout is temporarily unavailable.");
+  const prices = (tiers ?? []).map((tier) => tier.price_paise);
+  if (!event.is_free || prices.some((price) => price > 0)) {
+    const disabled = internationalPaidTicketError(
+      await hasInternationalKyc(client, organiser.id),
+      event.is_free,
+      prices,
+    );
+    if (disabled) return { event, tiers: tiers ?? [], version, disabled, mode: "mock" as const };
+  }
   let mode: "mock" | "cashfree" = "mock";
   let paymentsUnavailable = false;
   try {

@@ -23,7 +23,7 @@ export type TemplateData = {
   };
   kyc_submitted: EmailBase & { organiserName: string };
   kyc_needs_docs: EmailBase & { organiserName: string; requestedDocs: string[] };
-  kyc_approved: EmailBase & { organiserName: string };
+  kyc_approved: EmailBase & { organiserName: string; international?: boolean };
   kyc_rejected: EmailBase & { organiserName: string; reason: string };
   team_invite: EmailBase & { organiserName: string; inviterName: string; role: string };
   payout_settled: EmailBase & { organiserName: string; payoutRef: string; amountPaise: number };

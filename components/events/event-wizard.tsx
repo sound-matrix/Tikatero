@@ -20,6 +20,7 @@ import {
   type Tier,
 } from "@/lib/events/model";
 import type { Draft } from "@/lib/events/store";
+import { INTERNATIONAL_PAID_TICKETS } from "@/lib/kyc/paid-tickets";
 import { previewPricing, organiserFeeWording, type PricingVersion } from "@/lib/pricing";
 import { formatInr, formatIst } from "@/lib/format";
 import { VenueMap } from "./venue-map";
@@ -76,6 +77,7 @@ export type WizardProps = {
   organiserId: string;
   organiserName: string;
   approved: boolean;
+  freeOnly: boolean;
   paused: boolean;
   initial: Draft | null;
   initialStep: number;
@@ -89,6 +91,7 @@ export function EventWizard({
   organiserId,
   organiserName,
   approved,
+  freeOnly,
   paused,
   initial,
   initialStep,
@@ -100,7 +103,12 @@ export function EventWizard({
   const router = useRouter();
   const [id] = useState(initialId);
   const hydrated = useSyncExternalStore(subscribeToHydration, clientReady, serverReady);
-  const [values, setValues] = useState<Values>(initial?.values ?? emptyValues()),
+  const [values, setValues] = useState<Values>(() => {
+      const saved = initial?.values ?? emptyValues();
+      return freeOnly
+        ? { ...saved, free: true, tiers: saved.tiers.map((tier) => ({ ...tier, price: "0" })) }
+        : saved;
+    }),
     [draft, setDraft] = useState(initial),
     [step, setStep] = useState(initialStep),
     [busy, setBusy] = useState(false),
@@ -336,6 +344,7 @@ export function EventWizard({
                     type="checkbox"
                     className="size-5 accent-teal"
                     checked={values.free}
+                    disabled={freeOnly}
                     onChange={(e) => {
                       update("free", e.target.checked);
                       if (e.target.checked)
@@ -347,6 +356,7 @@ export function EventWizard({
                   />
                   Free event — RSVP only
                 </label>
+                {freeOnly && <p className="text-sm text-muted">{INTERNATIONAL_PAID_TICKETS}</p>}
               </Section>
             )}
             {step === 1 && (
@@ -684,7 +694,7 @@ export function EventWizard({
                         />
                       </Field>
                       <div className="grid gap-4 sm:grid-cols-2">
-                        {!values.free && (
+                        {!values.free && !freeOnly && (
                           <Field label={`Tier ${index + 1} price incl. GST (₹)`}>
                             <input
                               inputMode="decimal"

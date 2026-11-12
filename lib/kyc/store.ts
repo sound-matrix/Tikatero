@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json, Tables } from "@/lib/db/types";
 import type { Application } from "./model";
 export const applicationColumns =
-  "id,organiser_id,status,revision,step_progress,flagged_steps,reviewer_note,submission_count" as const;
+  "id,organiser_id,region,status,revision,step_progress,flagged_steps,reviewer_note,submission_count" as const;
 export async function loadApplication(
   client: SupabaseClient<Database>,
   organiserId: string,
@@ -27,6 +27,7 @@ export function applicationDto(
     Tables<"kyc_applications">,
     | "id"
     | "organiser_id"
+    | "region"
     | "status"
     | "revision"
     | "step_progress"
@@ -38,6 +39,7 @@ export function applicationDto(
   return {
     id: row.id,
     organiser_id: row.organiser_id,
+    region: row.region,
     status: row.status,
     revision: row.revision ?? 0,
     step_progress: row.step_progress as unknown as Application["step_progress"],
@@ -45,4 +47,16 @@ export function applicationDto(
     reviewer_note: row.reviewer_note,
     submission_count: row.submission_count,
   };
+}
+
+export async function hasInternationalKyc(client: SupabaseClient<Database>, organiserId: string) {
+  const { data, error } = await client
+    .from("kyc_applications")
+    .select("id")
+    .eq("organiser_id", organiserId)
+    .eq("region", "INTL")
+    .or("revision.not.is.null,status.eq.approved")
+    .limit(1);
+  if (error) throw new KycError("The organiser’s verification could not be checked. Try again.");
+  return !!data?.length;
 }

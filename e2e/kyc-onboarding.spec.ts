@@ -35,10 +35,6 @@ test.describe("India organiser verification", () => {
       );
       await expect(page).toHaveURL(/\/console\/pending$/);
       await page.getByRole("link", { name: "Start or continue verification" }).click();
-      await page.getByLabel("Where is your organiser based?").selectOption("INTL");
-      await expect(
-        page.getByRole("heading", { name: "Coming soon — please contact support" }),
-      ).toBeVisible();
       await page.getByLabel("Where is your organiser based?").selectOption("IN");
       await expect(
         page.getByText(

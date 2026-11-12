@@ -8,7 +8,7 @@ import {
   type ActionState,
 } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
-import { fieldClass, stepLabels } from "@/lib/admin/model";
+import { fieldClass, reviewStepLabels } from "@/lib/admin/model";
 function Feedback({ state }: { state: ActionState }) {
   const [retryState, retry, pending] = useActionState(retryNotification, {});
   return (
@@ -41,10 +41,12 @@ export function ReviewForm({
   id,
   revision,
   disabled,
+  region,
 }: {
   id: string;
   revision: number | null;
   disabled: boolean;
+  region?: "IN" | "INTL";
 }) {
   const [state, action, pending] = useActionState(reviewKyc, {});
   return (
@@ -69,7 +71,7 @@ export function ReviewForm({
               Steps to correct when requesting more docs
             </legend>
             <div className="flex flex-wrap gap-4">
-              {Object.entries(stepLabels).map(([key, label]) => (
+              {Object.entries(reviewStepLabels(region)).map(([key, label]) => (
                 <label key={key} className="flex items-center gap-2">
                   <input type="checkbox" name="steps" value={key} className="size-5 accent-teal" />
                   {label}
