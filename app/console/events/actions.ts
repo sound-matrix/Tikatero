@@ -80,6 +80,12 @@ export async function saveEvent(input: unknown): Promise<SaveResult> {
     return { error: "People have already booked this ticket type, so it can't be removed." };
   if (error?.message === "A tier with sold tickets cannot change price")
     return { error: "People have already booked this ticket type, so its price can't change." };
+  if (
+    error?.message ===
+    "People have already booked under these rules, so you can only make them more generous."
+  )
+    return { error: error.message };
+  if (error?.message === "Show this event before publishing it.") return { error: error.message };
   if (error)
     return {
       error:

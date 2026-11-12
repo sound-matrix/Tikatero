@@ -70,7 +70,7 @@ export async function processEventRefunds(
           break;
         }
         try {
-          await settleOpenedRefund(
+          const result = await settleOpenedRefund(
             {
               refund_id: refund.id,
               order_id: order.id,
@@ -81,6 +81,10 @@ export async function processEventRefunds(
             },
             true,
           );
+          if (result && typeof result === "object" && "paused" in result && result.paused) {
+            queued = true;
+            break;
+          }
         } catch {
           queued = true;
           break;
@@ -111,10 +115,32 @@ export async function sweepEventRefunds() {
   if (error) throw error;
   let failed = 0;
   for (let index = 0; index < data.length; index += 5) {
-    const results = await Promise.allSettled(
-      data.slice(index, index + 5).map(processCancelledOrder),
-    );
+    const results = await Promise.allSettled(data.slice(index, index + 5).map(processQueuedOrder));
     failed += results.filter((result) => result.status === "rejected").length;
   }
   return failed;
+}
+
+async function processQueuedOrder(order: { id: string; event_id: string }) {
+  if (await processCancelledOrder(order)) return;
+  const { data, error } = await createServiceClient()
+    .from("refunds")
+    .select("id, amount_paise, organiser_reversal_paise, orders!inner(is_test)")
+    .eq("order_id", order.id)
+    .eq("status", "approved")
+    .is("cf_refund_id", null)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return;
+  await settleOpenedRefund(
+    {
+      refund_id: data.id,
+      order_id: order.id,
+      amount_paise: data.amount_paise,
+      reversal_paise: data.organiser_reversal_paise,
+      is_test: data.orders.is_test,
+      needs_provider: true,
+    },
+    true,
+  );
 }

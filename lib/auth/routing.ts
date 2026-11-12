@@ -36,7 +36,7 @@ function eventLeaf(path: string, leaf: "scan" | "team") {
 }
 
 function eventSales(path: string) {
-  const match = /^\/console\/events\/([0-9a-f-]{36})(?:\/export)?$/i.exec(path);
+  const match = /^\/console\/events\/([0-9a-f-]{36})(?:\/(?:export|live))?$/i.exec(path);
   return match?.[1]?.toLowerCase() ?? null;
 }
 

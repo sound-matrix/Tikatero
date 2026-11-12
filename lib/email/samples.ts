@@ -48,6 +48,10 @@ export const emailSamples: TemplateData = {
     reason: "Please confirm the updated date.",
     actionPath: "/console/events",
   },
+  refund_request_rejected: {
+    eventTitle: "Indie Night",
+    reason: "Your booking was outside the refund window.",
+  },
   refund_processed: {
     recipientName,
     eventTitle: event.title,

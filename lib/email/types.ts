@@ -10,6 +10,7 @@ export type TemplateData = {
     amountPaise: number;
     vip?: boolean;
     testBooking?: boolean;
+    refundPolicy?: string;
     tickets?: { label: string; href: string; path: string }[];
   };
   payment_failed: EmailBase & { eventTitle: string; orderRef: string; amountPaise: number };
@@ -19,6 +20,7 @@ export type TemplateData = {
   event_hidden_by_admin: EmailBase & { eventTitle: string; reason: string };
   event_removal_approved: EmailBase & { eventTitle: string; reason: string };
   event_removal_rejected: EmailBase & { eventTitle: string; reason: string };
+  refund_request_rejected: EmailBase & { eventTitle: string; reason: string };
   refund_processed: EmailBase & {
     eventTitle: string;
     refundRef: string;

@@ -1,3 +1,4 @@
+import type { RuleSettings } from "@/lib/refunds/rules";
 export const steps = [
   "Basics",
   "Date & time",
@@ -74,8 +75,10 @@ export type Values = {
   tiers: Tier[];
   capacity: string;
   feePayer: "organiser" | "buyer";
-  refundPolicy: "72h" | "none" | "custom";
+  refundPolicy: RuleSettings["refundPolicy"];
   refundText: string;
+  refundRules: RuleSettings["refundRules"];
+  refundAutoApprove: boolean;
 };
 export function emptyValues(): Values {
   return {
@@ -99,7 +102,9 @@ export function emptyValues(): Values {
     tiers: [],
     capacity: "",
     feePayer: "organiser",
-    refundPolicy: "72h",
+    refundPolicy: "full",
+    refundRules: [{ days: "3", percent: "100" }],
+    refundAutoApprove: false,
     refundText: "",
   };
 }

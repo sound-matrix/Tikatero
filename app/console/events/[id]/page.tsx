@@ -6,7 +6,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireAccount } from "@/lib/auth/account";
 import { ShareEventCard } from "@/components/console/share-event";
-import { SalesFigures } from "@/components/console/sales-view";
+import { LiveSalesFigures } from "@/components/console/live-sales";
 import { Button } from "@/components/ui/button";
 import { loadEventSales } from "@/lib/payouts/read";
 import { loadRefundDesk } from "@/lib/refunds/desk";
@@ -45,13 +45,7 @@ async function EventSales({
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 md:px-8">
       <p className="text-sm font-bold uppercase tracking-widest text-teal">Event sales</p>
-      <SalesFigures event={sales} detail />
-      {event?.capacity && (
-        <p className="font-semibold">
-          {sales.tiers.reduce((total, ticket) => total + ticket.qty_sold, 0)} of {event.capacity}{" "}
-          seats sold
-        </p>
-      )}
+      <LiveSalesFigures initial={sales} />
       {event && ownsEvent && (
         <EventModeration
           event={event}
@@ -72,7 +66,10 @@ async function EventSales({
         />
       )}
       <div className="flex flex-wrap gap-3">
-        <Button href={`/console/events/${id}/export`} variant="primary">
+        <Button href={`/console/events/${id}/export.xlsx`} variant="primary" prefetch={false}>
+          Download Excel
+        </Button>
+        <Button href={`/console/events/${id}/export`} prefetch={false}>
           Download sales CSV
         </Button>
         <Link

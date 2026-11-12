@@ -110,7 +110,7 @@ set local role authenticated;
 select throws_ok(
   $$select public.refund_action('request', 'e1540001-0000-4000-8000-000000000002', null, null, null, 'too soon', 'organiser', false)$$,
   'P0001',
-  'Refunds for this event close 72 hours before the start.',
+  'There is no refund for a cancellation at this time.',
   'a request 71 hours before the start is refused'
 );
 select throws_ok(
@@ -130,9 +130,16 @@ select is(
 );
 select is(
   (public.refund_action('request', 'e1540001-0000-4000-8000-000000000001', null, null, null, 'window', 'organiser', false)->>'needs_provider')::boolean,
-  true,
-  'a 72 hour request is ready to refund'
+  false,
+  'a 72 hour request waits for approval'
 );
+reset role;
+
+select set_config('request.jwt.claims', '{"sub":"e1500001-0000-4000-8000-000000000003","role":"authenticated"}', true);
+set local role authenticated;
+select public.refund_action('approve', null,
+  (select id from public.refunds where order_id = 'e1540001-0000-4000-8000-000000000001'),
+  null, null, null, 'organiser', false);
 reset role;
 
 select is(

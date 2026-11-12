@@ -26,7 +26,7 @@ export async function EventEditor({
   if (!account.organisers.some((o) => o.id === organiserId)) notFound();
   const { data: organisers, error } = await client
     .from("organisers")
-    .select("id,display_name,country,kyc_status,sales_paused")
+    .select("id,display_name,country,kyc_status,sales_paused,owner_id")
     .in(
       "id",
       account.organisers.map((o) => o.id),
@@ -76,6 +76,7 @@ export async function EventEditor({
         key={draft?.id ?? organiserId}
         id={id ?? randomUUID()}
         organiserId={organiserId}
+        canAutoApprove={organiser.owner_id === account.profile.id}
         organiserName={organiser.display_name}
         organiserCountry={organiser.country}
         venueCountries={venueCountries}

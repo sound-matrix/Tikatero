@@ -2,7 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db/types";
-import { refundText } from "@/lib/discovery/model";
+import { loadRefundPause, readRefundPolicyText } from "./read";
 import { formatInr, formatIst } from "@/lib/format";
 import { createServiceClient } from "@/lib/supabase/service";
 import { loadEventSales } from "@/lib/payouts/read";
@@ -11,6 +11,7 @@ export type RefundDesk = {
   eventId: string;
   title: string;
   policyText: string;
+  paused: boolean;
   orders: {
     id: string;
     buyerName: string;
@@ -28,6 +29,9 @@ export type RefundDesk = {
       amountLabel: string;
       whenLabel: string;
       open: boolean;
+      offeredRupees: string;
+      hoursBefore: number | null;
+      rulePercent: number | null;
       queued: boolean;
     }[];
   }[];
@@ -46,6 +50,8 @@ export async function loadRefundDesk(
   const sales = await loadEventSales(client, eventId);
   if (!sales) return null;
   const service = createServiceClient();
+  const pause = await loadRefundPause(client, eventId);
+  const paused = pause.site_paused || pause.event_paused;
   const { data: event, error } = await service
     .from("events")
     .select("id, title, refund_policy, status, starts_at")
@@ -67,14 +73,17 @@ export async function loadRefundDesk(
     ids.length
       ? service
           .from("refunds")
-          .select("id, order_id, amount_paise, status, created_at, cf_refund_id")
+          .select(
+            "id, order_id, amount_paise, status, created_at, cf_refund_id, offered_paise, hours_before_event, rule_percent",
+          )
           .in("order_id", ids)
       : Promise.resolve({ data: [] }),
   ]);
   return {
     eventId,
     title: event.title,
-    policyText: refundText(event.refund_policy),
+    policyText: await readRefundPolicyText(service, event.id, event.refund_policy),
+    paused,
     orders: (orders ?? []).map((order) => {
       const orderRefunds = (refunds ?? []).filter((refund) => refund.order_id === order.id);
       const processed = orderRefunds
@@ -105,8 +114,10 @@ export async function loadRefundDesk(
           amountLabel: `${formatInr(refund.amount_paise)} incl. GST`,
           whenLabel: formatIst(refund.created_at),
           open: refund.status === "requested",
-          queued:
-            event.status === "cancelled" && refund.status === "approved" && !refund.cf_refund_id,
+          offeredRupees: rupeesInput(refund.offered_paise ?? refund.amount_paise),
+          hoursBefore: refund.hours_before_event,
+          rulePercent: refund.rule_percent,
+          queued: refund.status === "approved" && !refund.cf_refund_id,
         })),
       };
     }),

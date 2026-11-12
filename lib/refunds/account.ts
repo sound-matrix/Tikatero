@@ -1,9 +1,11 @@
 import "server-only";
 
-import { refundText } from "@/lib/discovery/model";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/db/types";
+import { loadBuyerQuote, readRefundPolicyText } from "./read";
 import { formatInr, formatIst } from "@/lib/format";
 import { createServiceClient } from "@/lib/supabase/service";
-import { buyerRefundDecision, refundCopy } from "./model";
+import { refundCopy } from "./model";
 
 export type MyOrderView = {
   id: string;
@@ -16,6 +18,7 @@ export type MyOrderView = {
   policyText: string;
   canRequest: boolean;
   requestReason: string;
+  paused: boolean;
   refunds: {
     id: string;
     amountLabel: string;
@@ -32,7 +35,10 @@ const orderLabels: Record<string, string> = {
   expired: "Expired",
 };
 
-export async function loadMyOrders(buyerId: string): Promise<MyOrderView[]> {
+export async function loadMyOrders(
+  buyerId: string,
+  session: SupabaseClient<Database>,
+): Promise<MyOrderView[]> {
   const client = createServiceClient();
   const { data: orders, error } = await client
     .from("orders")
@@ -44,42 +50,27 @@ export async function loadMyOrders(buyerId: string): Promise<MyOrderView[]> {
   if (!orders?.length) return [];
   const eventIds = [...new Set(orders.map((order) => order.event_id))];
   const orderIds = orders.map((order) => order.id);
-  const [
-    { data: events, error: eventError },
-    { data: tickets, error: ticketError },
-    { data: refunds, error: refundError },
-  ] = await Promise.all([
-    client.from("events").select("id, title, starts_at, refund_policy").in("id", eventIds),
-    client.from("tickets").select("order_id, status").in("order_id", orderIds),
-    client
-      .from("refunds")
-      .select("id, order_id, amount_paise, status, created_at")
-      .in("order_id", orderIds),
-  ]);
-  if (eventError || ticketError || refundError) throw new Error("Your orders could not be loaded.");
-  const now = new Date();
-  return orders.flatMap((order) => {
-    if (order.buyer_id !== buyerId) return [];
-    const event = events?.find((item) => item.id === order.event_id);
-    if (!event?.starts_at) return [];
-    const orderRefunds = (refunds ?? []).filter((refund) => refund.order_id === order.id);
-    const processed = orderRefunds
-      .filter((refund) => refund.status === "processed")
-      .reduce((sum, refund) => sum + refund.amount_paise, 0);
-    const decision = buyerRefundDecision({
-      policy: event.refund_policy,
-      startsAt: event.starts_at,
-      now,
-      orderStatus: order.status,
-      buyerTotalPaise: order.total_paise,
-      processedPaise: processed,
-      ticketStatuses: (tickets ?? [])
-        .filter((ticket) => ticket.order_id === order.id)
-        .map((ticket) => ticket.status),
-      openRefund: orderRefunds.some((refund) => ["requested", "approved"].includes(refund.status)),
-    });
-    return [
-      {
+  const [{ data: events, error: eventError }, { data: refunds, error: refundError }] =
+    await Promise.all([
+      client.from("events").select("id, title, starts_at, refund_policy").in("id", eventIds),
+      client
+        .from("refunds")
+        .select("id, order_id, amount_paise, status, created_at, cf_refund_id")
+        .in("order_id", orderIds),
+    ]);
+  if (eventError || refundError) throw new Error("Your orders could not be loaded.");
+  const result = await Promise.all(
+    orders.map(async (order) => {
+      if (order.buyer_id !== buyerId) return null;
+      const event = events?.find((item) => item.id === order.event_id);
+      if (!event?.starts_at) return null;
+      const orderRefunds = (refunds ?? []).filter((refund) => refund.order_id === order.id);
+
+      const [decision, policyText] = await Promise.all([
+        loadBuyerQuote(session, order.id),
+        readRefundPolicyText(client, event.id, event.refund_policy),
+      ]);
+      return {
         id: order.id,
         eventTitle: event.title,
         whenLabel: formatIst(event.starts_at),
@@ -87,16 +78,21 @@ export async function loadMyOrders(buyerId: string): Promise<MyOrderView[]> {
         totalLabel: `${formatInr(order.total_paise)} incl. GST`,
         statusLabel: orderLabels[order.status] ?? order.status,
         isTest: order.is_test,
-        policyText: refundText(event.refund_policy),
-        canRequest: decision.ok,
-        requestReason: decision.ok ? "" : decision.reason,
+        policyText,
+        canRequest: !!decision.quote,
+        requestReason: decision.message,
+        paused: decision.quote?.paused ?? false,
         refunds: orderRefunds.map((refund) => ({
           id: refund.id,
           amountLabel: `${formatInr(refund.amount_paise)} incl. GST`,
           whenLabel: formatIst(refund.created_at),
-          copy: refundCopy({ status: refund.status, isTest: order.is_test }),
+          copy:
+            refund.status === "approved" && !refund.cf_refund_id
+              ? "Your refund was approved and is waiting to be sent."
+              : refundCopy({ status: refund.status, isTest: order.is_test }),
         })),
-      },
-    ];
-  });
+      };
+    }),
+  );
+  return result.filter((order) => order !== null);
 }

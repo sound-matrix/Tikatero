@@ -7,7 +7,8 @@ import { OrganiserForm } from "@/components/auth/organiser-form";
 import { signOut } from "./actions";
 import { loadMyTickets, type MyTicket } from "@/lib/tickets/mine";
 import { loadMyOrders } from "@/lib/refunds/account";
-import { requestBuyerRefund } from "@/lib/refunds/actions";
+import { CancelBooking } from "@/components/refunds/cancel-booking";
+import { PAUSE_REQUEST } from "@/lib/refunds/rules";
 
 function TicketList({
   title,
@@ -50,10 +51,10 @@ function TicketList({
 }
 
 async function AccountContent({ notice, error }: { notice?: string; error?: string }) {
-  const { account } = await requireAccount();
+  const { account, client } = await requireAccount();
   const destination = landingPath(account);
   const tickets = await loadMyTickets(account.profile.id);
-  const orders = await loadMyOrders(account.profile.id);
+  const orders = await loadMyOrders(account.profile.id, client);
   const upcoming = tickets.filter((ticket) => !ticket.past);
   const past = tickets.filter((ticket) => ticket.past).reverse();
   return (
@@ -92,18 +93,12 @@ async function AccountContent({ notice, error }: { notice?: string; error?: stri
                   {refund.amountLabel} · {refund.whenLabel}. {refund.copy}
                 </p>
               ))}
-              {order.canRequest ? (
-                <form action={requestBuyerRefund} className="mt-4">
-                  <input type="hidden" name="order_id" value={order.id} />
-                  <Button type="submit" variant="primary">
-                    Request a refund
-                  </Button>
-                </form>
-              ) : (
-                order.requestReason && (
-                  <p className="mt-3 text-sm text-muted">{order.requestReason}</p>
-                )
-              )}
+              <CancelBooking
+                orderId={order.id}
+                message={order.requestReason}
+                canRequest={order.canRequest}
+                paused={order.paused}
+              />
             </Card>
           ))
         )}
@@ -159,7 +154,13 @@ async function MeNotice({
   const query = await searchParams;
   return (
     <AccountContent
-      notice={query.refund === "updated" ? "Your refund has been updated." : undefined}
+      notice={
+        query.refund === "paused"
+          ? PAUSE_REQUEST
+          : query.refund === "requested"
+            ? "Your refund request is saved."
+            : undefined
+      }
       error={query.refund_error}
     />
   );

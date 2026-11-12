@@ -173,7 +173,7 @@ test.describe("Organiser event wizard", () => {
       status: "published",
       organiser_id: owner,
       fee_payer: "buyer",
-      refund_policy: "72h",
+      refund_policy: "schedule",
       lat: 17.385,
       lng: 78.4867,
       maps_url: "https://www.google.com/maps?q=17.385,78.4867",

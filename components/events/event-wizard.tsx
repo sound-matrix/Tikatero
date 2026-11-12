@@ -1,6 +1,8 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
+import { RefundRulesEditor } from "@/components/refunds/rules-editor";
+import { refundPolicyText, rulesFromEditor } from "@/lib/refunds/rules";
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -87,6 +89,7 @@ function when(value: string) {
 export type WizardProps = {
   id: string;
   organiserId: string;
+  canAutoApprove: boolean;
   organiserName: string;
   organiserCountry: string;
   venueCountries: { code: string; name: string }[];
@@ -103,6 +106,7 @@ export type WizardProps = {
 export function EventWizard({
   id: initialId,
   organiserId,
+  canAutoApprove,
   organiserName,
   organiserCountry,
   venueCountries,
@@ -896,30 +900,16 @@ export function EventWizard({
                   </dl>
                   <p className="mt-4 text-xs text-muted">{organiserFeeWording(pricingVersion)}</p>
                 </div>
-                <Field label="Refund policy">
-                  <select
-                    className={fieldClass}
-                    value={values.refundPolicy}
-                    onChange={(e) =>
-                      update("refundPolicy", e.target.value as Values["refundPolicy"])
-                    }
-                  >
-                    <option value="72h">Full refund up to 72 hours before the event starts</option>
-                    <option value="none">No refunds</option>
-                    <option value="custom">Write my own refund policy</option>
-                  </select>
-                </Field>
-                {values.refundPolicy === "custom" && (
-                  <Field label="Your refund policy">
-                    <textarea
-                      className={`${fieldClass} py-3`}
-                      rows={4}
-                      value={values.refundText}
-                      maxLength={2000}
-                      onChange={(e) => update("refundText", e.target.value)}
-                    />
-                  </Field>
-                )}
+                <RefundRulesEditor
+                  settings={{
+                    refundPolicy: values.refundPolicy,
+                    refundText: values.refundText,
+                    refundRules: values.refundRules,
+                    refundAutoApprove: values.refundAutoApprove,
+                  }}
+                  canAuto={canAutoApprove}
+                  onChange={(settings) => setValues((current) => ({ ...current, ...settings }))}
+                />
               </Section>
             )}
             {step === 7 && (
@@ -1004,13 +994,7 @@ export function EventWizard({
                   <dt className="font-semibold">Platform fee</dt>
                   <dd>{values.feePayer === "organiser" ? "Paid by organiser" : "Paid by buyer"}</dd>
                   <dt className="font-semibold">Refund policy</dt>
-                  <dd>
-                    {values.refundPolicy === "72h"
-                      ? "Full refund up to 72 hours before start"
-                      : values.refundPolicy === "none"
-                        ? "No refunds"
-                        : values.refundText}
-                  </dd>
+                  <dd>{rulesPreview(values)}</dd>
                 </dl>
                 {draft?.slug && (
                   <div className="rounded-xl bg-soft p-4">
@@ -1080,4 +1064,13 @@ export function EventWizard({
       </form>
     </main>
   );
+}
+
+function rulesPreview(values: Values) {
+  try {
+    const { refund_policy, refund_rules } = rulesFromEditor(values);
+    return refundPolicyText(refund_policy, refund_rules);
+  } catch {
+    return "Complete the refund rules.";
+  }
 }

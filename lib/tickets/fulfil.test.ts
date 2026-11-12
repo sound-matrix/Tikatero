@@ -32,6 +32,7 @@ const event = {
   ends_at: null,
   gates_open_at: "2026-11-07T12:00:00.000Z",
   venue_name: "NSCI Dome",
+  refund_policy: "none",
   address: "Worli",
   city: "Mumbai",
   maps_url: null,

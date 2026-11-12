@@ -10,7 +10,7 @@ const payouts = [
     amountPaise: 95339,
     expectedAt: "2026-11-11T12:30:00.000Z",
     settledAt: null,
-    isTest: true,
+    isTest: false,
   },
   {
     organiserId: "org-b",
@@ -32,7 +32,8 @@ it("exports only the caller organiser, with rupees, paise, and IST, and no secre
   expect(csv).not.toContain("'₹953.39");
   expect(csv).not.toContain("'River night");
   expect(csv).toContain("11 Nov 2026, 6:00 PM IST");
-  expect(csv).toContain("test");
+  expect(csv).toContain("live");
+  expect(payoutsCsv([{ ...payouts[0], isTest: true }], "org-a")).not.toContain("River night");
   expect(csv).not.toContain("org-b");
   expect(csv).not.toContain("Other night");
   expect(csv).not.toContain("5000");

@@ -5,7 +5,8 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import type { Metadata } from "next";
 import { publicEvent, requestTime } from "@/lib/discovery/data";
-import { publicPrice, refundText, tierState, jsonLdString } from "@/lib/discovery/model";
+import { publicPrice, tierState, jsonLdString } from "@/lib/discovery/model";
+import { readRefundPolicyText } from "@/lib/refunds/read";
 import { eventJsonLd, siteOrigin } from "@/lib/discovery/seo";
 import { formatIst } from "@/lib/format";
 import { openMaps } from "@/lib/events/model";
@@ -51,9 +52,10 @@ async function Detail({ params, searchParams }: Props) {
     seatsLeft = e.capacity === null ? null : Math.max(0, e.capacity - e.tickets_sold),
     available = seatsLeft !== 0 && e.tiers.some((t) => tierState(t, end, now) === "Available"),
     origin = await siteOrigin();
-  const [{ ref }, host] = await Promise.all([
+  const [{ ref }, host, policyText] = await Promise.all([
     searchParams,
     createAnonClient().rpc("event_host_slug", { p_event_id: e.id }),
+    readRefundPolicyText(createAnonClient(), e.id, e.refund_policy),
   ]);
   const channel = shareChannel(ref);
   const maps = openMaps({
@@ -209,7 +211,7 @@ async function Detail({ params, searchParams }: Props) {
           )}
           <section className="mt-8 rounded-2xl bg-soft p-5">
             <h2 className="font-bold">Refund policy</h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted">{refundText(e.refund_policy)}</p>
+            <p className="mt-2 text-sm leading-relaxed text-muted">{policyText}</p>
           </section>
         </div>
         <aside

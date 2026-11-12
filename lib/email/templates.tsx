@@ -100,6 +100,7 @@ const definitions: {
           detail("Booking reference", d.orderRef),
           detail("Total paid", formatINR(d.amountPaise)),
           ...(d.testBooking ? [detail("Payment", "Test booking. No real money was taken.")] : []),
+          ...(d.refundPolicy ? [detail("Refund rules", d.refundPolicy)] : []),
           ...tickets.map((ticket) => detail(ticket.label, ticket.href)),
         ],
         tickets.length ? "View your ticket" : "View your booking",
@@ -182,6 +183,17 @@ const definitions: {
         "Your event is still hidden. Open the event to see who can make it visible again.",
         [detail("Event", d.eventTitle), detail("Tikatero’s note", d.reason)],
         "Open your event",
+      ),
+  },
+  refund_request_rejected: {
+    label: "Refund request declined",
+    build: (d) =>
+      notice(
+        "Your refund request was declined",
+        "The organiser or Tikatero reviewed your request.",
+        [detail("Event", d.eventTitle), detail("Reason", d.reason)],
+        "View your booking",
+        "/me",
       ),
   },
   refund_processed: {
