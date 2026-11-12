@@ -403,6 +403,12 @@ begin
   if exists (select 1 from public.refunds where order_id = ord.id and status in ('requested', 'approved')) then
     raise exception 'A refund is already in progress for this booking.';
   end if;
+  -- A partial cancellation voids the booking's unused tickets. A second request
+  -- must not apply the same percentage again to the balance.
+  if exists (select 1 from public.refunds where order_id = ord.id and status = 'processed'
+    and offered_paise is not null) then
+    raise exception 'You have already cancelled this booking.';
+  end if;
   if ev.refund_policy = 'none' then raise exception 'This event does not offer refunds.'; end if;
   if ev.starts_at is null or ev.starts_at <= statement_timestamp() or ev.status = 'cancelled' then
     raise exception 'You can only cancel before the event starts.';

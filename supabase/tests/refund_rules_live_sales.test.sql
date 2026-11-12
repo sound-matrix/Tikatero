@@ -146,6 +146,14 @@ select is(jsonb_array_length(public.event_excel_rows('f2420000-0000-4000-8000-00
 select ok(public.event_excel_rows('f2420000-0000-4000-8000-000000000001',false)::text not like '%@example.test%', 'Excel rows do not include email addresses');
 reset role;
 
+select public.finish_refund((select id from public.refunds where order_id = 'f2440000-0000-4000-8000-000000000001'), 'pr24-partial', 'processed');
+select set_config('request.jwt.claim.sub','f2400000-0000-4000-8000-000000000003',true);
+set local role authenticated;
+select throws_ok($$
+  select public.buyer_refund_quote('f2440000-0000-4000-8000-000000000001')
+$$, 'P0001', 'You have already cancelled this booking.', 'A partial cancellation cannot repeatedly claim the balance');
+reset role;
+
 select set_config('request.jwt.claim.sub','f2400000-0000-4000-8000-000000000004',true);
 set local role authenticated;
 select throws_ok($$select public.organiser_event_sales('f2420000-0000-4000-8000-000000000001')$$,'42501',null,'Door staff cannot view sales');
