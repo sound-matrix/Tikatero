@@ -600,7 +600,7 @@ returns jsonb language sql stable set search_path = '' as $$
   from public.events ev join public.organisers org on org.id = ev.organiser_id
   cross join summary cross join orders cross join refunds
   left join lateral (
-    select least(sum(m.available_paise),sum(m.available_paise) filter (where m.event_id = ev.id)) as available_paise,
+    select least(sum(m.available_paise),coalesce(sum(m.available_paise) filter (where m.event_id = ev.id),0)) as available_paise,
       min(m.next_at) filter (where m.event_id = ev.id) as next_at
     from payout_private.manual_buckets(org.id,p_test) m
   ) b on true
@@ -972,7 +972,7 @@ begin
   end if;
   with eligible as (
     select o.id, b.bank_holder_name as beneficiary, b.bank_ifsc as ifsc,
-      greatest(0, least(s.total,case when p_event is null then s.total else s.scoped end))::bigint as amount_paise,
+      greatest(0, least(s.total,case when p_event is null then s.total else coalesce(s.scoped,0) end))::bigint as amount_paise,
       coalesce(ev.title,'host earnings') as event_title, a.encrypted_number
     from public.organisers o
     cross join lateral payout_private.bank_check(o.id) b

@@ -70,6 +70,10 @@ insert into public.orders(id,event_id,buyer_name,buyer_email,status,paid_at,subt
 values ('f2540000-0000-4000-8000-000000000002','f2520000-0000-4000-8000-000000000002','Buyer','manual-buyer@example.test','paid',now()-interval '10 days',8000,8000,8000,0,'organiser'),
        ('f2540000-0000-4000-8000-000000000003','f2520000-0000-4000-8000-000000000003','Buyer','manual-buyer@example.test','paid',now()-interval '10 days',8000,8000,8000,0,'organiser');
 
+insert into public.payout_bank_accounts(application_id,bank_check_ref,encrypted_number)
+select id,'synthetic-check','encrypted-bank-envelope-for-tests-only'
+from public.kyc_applications where organiser_id = 'f2510000-0000-4000-8000-000000000001';
+
 create function pg_temp.pay(p_amount bigint,p_utr text default 'MANUAL1234',p_on date default current_date - 1,
   p_org uuid default 'f2510000-0000-4000-8000-000000000001',p_reason text default null)
 returns uuid language sql as $$
@@ -78,6 +82,12 @@ $$;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','f2500000-0000-4000-8000-000000000001',true);
+select is(jsonb_array_length(public.admin_payout_bank_details(null,'f2520000-0000-4000-8000-000000000001',false,true)),
+  0,'An event with nothing due cannot export another event’s balance');
+select is(public.admin_payout_bank_details(null,'f2520000-0000-4000-8000-000000000002',false,true)#>>'{0,amount_paise}',
+  '8000','The bank export uses the balance of the selected event');
+select is(public.admin_payout_bank_details('f2510000-0000-4000-8000-000000000001',null,false,false)#>>'{0,encrypted_number}',
+  'encrypted-bank-envelope-for-tests-only','Staff may request the encrypted account for a verified host');
 select throws_ok($$select pg_temp.pay(8001)$$,'P0001','Amount exceeds what can be paid now.','Staff cannot overpay without a reason');
 select throws_ok($$select pg_temp.pay(10,'MANUAL1234',current_date + 2)$$,'P0001','Enter a payment date on or before today in India.','Paid on cannot be in the future');
 select throws_ok($$select pg_temp.pay(10,'MANUAL1234',current_date - 1,'f2510000-0000-4000-8000-000000000002')$$,
@@ -139,6 +149,11 @@ select is((select sum(amount_paise)::bigint from public.organiser_earnings_entri
   where order_id = 'f2540000-0000-4000-8000-000000000004' and is_test),
   (select amount_paise from public.payouts where order_id = 'f2540000-0000-4000-8000-000000000004'),
   'Historical sale backfill ties to the legacy per-order payout and preserves test status');
+
+select is((select count(*) from public.audit_log where action = 'payout_bank_export'),2::bigint,
+  'Bank export attempts are audited');
+select is((select count(*) from public.audit_log where action = 'payout_bank_revealed'),1::bigint,
+  'Bank reveal is audited without the account number');
 
 select * from finish();
 rollback;
