@@ -1,12 +1,17 @@
 import "server-only";
 import { PaymentsNotConfiguredError } from "@/lib/payments";
-import { productionPaymentLock } from "@/lib/payments/model";
+import {
+  cashfreeOrderSplits,
+  cashfreeRefundSplits,
+  type SplitCapability,
+  productionPaymentLock,
+} from "@/lib/payments/model";
 import { LIVE_VENDOR_UNAVAILABLE, mockVendorId } from "./model";
 
 export interface SplitVendor {
   mode: "mock" | "cashfree";
-  ensureVendor(organiserId: string): Promise<{ vendorId: string }>;
-  setSettlementHold(vendorId: string, hold: boolean): Promise<void>;
+  ensureRecipient(organiserId: string): Promise<{ vendorId: string }>;
+  setRecipientHold(vendorId: string, hold: boolean): Promise<void>;
 }
 
 class SplitError extends Error {
@@ -25,17 +30,19 @@ function credentials() {
 
 export class MockSplit implements SplitVendor {
   readonly mode = "mock" as const;
-  async ensureVendor(organiserId: string) {
+  async ensureRecipient(organiserId: string) {
     return { vendorId: mockVendorId(organiserId) };
   }
-  async setSettlementHold() {
+  async setRecipientHold() {
     return;
   }
 }
 
 /** Easy Split vendor settlement. Responses are not logged. */
-export class CashfreeSplit implements SplitVendor {
+export class CashfreeSplit implements SplitVendor, SplitCapability {
   readonly mode = "cashfree" as const;
+  readonly splitForOrder = cashfreeOrderSplits;
+  readonly reverseOnRefund = cashfreeRefundSplits;
   private async request(path: string, init: RequestInit) {
     const keys = credentials();
     if (!keys) throw new SplitError();
@@ -57,14 +64,14 @@ export class CashfreeSplit implements SplitVendor {
     });
     if (!response.ok) throw new SplitError();
   }
-  async ensureVendor(organiserId: string): Promise<{ vendorId: string }> {
+  async ensureRecipient(organiserId: string): Promise<{ vendorId: string }> {
     // Full account numbers are not stored. Do not invent a vendor, save a mock id, or log anything.
     if (!organiserId || organiserId.startsWith("mock_vendor_")) {
       throw new Error(LIVE_VENDOR_UNAVAILABLE);
     }
     throw new Error(LIVE_VENDOR_UNAVAILABLE);
   }
-  async setSettlementHold(vendorId: string, hold: boolean) {
+  async setRecipientHold(vendorId: string, hold: boolean) {
     if (!/^[\w-]{1,64}$/.test(vendorId) || vendorId.startsWith("mock_vendor_"))
       throw new Error("Payout account could not be updated.");
     await this.request(`/easy-split/vendors/${encodeURIComponent(vendorId)}`, {

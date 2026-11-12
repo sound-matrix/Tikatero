@@ -1,5 +1,6 @@
 begin;
 select no_plan();
+alter table public.orders alter column payout_mode set default 'gateway_split';
 
 insert into auth.users(id, email) values
   ('f2400000-0000-4000-8000-000000000001', 'pr24-admin@example.test'),
@@ -132,16 +133,15 @@ select is(public.claim_refund_dispatch((select id from public.refunds where orde
   'f2440000-0000-4000-8000-000000000005'),'skip','A concurrent worker cannot claim the same refund');
 
 select public.finish_refund((select id from public.refunds where order_id = 'f2440000-0000-4000-8000-000000000002'), 'pr24-full', 'processed');
--- The partial refund remains approved and counts against the share. Only the full
--- processed refund has invalidated a ticket.
+-- The partial refund is approved. Its earnings entry is posted on completion.
 update public.payouts set status = 'settled', settled_at = now() where order_id = 'f2440000-0000-4000-8000-000000000001';
 select set_config('request.jwt.claim.sub','f2400000-0000-4000-8000-000000000002',true);
 set local role authenticated;
 select is(public.organiser_event_sales('f2420000-0000-4000-8000-000000000001')#>>'{live,tickets_sold}', '1','One real ticket remains after a full refund');
 select is(public.organiser_event_sales('f2420000-0000-4000-8000-000000000001')#>>'{live,tickets_left}', '18','Test ticket is excluded from inventory reporting');
 select is(public.organiser_event_sales('f2420000-0000-4000-8000-000000000001')#>>'{live,qty_held}', '1','The active hold is counted separately');
-select is(public.organiser_event_sales('f2420000-0000-4000-8000-000000000001')#>>'{live,share_paise}', '90001','Share subtracts the exact existing refund reversal');
-select is(public.organiser_event_sales('f2420000-0000-4000-8000-000000000001')#>>'{live,paid_out_paise}', '135000','Already paid is sourced from payouts');
+select is(public.organiser_event_sales('f2420000-0000-4000-8000-000000000001')#>>'{live,share_paise}', '135000','Earnings reflect refunds that have completed');
+select is(public.organiser_event_sales('f2420000-0000-4000-8000-000000000001')#>>'{live,paid_out_paise}', '135000','Paid amounts are recorded in earnings');
 select is(jsonb_array_length(public.event_excel_rows('f2420000-0000-4000-8000-000000000001',false)->'orders'),2,'Excel only includes real paid orders');
 select ok(public.event_excel_rows('f2420000-0000-4000-8000-000000000001',false)::text not like '%@example.test%', 'Excel rows do not include email addresses');
 reset role;

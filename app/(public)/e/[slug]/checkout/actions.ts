@@ -9,7 +9,7 @@ import { checkoutData, providerOrder, transition } from "@/lib/checkout/store";
 import { grantOrderAccess, tokenHash, verifyCheckoutRecaptcha } from "@/lib/checkout/security";
 import { computePricing } from "@/lib/pricing/compute";
 import { paymentProvider, PaymentsNotConfiguredError } from "@/lib/payments";
-import { orderIsTest, PAYMENTS_UNAVAILABLE, type PaymentProvider } from "@/lib/payments/model";
+import { orderIsTest, PAYMENTS_UNAVAILABLE, type PaymentGateway } from "@/lib/payments/model";
 function providerMinimum(mode: string, amount: number) {
   return mode === "cashfree" && amount > 0 && amount < 100;
 }
@@ -68,11 +68,11 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
     if (amounts.total.buyer_total > 0 && amounts.total.organiser_share <= 0)
       return { error: "This ticket cannot be booked at its current price." };
     const free = amounts.total.buyer_total === 0;
-    let gateway: PaymentProvider | "free";
+    let gateway: PaymentGateway | "free";
     if (free) gateway = "free";
     else {
       try {
-        gateway = paymentProvider();
+        gateway = paymentProvider(data.activeGateway, data.payoutMode);
       } catch (error) {
         if (error instanceof PaymentsNotConfiguredError) return { error: PAYMENTS_UNAVAILABLE };
         throw error;
@@ -145,7 +145,10 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
     // If the request times out, keep the hold and reconcile; the remote create may
     // have succeeded. Never release inventory based on an ambiguous network error.
     try {
-      const { sessionId } = await gateway.create(
+      const { sessionId } = await paymentProvider(
+        data.activeGateway,
+        order.payout_mode,
+      ).createOrder(
         {
           ...providerOrder(order),
           ...(buyer ? { customer_id: buyer.id, preferred_method: values.preferredMethod } : {}),

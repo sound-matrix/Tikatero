@@ -1,5 +1,7 @@
 begin;
 select plan(47);
+alter table public.orders alter column payout_mode set default 'gateway_split';
+
 
 select is(
   payout_private.expected_payout_at('2026-11-06 12:30:00+00', 2, null),

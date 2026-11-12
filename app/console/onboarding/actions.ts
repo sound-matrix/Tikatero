@@ -19,6 +19,7 @@ import {
 import { applicationDto, loadApplication, progressJson } from "@/lib/kyc/store";
 import { detailsInput, docKey, field, offlineLast4 } from "@/lib/kyc/validation";
 import { notifyKycSubmitted } from "@/lib/kyc/notify";
+import { encryptBankNumber } from "@/lib/payouts/bank";
 import { revalidatePath } from "next/cache";
 
 export async function saveKycStep(_previous: FlowState, data: FormData): Promise<FlowState> {
@@ -47,6 +48,7 @@ export async function saveKycStep(_previous: FlowState, data: FormData): Promise
     let flagged = application?.flagged_steps ?? [];
     let status = application?.status ?? "draft";
     let redirectUrl: string | undefined;
+    let encryptedNumber: string | undefined;
     if (submit) {
       if (
         !progress.details ||
@@ -124,6 +126,8 @@ export async function saveKycStep(_previous: FlowState, data: FormData): Promise
             throw new KycError("Check your account number and 11-character IFSC.");
           check = await provider.bank(number, ifsc, name);
           check.passed = check.passed && (check.score ?? 0) >= threshold;
+          if (check.passed && process.env.PAYOUT_BANK_ENCRYPTION_KEY)
+            encryptedNumber = encryptBankNumber(number, organiserId);
         } else if (step === "aadhaar") {
           const method = field(data, "method");
           if (method === "xml") {
@@ -191,7 +195,13 @@ export async function saveKycStep(_previous: FlowState, data: FormData): Promise
       p_status: status as "draft" | "needs_docs" | "auto_passed",
       p_submit: submit,
     };
-    const { data: saved, error } = await createServiceClient().rpc("save_kyc_progress", args);
+    const service = createServiceClient();
+    const { data: saved, error } = encryptedNumber
+      ? await service.rpc("save_kyc_progress_with_bank", {
+          ...args,
+          p_encrypted_number: encryptedNumber,
+        })
+      : await service.rpc("save_kyc_progress", args);
     if (error?.message === COUNTRY_LOCKED) throw new KycError(COUNTRY_LOCKED);
     if (error || !saved?.[0])
       throw new KycError("Your changes could not be saved. Reload this page and try again.");

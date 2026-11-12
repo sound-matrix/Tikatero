@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/service";
-import { verifyWebhook, providerPaise } from "@/lib/payments/model";
+import { Cashfree } from "@/lib/payments/cashfree";
+import { providerPaise } from "@/lib/payments/model";
 import { transition } from "@/lib/checkout/store";
 import { applySettlement, settlementCommand } from "@/lib/payouts/settle";
 import { applyRefundWebhook } from "@/lib/refunds/complete";
@@ -29,13 +30,11 @@ const schema = z.object({
 });
 export async function POST(request: Request) {
   const raw = await request.text();
-  const secret = process.env.CASHFREE_WEBHOOK_SECRET || process.env.CASHFREE_SECRET_KEY || "";
   if (
-    !verifyWebhook(
+    !new Cashfree().verifyWebhook(
       raw,
       request.headers.get("x-webhook-timestamp"),
       request.headers.get("x-webhook-signature"),
-      secret,
     )
   )
     return new Response(null, { status: 401 });

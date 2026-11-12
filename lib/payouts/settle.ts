@@ -74,6 +74,8 @@ export async function applySettlement(command: {
   if (error || !data || typeof data !== "object" || Array.isArray(data))
     throw new Error("Payout status could not be saved.");
   const outcome = data as { outcome?: string; payout_id?: string; is_test?: boolean };
+  if (outcome.outcome === "manual")
+    console.info("Ignored a gateway settlement for a manual payout order.");
   if (
     command.status === "settled" &&
     outcome.payout_id &&

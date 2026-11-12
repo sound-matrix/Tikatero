@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import type { GatewayName, PayoutMode } from "./settings";
 import type { CheckoutMethod } from "@/lib/db/account-schema";
 import { parseHundredths } from "@/lib/pricing/settings";
 export type ProviderOrder = {
@@ -11,6 +12,7 @@ export type ProviderOrder = {
   total_paise: number;
   organiser_share_paise: number;
   vendor_id: string | null;
+  payout_mode: PayoutMode;
   hold_expires_at: string;
 };
 export type PaymentState = "paid" | "failed" | "expired" | "pending";
@@ -32,10 +34,18 @@ export type ProviderRefundResult = {
   cfRefundId: string;
   status: "processed" | "pending" | "failed";
 };
-export interface PaymentProvider {
-  mode: "mock" | "cashfree";
-  create(order: ProviderOrder, origin: string): Promise<{ sessionId: string }>;
-  get(order: ProviderOrder): Promise<PaymentResult>;
+export interface SplitCapability {
+  ensureRecipient(organiserId: string): Promise<{ vendorId: string }>;
+  setRecipientHold(vendorId: string, hold: boolean): Promise<void>;
+  splitForOrder(order: ProviderOrder): { vendor: string; amount: number }[];
+  reverseOnRefund(refund: ProviderRefund): { vendor_id: string; amount: number }[];
+}
+export interface PaymentGateway {
+  name: GatewayName | "mock";
+  mode: GatewayName | "mock";
+  verifyWebhook(raw: string, timestamp: string | null, signature: string | null): boolean;
+  createOrder(order: ProviderOrder, origin: string): Promise<{ sessionId: string }>;
+  fetchOrderStatus(order: ProviderOrder): Promise<PaymentResult>;
   refund(input: ProviderRefund): Promise<ProviderRefundResult>;
 }
 /** Only the provider boundary uses rupee decimals. The ledger remains integer paise. */
@@ -53,13 +63,17 @@ export function providerPaise(value: unknown) {
 }
 const cashfreeMethods = { upi: "upi", card: "cc,dc", netbanking: "nb" } as const;
 
-export function cashfreeBody(order: ProviderOrder, origin: string) {
+export function cashfreeOrderSplits(order: ProviderOrder) {
   if (
     !order.vendor_id ||
     order.organiser_share_paise <= 0 ||
     order.organiser_share_paise > order.total_paise
   )
     throw new Error("This organiser is not ready to accept payments.");
+  return [{ vendor: order.vendor_id, amount: rupees(order.organiser_share_paise) }];
+}
+
+export function cashfreeBody(order: ProviderOrder, origin: string, split = cashfreeOrderSplits) {
   if (order.total_paise < 100) throw new Error("Cashfree payments must be at least ₹ 1.");
   return {
     order_id: order.id,
@@ -79,11 +93,17 @@ export function cashfreeBody(order: ProviderOrder, origin: string) {
         ? { payment_methods: cashfreeMethods[order.preferred_method] }
         : {}),
     },
-    order_splits: [{ vendor: order.vendor_id, amount: rupees(order.organiser_share_paise) }],
+    ...(order.payout_mode === "gateway_split" ? { order_splits: split(order) } : {}),
   };
 }
 /** Easy Split refund. The buyer amount is what they paid; the vendor amount is the reversed organiser share. */
-export function cashfreeRefundBody(input: ProviderRefund) {
+export function cashfreeRefundSplits(input: ProviderRefund) {
+  return input.vendorId && input.reversalPaise > 0
+    ? [{ vendor_id: input.vendorId, amount: rupees(input.reversalPaise) }]
+    : [];
+}
+
+export function cashfreeRefundBody(input: ProviderRefund, reverse = cashfreeRefundSplits) {
   if (!Number.isSafeInteger(input.amountPaise) || input.amountPaise <= 0)
     throw new Error("Invalid refund amount.");
   if (
@@ -103,8 +123,8 @@ export function cashfreeRefundBody(input: ProviderRefund) {
     refund_amount: rupees(input.amountPaise),
     refund_note: note || "Refund",
   };
-  if (input.vendorId && input.reversalPaise > 0)
-    body.refund_splits = [{ vendor_id: input.vendorId, amount: rupees(input.reversalPaise) }];
+  const splits = reverse(input);
+  if (splits.length) body.refund_splits = splits;
   return body;
 }
 /** Verify before JSON parsing, using the exact raw bytes and constant-time comparison. */
@@ -143,7 +163,7 @@ export function productionPaymentLock(
 }
 /** Mock orders are never live charges. Sandbox Cashfree orders stay marked too. */
 export function orderIsTest(
-  mode: "mock" | "cashfree" | "free",
+  mode: GatewayName | "mock" | "free",
   env: { NODE_ENV?: string; CASHFREE_ENV?: string } = process.env,
 ) {
   if (mode === "free") return false;

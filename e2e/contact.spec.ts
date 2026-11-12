@@ -40,7 +40,9 @@ test("contact form, pricing, and footer links", async ({ page }) => {
   await expect(page.getByRole("cell", { name: "₹2,500", exact: true })).toBeVisible();
   await expect(page.getByText(/include GST/i).first()).toBeVisible();
   await expect(
-    page.getByText("Organisers are usually paid within 2 days after the payment clears."),
+    page.getByText(
+      "Tikatero collects ticket money for you and sends your earnings to your bank account within 2 working days after your event ends. You'll get an email with the bank reference each time.",
+    ),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Start selling tickets" })).toHaveAttribute(
     "href",

@@ -48,5 +48,5 @@ it("pins functions to Mumbai and keeps the payments cron", () => {
   expect(vercel.crons).toEqual([{ path: "/api/cron/payments", schedule: "*/5 * * * *" }]);
   const payouts = readFileSync("app/console/payouts/page.tsx", "utf8");
   expect(payouts).not.toContain("payoutWindowCopy(2)");
-  expect(payouts).toContain("payoutWindowDays");
+  expect(payouts).toContain("earningsPaymentCopy(hold_days)");
 });

@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { LegalSlug } from "@/lib/legal";
 import { legalPages } from "@/lib/legal";
 
-export function LegalArticle({ slug }: { slug: LegalSlug }) {
+export function LegalArticle({ slug, extra }: { slug: LegalSlug; extra?: string }) {
   const page = legalPages[slug];
 
   return (
@@ -13,6 +13,7 @@ export function LegalArticle({ slug }: { slug: LegalSlug }) {
           {paragraph}
         </p>
       ))}
+      {extra && <p className="mt-4 text-base leading-7 text-ink">{extra}</p>}
       {"support" in page ? (
         <p className="mt-4 text-base leading-7 text-ink">
           {page.support.before}{" "}

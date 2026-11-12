@@ -60,6 +60,7 @@ export async function ownOrder(id: string): Promise<CheckoutOrder | null> {
   return {
     ...data,
     vendor_id: null,
+    payout_mode: "manual",
     organiser_share_paise: 0,
     platform_share_paise: 0,
     platform_fee_paise: 0,

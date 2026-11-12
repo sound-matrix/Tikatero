@@ -3,6 +3,8 @@ import Link from "next/link";
 import { requireStaff } from "@/lib/admin/access";
 import { waitingStatuses, ageLabel, istDayRange } from "@/lib/admin/model";
 import { AdminPage } from "@/components/admin/page";
+import { earningsReconciliation } from "@/lib/payouts/earnings";
+import { formatInr } from "@/lib/format";
 import { Card } from "@/components/ui/card";
 async function Dashboard() {
   const { client } = await requireStaff();
@@ -28,6 +30,7 @@ async function Dashboard() {
   ]);
   if (results.some((r) => r.error))
     throw new Error("The dashboard could not be loaded. Try again.");
+  const earnings = await earningsReconciliation(client);
   const tiles = [
     {
       label: "ID checks waiting",
@@ -43,6 +46,17 @@ async function Dashboard() {
       detail: "Published events",
       href: "/admin/events",
     },
+    ...[
+      ["Collected for hosts", earnings.collected_paise],
+      ["Paid to hosts", earnings.paid_paise],
+      ["Owed to hosts now", earnings.available_paise],
+      ["Owed later", earnings.later_paise],
+    ].map(([label, amount]) => ({
+      label: String(label),
+      value: formatInr(Number(amount)),
+      detail: "Real payments",
+      href: "/admin/payouts",
+    })),
     { label: "Orders today", value: results[2].count ?? 0, detail: "Today in IST", href: null },
     {
       label: "Payout issues",

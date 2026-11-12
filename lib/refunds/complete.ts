@@ -1,6 +1,6 @@
 import "server-only";
 
-import { Cashfree } from "@/lib/payments/cashfree";
+import { paymentProvider } from "@/lib/payments";
 import { MockPayment } from "@/lib/payments/mock";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PAYMENTS_REFUND_UNAVAILABLE, refundRoute, type RefundRoute } from "./model";
@@ -51,22 +51,32 @@ export function refundPaymentsReady(isTest: boolean) {
 
 export async function settleOpenedRefund(opened: OpenedRefund, preserveOnError = false) {
   if (!opened.needs_provider || !opened.refund_id || !opened.order_id) return opened;
-  const route = currentRoute(opened.is_test === true);
-  if (route === "refuse") {
-    if (!preserveOnError) await finish(opened.refund_id, "", "failed");
-    throw new Error(PAYMENTS_REFUND_UNAVAILABLE);
-  }
   const service = createServiceClient();
   const { data: order, error } = await service
     .from("orders")
-    .select("id, cf_order_id, vendor_id, is_test")
+    .select("id, cf_order_id, vendor_id, is_test, payout_mode, payment_provider")
     .eq("id", opened.order_id)
     .single();
   if (error || !order) {
     if (!preserveOnError) await finish(opened.refund_id, "", "failed");
     throw new Error("The refund could not be saved.");
   }
-  const reversal = opened.reversal_paise ?? 0;
+  const ready = currentRoute(order.is_test);
+  const route =
+    order.payout_mode === "manual" && order.payment_provider === "cashfree"
+      ? ready !== "refuse" &&
+        Boolean(process.env.CASHFREE_APP_ID && process.env.CASHFREE_SECRET_KEY) &&
+        (order.is_test
+          ? process.env.CASHFREE_ENV === "sandbox"
+          : process.env.CASHFREE_ENV === "production")
+        ? "cashfree"
+        : "refuse"
+      : ready;
+  if (route === "refuse") {
+    if (!preserveOnError) await finish(opened.refund_id, "", "failed");
+    throw new Error(PAYMENTS_REFUND_UNAVAILABLE);
+  }
+  const reversal = order.payout_mode === "manual" ? 0 : (opened.reversal_paise ?? 0);
   if (route === "cashfree" && reversal > 0 && !order.vendor_id) {
     if (!preserveOnError) await finish(opened.refund_id, "", "failed");
     throw new Error("This organiser is not ready to refund yet.");
@@ -77,14 +87,15 @@ export async function settleOpenedRefund(opened: OpenedRefund, preserveOnError =
   });
   if (claimError) throw new Error("The refund could not be saved.");
   if (dispatch !== "claimed") return { ...opened, paused: dispatch === "paused" };
-  const provider = route === "mock" ? new MockPayment() : new Cashfree();
+  const provider =
+    route === "mock" ? new MockPayment() : paymentProvider("cashfree", order.payout_mode);
   try {
     const result = await provider.refund({
       refundId: opened.refund_id,
       orderId: order.cf_order_id || order.id,
       amountPaise: opened.amount_paise ?? 0,
       reversalPaise: reversal,
-      vendorId: order.vendor_id,
+      vendorId: order.payout_mode === "manual" ? null : order.vendor_id,
       note: "Refund to the original payment method",
     });
     const saved = await finish(opened.refund_id, result.cfRefundId, result.status);
@@ -133,9 +144,10 @@ export async function applyRefundWebhook(command: {
   }
   const { data: order } = await service
     .from("orders")
-    .select("id,is_test,event_id")
+    .select("id,is_test,event_id,payment_provider")
     .eq("id", refund.order_id)
     .maybeSingle();
+  if (!order || order.payment_provider !== "cashfree") throw new Error("invalid");
   await finish(command.refundId, command.cfRefundId, command.outcome);
   if (command.outcome === "processed") {
     try {

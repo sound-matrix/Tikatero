@@ -87,7 +87,7 @@ describe("role routing uses profiles and actual memberships", () => {
     expect(routeRedirect(door, `/console/events/${eventId}/export`)).toBe(
       `/console/events/${eventId}/scan`,
     );
-    expect(routeRedirect(manager, "/console/payouts")).toBe(`/console/events/${eventId}/scan`);
+    expect(routeRedirect(manager, "/console/payouts")).toBeNull();
     expect(routeRedirect(account("staff", [], false), "/console")).toBe("/admin");
   });
   it("blocks every protected surface and does not loop on the block page", () => {

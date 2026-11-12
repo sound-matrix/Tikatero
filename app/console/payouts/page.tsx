@@ -4,117 +4,163 @@ import { requireAccount } from "@/lib/auth/account";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatInr, formatIst } from "@/lib/format";
-import { activePricing } from "@/lib/pricing/data";
-import { payoutWindowCopy, payoutWindowDays } from "@/lib/payouts/model";
+import { earningsPaymentCopy, hostEarnings, paymentDate } from "@/lib/payouts/earnings";
+import { PayoutBankForm } from "./bank-form";
 
-export const metadata: Metadata = { title: "Payouts" };
+export const metadata: Metadata = { title: "Your earnings" };
+type Props = { searchParams: Promise<{ test?: string }> };
 
-const labels: Record<string, string> = {
-  scheduled: "To be paid",
-  settled: "Paid",
-  failed: "Could not be paid",
-  on_hold: "On hold",
-  cancelled: "Not paid · refunded",
-};
-
-async function Payouts() {
+async function Payouts({ searchParams }: Props) {
   const { client, account } = await requireAccount();
-  if (!account.organisers.length) {
-    return (
-      <main className="mx-auto max-w-3xl px-4 py-8">
-        <h1 className="text-3xl font-extrabold">Payouts</h1>
-        <p className="mt-3 text-muted">Payouts are available to organiser accounts.</p>
-      </main>
-    );
-  }
-  const { data, error } = await client
-    .from("payouts")
-    .select("id, amount_paise, status, expected_at, settled_at, is_test, events(title)")
-    .order("created_at", { ascending: false })
-    .limit(200);
-  if (error) throw new Error("Your payouts could not be loaded. Try again.");
-  const pricing = await activePricing();
-  const rows = data ?? [];
-  const testMode = rows.some((row) => row.is_test);
-  const toPay = rows
-    .filter((row) => row.status === "scheduled" && !row.is_test)
-    .reduce((sum, row) => sum + row.amount_paise, 0);
+  const test = (await searchParams).test === "true";
+  const [{ events, history, hold_days, has_test, ...totals }, { data: hosts }] = await Promise.all([
+    hostEarnings(client, test),
+    client
+      .from("organisers")
+      .select("id,display_name")
+      .eq("owner_id", account.profile.id)
+      .eq("kyc_status", "approved"),
+  ]);
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 md:px-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="mb-2 text-sm font-bold uppercase tracking-widest text-teal">Payouts</p>
-          <h1 className="text-3xl font-extrabold">Money from ticket sales</h1>
-          <p className="mt-2 max-w-2xl text-muted">
-            {payoutWindowCopy(payoutWindowDays(pricing.payout_days))} Amounts include GST and are
-            shown in India time.
-          </p>
+          <h1 className="text-3xl font-extrabold">Your earnings</h1>
+          <p className="mt-2 max-w-2xl text-muted">{earningsPaymentCopy(hold_days)}</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button href="/console/payouts/export.xlsx" variant="primary" prefetch={false}>
-            Export all my events
+          <Button href="/console/payouts/export.xlsx" prefetch={false}>
+            Download Excel
           </Button>
           <Button href="/console/payouts/export" prefetch={false}>
             Download CSV
           </Button>
         </div>
       </header>
-      {testMode && (
-        <p className="rounded-2xl border border-line bg-gold-soft p-4 text-sm">
-          Payouts are in test mode. No money has been sent to a bank.
-        </p>
+      {(test || has_test) && (
+        <div className="flex flex-wrap items-center gap-4">
+          {test && (
+            <p className="rounded-xl bg-gold-soft p-3 text-sm">
+              Test records. No money was sent to your bank.
+            </p>
+          )}
+          <Button href={test ? "/console/payouts" : "/console/payouts?test=true"}>
+            {test ? "Show real payments" : "Show test records"}
+          </Button>
+        </div>
       )}
-      <p className="text-lg">
-        To be paid: <strong>{formatInr(toPay)}</strong>
-      </p>
-      <Card className="overflow-x-auto p-0!">
-        <table className="w-full min-w-[640px] text-left">
-          <caption className="sr-only">Payouts for your organisers</caption>
-          <thead className="bg-soft text-sm text-muted">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          ["Your earnings", formatInr(totals.earnings_paise)],
+          ["Paid to you", formatInr(totals.paid_paise)],
+          ["Still to be paid", formatInr(totals.remaining_paise)],
+          [
+            "Next payment date",
+            totals.next_available_at ? formatIst(totals.next_available_at) : "—",
+          ],
+        ].map(([label, value]) => (
+          <Card key={label}>
+            <p className="text-sm text-muted">{label}</p>
+            <p className="mt-2 text-xl font-bold">{value}</p>
+          </Card>
+        ))}
+      </div>
+      <Card className="overflow-x-auto">
+        <h2 className="mb-3 text-xl font-bold">By event</h2>
+        <table className="w-full min-w-[950px] text-left text-sm">
+          <thead>
             <tr>
-              {["Event", "Amount", "Status", "Expected", "Paid"].map((label) => (
-                <th key={label} scope="col" className="p-4">
+              {[
+                "Event",
+                "Ticket money",
+                "Tikatero fee",
+                "GST on fee",
+                "Payment charges",
+                "Refunds",
+                "Your earnings",
+                "Paid to you",
+                "Still to be paid",
+              ].map((label) => (
+                <th key={label} className="p-2" scope="col">
                   {label}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => {
-              const event = Array.isArray(row.events) ? row.events[0] : row.events;
-              return (
-                <tr key={row.id} className="border-t border-line">
-                  <td className="p-4 font-semibold">{event?.title || "Event"}</td>
-                  <td className="p-4">{formatInr(row.amount_paise)}</td>
-                  <td className="p-4">
-                    {labels[row.status] || row.status}
-                    {row.is_test && (
-                      <small className="mt-1 block font-normal text-muted">
-                        Test. No money has been sent to a bank.
-                      </small>
-                    )}
+            {events.map((event) => (
+              <tr key={event.id} className="border-t border-line">
+                <th scope="row" className="p-2 font-semibold">
+                  {event.title}
+                </th>
+                {[
+                  event.gross_paise,
+                  event.fee_paise,
+                  event.gst_paise,
+                  event.charges_paise,
+                  event.refunds_paise,
+                  event.earnings_paise,
+                  event.paid_paise,
+                  event.remaining_paise,
+                ].map((amount, index) => (
+                  <td className="p-2" key={index}>
+                    {formatInr(amount)}
                   </td>
-                  <td className="p-4 text-sm">
-                    {row.expected_at ? formatIst(row.expected_at) : "—"}
-                  </td>
-                  <td className="p-4 text-sm">
-                    {row.settled_at ? formatIst(row.settled_at) : "—"}
-                  </td>
-                </tr>
-              );
-            })}
+                ))}
+              </tr>
+            ))}
           </tbody>
         </table>
-        {!rows.length && <p className="p-8 text-center text-muted">No payouts yet.</p>}
+        {!events.length && <p className="mt-4 text-muted">No event earnings yet.</p>}
       </Card>
+      <Card className="overflow-x-auto">
+        <h2 className="mb-3 text-xl font-bold">Payment history</h2>
+        <table className="w-full min-w-[640px] text-left text-sm">
+          <thead>
+            <tr>
+              {["Date", "Amount", "Method", "Bank reference", "Event", "Status"].map((label) => (
+                <th key={label} className="p-2" scope="col">
+                  {label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {history.map((row) => (
+              <tr key={row.id} className="border-t border-line">
+                {[
+                  paymentDate(row),
+                  formatInr(row.amount_paise),
+                  row.method?.toUpperCase(),
+                  row.bank_reference,
+                  row.event_title ?? "All events",
+                  row.voided_at ? "Voided" : "Paid",
+                ].map((cell, index) => (
+                  <td className="p-2" key={index}>
+                    {cell ?? "—"}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!history.length && <p className="mt-4 text-muted">No payments recorded yet.</p>}
+      </Card>
+      {!!hosts?.length && (
+        <Card>
+          <PayoutBankForm
+            hosts={hosts.map((host) => ({ id: host.id, title: host.display_name }))}
+          />
+        </Card>
+      )}
     </main>
   );
 }
 
-export default function ConsolePayoutsPage() {
+export default function Page(props: Props) {
   return (
-    <Suspense fallback={<p className="p-8">Loading payouts…</p>}>
-      <Payouts />
+    <Suspense fallback={<p className="p-8">Loading earnings…</p>}>
+      <Payouts {...props} />
     </Suspense>
   );
 }

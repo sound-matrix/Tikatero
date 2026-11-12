@@ -1,3 +1,4 @@
+import type { GatewayName, PayoutMode } from "@/lib/payments/settings";
 import type { AccountFunctions, AccountTables, AccountViews, ShareChannel } from "./account-schema";
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
@@ -722,8 +723,20 @@ export type Database = {
           },
         ];
       };
+      platform_payment_settings: {
+        Row: {
+          id: boolean;
+          payout_mode: PayoutMode;
+          active_gateway: GatewayName;
+          payout_hold_days_after_event: number;
+        };
+        Insert: Partial<Database["public"]["Tables"]["platform_payment_settings"]["Row"]>;
+        Update: Partial<Database["public"]["Tables"]["platform_payment_settings"]["Row"]>;
+        Relationships: [];
+      };
       orders: {
         Row: {
+          payout_mode: PayoutMode;
           ref_channel: ShareChannel | null;
           payment_provider: "mock" | "cashfree" | "free" | null;
           payment_session_id: string | null;
@@ -759,6 +772,7 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          payout_mode?: PayoutMode;
           ref_channel?: ShareChannel | null;
           payment_provider?: "mock" | "cashfree" | "free" | null;
           payment_session_id?: string | null;
@@ -793,6 +807,7 @@ export type Database = {
           total_paise: number;
         };
         Update: {
+          payout_mode?: PayoutMode;
           ref_channel?: ShareChannel | null;
           payment_provider?: "mock" | "cashfree" | "free" | null;
           payment_session_id?: string | null;
@@ -902,6 +917,7 @@ export type Database = {
       };
       organisers: {
         Row: {
+          payout_mode_override: PayoutMode | null;
           approved_at: string | null;
           approved_by: string | null;
           cashfree_vendor_id: string | null;
@@ -919,6 +935,7 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          payout_mode_override?: PayoutMode | null;
           approved_at?: string | null;
           approved_by?: string | null;
           cashfree_vendor_id?: string | null;
@@ -935,6 +952,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          payout_mode_override?: PayoutMode | null;
           approved_at?: string | null;
           approved_by?: string | null;
           cashfree_vendor_id?: string | null;
@@ -969,6 +987,16 @@ export type Database = {
       };
       payouts: {
         Row: {
+          method: string | null;
+          bank_reference: string | null;
+          paid_on: string | null;
+          paid_by: string | null;
+          note: string | null;
+          proof_path: string | null;
+          voided_at: string | null;
+          voided_by: string | null;
+          void_reason: string | null;
+          bank_last4: string | null;
           amount_paise: number;
           cf_split_ref: string | null;
           created_at: string;
@@ -983,6 +1011,16 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          method?: string | null;
+          bank_reference?: string | null;
+          paid_on?: string | null;
+          paid_by?: string | null;
+          note?: string | null;
+          proof_path?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+          void_reason?: string | null;
+          bank_last4?: string | null;
           amount_paise: number;
           cf_split_ref?: string | null;
           created_at?: string;
@@ -996,6 +1034,16 @@ export type Database = {
           is_test?: boolean;
         };
         Update: {
+          method?: string | null;
+          bank_reference?: string | null;
+          paid_on?: string | null;
+          paid_by?: string | null;
+          note?: string | null;
+          proof_path?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+          void_reason?: string | null;
+          bank_last4?: string | null;
           amount_paise?: number;
           cf_split_ref?: string | null;
           created_at?: string;
@@ -1646,6 +1694,78 @@ export type Database = {
       };
     };
     Functions: AccountFunctions & {
+      admin_update_payment_settings: {
+        Args: { p_mode: string; p_gateway: string; p_days: number; p_reason: string };
+        Returns: undefined;
+      };
+      admin_set_host_payout_mode: {
+        Args: { p_id: string; p_mode: string | null; p_reason: string };
+        Returns: undefined;
+      };
+      admin_record_manual_payout: {
+        Args: {
+          p_organiser: string;
+          p_event: string | null;
+          p_amount: number;
+          p_method: string;
+          p_reference: string;
+          p_paid_on: string;
+          p_note: string | null;
+          p_proof: string | null;
+          p_test: boolean;
+          p_override_reason: string | null;
+        };
+        Returns: string;
+      };
+      admin_void_manual_payout: {
+        Args: { p_id: string; p_reference: string; p_reason: string };
+        Returns: undefined;
+      };
+      admin_add_earnings_adjustment: {
+        Args: {
+          p_organiser: string;
+          p_event: string | null;
+          p_amount: number;
+          p_reason: string;
+          p_test: boolean;
+        };
+        Returns: undefined;
+      };
+      organiser_event_earnings: { Args: { p_event_id: string }; Returns: Json };
+      organiser_earnings_summary: { Args: { p_test?: boolean }; Returns: Json };
+      admin_payouts_overview: {
+        Args: { p_test?: boolean; p_event?: string | null; p_host?: string | null };
+        Returns: Json;
+      };
+      admin_earnings_reconciliation: { Args: { p_test?: boolean }; Returns: Json };
+      admin_payout_bank_details: {
+        Args: {
+          p_organiser: string | null;
+          p_event: string | null;
+          p_test: boolean;
+          p_export: boolean;
+        };
+        Returns: Json;
+      };
+      save_kyc_progress_with_bank: {
+        Args: Database["public"]["Functions"]["save_kyc_progress"]["Args"] & {
+          p_encrypted_number: string;
+        };
+        Returns: Database["public"]["Functions"]["save_kyc_progress"]["Returns"];
+      };
+      store_reverified_payout_bank: {
+        Args: {
+          p_user_id: string;
+          p_organiser: string;
+          p_application: string;
+          p_ifsc: string;
+          p_last4: string;
+          p_mode: string;
+          p_encrypted_number: string;
+        };
+        Returns: undefined;
+      };
+
       admin_save_refund_rules: {
         Args: {
           p_event_id: string;

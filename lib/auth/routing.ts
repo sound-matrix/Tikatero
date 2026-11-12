@@ -52,6 +52,13 @@ export function routeRedirect(account: Account, path: string): string | null {
     if (!account.organisers.length) {
       if (["staff", "admin"].includes(account.profile.role) || !assignments.length) return landing;
       if (path === "/console/events") return null;
+      if (
+        (path === "/console/payouts" ||
+          within(path, "/console/payouts/export") ||
+          path === "/console/payouts/export.xlsx") &&
+        assignments.some((item) => item.role === "manager")
+      )
+        return null;
       const scanEvent = eventLeaf(path, "scan");
       if (scanEvent && assignments.some((item) => item.eventId === scanEvent)) return null;
       const teamEvent = eventLeaf(path, "team");

@@ -49,6 +49,20 @@ async function setup(page: Page, approved: boolean) {
   await expect(page).toHaveURL(approved ? /\/console$/ : /\/console\/pending$/);
   return id;
 }
+async function signInStaff(page: Page) {
+  const service = client();
+  const email = `manual-payout-staff-${crypto.randomUUID()}@example.test`;
+  const user = await service.auth.admin.createUser({ email, email_confirm: true });
+  expect(user.error).toBeNull();
+  expect(
+    (await service.from("profiles").update({ role: "staff" }).eq("id", user.data.user!.id)).error,
+  ).toBeNull();
+  const { data, error } = await service.auth.admin.generateLink({ type: "magiclink", email });
+  if (error || !data.properties) throw new Error("Could not create the staff test session.");
+  await page.goto(
+    `/auth/callback?token_hash=${encodeURIComponent(data.properties.hashed_token)}&type=email`,
+  );
+}
 async function next(page: Page, heading: string) {
   await page.getByRole("button", { name: "Save and continue", exact: true }).click();
   await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
@@ -84,10 +98,11 @@ test.describe("Organiser event wizard", () => {
       (route) => route.abort("blockedbyclient"),
     );
   });
-  test("approved organiser creates Sample Music Night, resumes it and publishes", async ({
+  test("approved organiser publishes and sells without a recipient, then receives a manual payment", async ({
     page,
+    browser,
   }, info) => {
-    test.setTimeout(180_000);
+    test.setTimeout(210_000);
     const owner = await setup(page, true);
     await page.goto("/console/events/new");
     await expect(page.getByRole("heading", { name: "Tell people about your event" })).toBeVisible();
@@ -189,6 +204,108 @@ test.describe("Organiser event wizard", () => {
       "Published",
     );
     await expect(page.getByRole("contentinfo")).toHaveText("© Sound Matrix");
+    const service = client();
+    expect(
+      (await service.from("organisers").select("cashfree_vendor_id").eq("id", owner).single()).data
+        ?.cashfree_vendor_id,
+    ).toBeNull();
+    expect(
+      (
+        await service.from("kyc_applications").insert({
+          organiser_id: owner,
+          region: "IN",
+          status: "approved",
+          bank_ifsc: "SBIN0001234",
+          bank_acct_last4: "1234",
+          bank_holder_name: "Event Organiser",
+          step_progress: { bank: { passed: true, mode: "mock", ref: "manual-payment-fixture" } },
+        })
+      ).error,
+    ).toBeNull();
+    const buyerContext = await browser.newContext();
+    const buyer = await buyerContext.newPage();
+    const { data: published } = await service
+      .from("events")
+      .select("slug")
+      .eq("id", eventId)
+      .single();
+    await buyer.goto(`/e/${published!.slug}/checkout`);
+    await buyer.getByLabel("How many VIP admission tickets?").selectOption("1");
+    await buyer.getByLabel("Full name", { exact: true }).fill("Ticket Buyer");
+    await buyer
+      .getByLabel("Email", { exact: true })
+      .fill(`manual-buyer-${crypto.randomUUID()}@example.test`);
+    await buyer.getByLabel("Phone", { exact: true }).fill("9876543210");
+    await buyer.getByRole("checkbox").check();
+    await buyer.getByRole("button", { name: /^Pay ₹/ }).click();
+    await expect(buyer.getByRole("heading", { name: "Test payment", exact: true })).toBeVisible();
+    const orderId = /\/orders\/([^/]+)/.exec(buyer.url())![1];
+    // A test clock for the event: simulate the provider confirming a held sale after
+    // the event and hold window passed without changing the append-only entries.
+    expect(
+      (
+        await service
+          .from("events")
+          .update({
+            starts_at: new Date(Date.now() - 10 * 86400000).toISOString(),
+            ends_at: new Date(Date.now() - 9 * 86400000).toISOString(),
+            gates_open_at: null,
+          })
+          .eq("id", eventId)
+      ).error,
+    ).toBeNull();
+    await buyer.getByRole("button", { name: "Success", exact: true }).click();
+    await expect(buyer.getByRole("heading", { name: "Booking confirmed" })).toBeVisible();
+    const { data: order } = await service
+      .from("orders")
+      .select("payout_mode,vendor_id,organiser_share_paise")
+      .eq("id", orderId)
+      .single();
+    expect(order).toMatchObject({ payout_mode: "manual", vendor_id: null });
+    await buyerContext.close();
+
+    const staffContext = await browser.newContext();
+    const staff = await staffContext.newPage();
+    await signInStaff(staff);
+    await staff.goto(`/admin/payouts?test=true&host=${owner}`);
+    const host = staff
+      .locator("div")
+      .filter({ has: staff.getByRole("heading", { name: "Riverfront Events", exact: true }) })
+      .filter({ has: staff.getByText("Payable now", { exact: false }) })
+      .last();
+    await expect(host).toContainText(formatInr(order!.organiser_share_paise));
+    await staff.getByText("Mark as paid", { exact: true }).click();
+    const reference = `UTR-${crypto.randomUUID().slice(0, 12).toUpperCase()}`;
+    await staff
+      .getByLabel("Amount (₹)", { exact: true })
+      .fill((order!.organiser_share_paise / 100).toFixed(2));
+    await staff.getByLabel("Bank reference (UTR)", { exact: true }).fill(reference);
+    await staff
+      .getByLabel("Paid on (IST)", { exact: true })
+      .fill(new Date(Date.now() - 86400000).toISOString().slice(0, 10));
+    await staff.getByRole("button", { name: "Record payment", exact: true }).click();
+    await expect(
+      staff.getByRole("status").filter({ hasText: "Test payment recorded." }),
+    ).toBeVisible();
+    await staffContext.close();
+
+    await page.goto("/console/payouts?test=true");
+    await expect(page.getByText("Paid to you", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("row").filter({ hasText: reference })).toContainText(
+      formatInr(order!.organiser_share_paise),
+    );
+    const { data: payout } = await service
+      .from("payouts")
+      .select("id")
+      .eq("bank_reference", reference)
+      .single();
+    const { data: mail } = await service
+      .from("email_log")
+      .select("template")
+      .eq("entity_ref", `payout/${payout!.id}/settled`)
+      .eq("template", "payout_settled");
+    expect(mail).toEqual([{ template: "payout_settled" }]);
+    await page.screenshot({ path: info.outputPath("manual-host-payment.png"), fullPage: true });
   });
   test("searches Google venues, saves a selection and fine-tunes its pin", async ({
     page,

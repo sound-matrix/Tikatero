@@ -4,6 +4,7 @@ import { hasInternationalKyc } from "@/lib/kyc/store";
 import { processCancelledOrder } from "@/lib/refunds/event-refunds";
 import { cache } from "react";
 import { createServiceClient } from "@/lib/supabase/service";
+import { platformPayments } from "@/lib/payments/settings";
 import { activePricing } from "@/lib/pricing/data";
 import { paymentProvider, PaymentsNotConfiguredError } from "@/lib/payments";
 import type { CheckoutOrder } from "./model";
@@ -24,7 +25,7 @@ export const checkoutData = cache(async (slug: string) => {
   const [{ data: organiser, error: oe }, { data: tiers, error: te }, version] = await Promise.all([
     client
       .from("organisers")
-      .select("id, kyc_status, sales_paused, cashfree_vendor_id")
+      .select("id, kyc_status, sales_paused, cashfree_vendor_id, payout_mode_override")
       .eq("id", event.organiser_id)
       .single(),
     client.from("ticket_types").select("*").eq("event_id", event.id).order("sort"),
@@ -38,12 +39,27 @@ export const checkoutData = cache(async (slug: string) => {
       event.is_free,
       prices,
     );
-    if (disabled) return { event, tiers: tiers ?? [], version, disabled, mode: "mock" as const };
+    if (disabled)
+      return {
+        event,
+        tiers: tiers ?? [],
+        version,
+        disabled,
+        mode: "mock" as const,
+        activeGateway: "cashfree" as const,
+        payoutMode: "manual" as const,
+      };
   }
-  let mode: "mock" | "cashfree" = "mock";
+  const settings = event.is_free ? null : await platformPayments(client);
+  const activeGateway = settings?.active_gateway ?? "cashfree";
+  const payoutMode = organiser.payout_mode_override ?? settings?.payout_mode ?? "manual";
+  let mode: ReturnType<typeof paymentProvider>["mode"] = "mock";
   let paymentsUnavailable = false;
   try {
-    mode = paymentProvider().mode;
+    if (!event.is_free) {
+      mode = paymentProvider(activeGateway, payoutMode).mode;
+      if (mode !== "cashfree" && mode !== "mock") throw new PaymentsNotConfiguredError();
+    }
   } catch (error) {
     if (!(error instanceof PaymentsNotConfiguredError)) throw error;
     // Free RSVP does not need a payment provider.
@@ -55,7 +71,11 @@ export const checkoutData = cache(async (slug: string) => {
   else if (organiser.sales_paused)
     disabled = "Ticket sales are temporarily paused. Please come back soon.";
   else if (paymentsUnavailable) disabled = PAYMENTS_UNAVAILABLE;
-  else if (!event.is_free && mode === "cashfree" && !organiser.cashfree_vendor_id?.trim())
+  else if (
+    !event.is_free &&
+    payoutMode === "gateway_split" &&
+    !organiser.cashfree_vendor_id?.trim()
+  )
     disabled = "This organiser is not ready to accept payments. Please come back soon.";
   else if (Date.parse(event.ends_at ?? event.starts_at ?? "") <= Date.now())
     disabled = "This event has ended.";
@@ -65,7 +85,7 @@ export const checkoutData = cache(async (slug: string) => {
     (tiers ?? []).reduce((sold, ticket) => sold + ticket.qty_sold, 0) >= event.capacity
   )
     disabled = "Sold out";
-  return { event, tiers: tiers ?? [], version, disabled, mode };
+  return { event, tiers: tiers ?? [], version, disabled, mode, activeGateway, payoutMode };
 });
 
 export function providerOrder(order: CheckoutOrder): ProviderOrder {
@@ -101,10 +121,10 @@ export async function reconcile(order: CheckoutOrder) {
   const stale = Date.parse(order.hold_expires_at ?? "") <= Date.now();
   if (order.payment_provider === "cashfree") {
     // A provider timeout keeps the order pending for the next reconciliation.
-    const provider = paymentProvider();
+    const provider = paymentProvider(order.payment_provider, order.payout_mode);
     if (provider.mode !== "cashfree")
       throw new Error("The order's payment provider is not available.");
-    const result = await provider.get(providerOrder(order));
+    const result = await provider.fetchOrderStatus(providerOrder(order));
     // Get Order ACTIVE is not final, even after local expiry: a payment may still
     // settle. Holds expire by timestamp; late successes recheck capacity in SQL.
     return transition(

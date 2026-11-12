@@ -40,7 +40,7 @@ export const legalPages = {
     paragraphs: [
       "Tikatero is a product of Sound Matrix.",
       "When you book, we collect your name, email address, phone number if you give one, and the tickets and orders on your account. We use this to deliver tickets, take payment, pay refunds, and show you your bookings.",
-      "We do not sell your details. Payments are handled by our payment provider. We do not store your card, UPI, or bank account details.",
+      "We do not sell your details. Our payment provider handles ticket payments. We do not store buyers’ card, UPI or bank details. For organisers, we encrypt the verified bank account number so authorised staff can send earnings. Access is recorded.",
       "From your account settings you can download a copy of your profile, tickets, and orders. You can also ask us to delete your account. If you have upcoming valid tickets, those bookings must be refunded or used first. If you run published or upcoming events, we will not delete the organiser for you. Close those events from the organiser console, or read the Help page, first.",
       "When an account is deleted we remove the personal details we no longer need from your profile, tickets, and orders. We keep payment and audit records we are required to retain.",
       "Times on Tikatero are shown in India Standard Time (IST). Prices are in Indian rupees and include GST.",

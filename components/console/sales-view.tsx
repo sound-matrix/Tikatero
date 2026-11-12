@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { formatInr, formatIst } from "@/lib/format";
-import { payoutWindowCopy } from "@/lib/payouts/model";
 import type { EventSales, LiveSales } from "@/lib/payouts/read";
 import { shareChannel, shareChannels } from "@/lib/sharing/links";
 
@@ -57,13 +56,13 @@ export function SalesFigures({
   const cards: [string, string][] = [
     ["Tickets sold", integer.format(live.tickets_sold)],
     ["Tickets left", integer.format(live.tickets_left)],
-    ["Your share", formatInr(live.share_paise)],
+    ["Your earnings", formatInr(live.share_paise)],
   ];
   if (detail)
     cards.push(
       ["Money from tickets", formatInr(live.ticket_money_paise)],
       ["Already paid to you", formatInr(live.paid_out_paise)],
-      ["To be paid", formatInr(live.to_be_paid_paise)],
+      ["Still to be paid", formatInr(live.to_be_paid_paise)],
       ["On hold", formatInr(live.on_hold_paise)],
       ["Refunds", `${integer.format(live.refund_count)} · ${formatInr(live.refunded_paise)}`],
       ["Checked in", integer.format(live.checked_in)],
@@ -74,7 +73,7 @@ export function SalesFigures({
     ["GST on fee", -live.fee_gst_paise],
     ["Payment gateway fee", -live.gateway_paise],
     ["Your part of refunds", -live.organiser_refunds_paise],
-    ["Your share", live.share_paise],
+    ["Your earnings", live.share_paise],
   ];
   return (
     <Card>
@@ -115,8 +114,7 @@ export function SalesFigures({
           </p>
           {live.expected_at && (
             <p className="text-sm text-muted">
-              Next expected payment {formatIst(live.expected_at)}.{" "}
-              {payoutWindowCopy(event.payout_days)}
+              Next expected payment {formatIst(live.expected_at)}.
             </p>
           )}
           <a className="font-semibold text-teal underline" href="#refunds">
@@ -150,7 +148,7 @@ export function SalesFigures({
                     "Left",
                     "Being booked now",
                     "Money",
-                    "Your share",
+                    "Your earnings",
                     "Checked in",
                   ].map((label) => (
                     <th scope="col" key={label} className="p-2">

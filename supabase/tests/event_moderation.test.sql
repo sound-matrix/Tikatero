@@ -1,5 +1,7 @@
 begin;
 select plan(40);
+alter table public.orders alter column payout_mode set default 'gateway_split';
+
 
 insert into auth.users(id,email) values
  ('e2210000-0000-4000-8000-000000000001','moderation-host@example.test'),
