@@ -1,5 +1,15 @@
 import { z } from "zod";
 import { categories, fromIstInput, toPaise, isGoogleMapsUrl, slugBase, type Values } from "./model";
+import { rulesFromEditor } from "@/lib/refunds/rules";
+export const ruleSettingsSchema = z.object({
+  refundPolicy: z.enum(["72h", "none", "full", "schedule", "custom"]),
+  refundText: z.string().trim().max(2000),
+  refundRules: z
+    .array(z.object({ days: z.string().max(12), percent: z.string().max(3) }))
+    .max(4)
+    .default([]),
+  refundAutoApprove: z.boolean().default(false),
+});
 const text = z.string().trim().max(2000);
 const uuid = z.string().uuid();
 const guest = z
@@ -45,8 +55,7 @@ export const valuesSchema = z
     tiers: z.array(tier).max(20),
     capacity: text.max(12).default(""),
     feePayer: z.enum(["organiser", "buyer"]),
-    refundPolicy: z.enum(["72h", "none", "custom"]),
-    refundText: text.max(2000),
+    ...ruleSettingsSchema.shape,
   })
   .strict();
 export const inputSchema = z
@@ -158,10 +167,7 @@ export function validateStep(v: Values, step: number, eventId: string) {
       }
       break;
     case 6:
-      requireValue(
-        v.refundPolicy !== "custom" || v.refundText.length >= 10,
-        "Describe your custom refund policy in at least 10 characters.",
-      );
+      rulesFromEditor(v);
       break;
   }
 }
@@ -230,7 +236,7 @@ export function stepPayload(v: Values, step: number) {
     case 6:
       return {
         fee_payer: v.feePayer,
-        refund_policy: v.refundPolicy === "custom" ? `custom: ${v.refundText}` : v.refundPolicy,
+        ...rulesFromEditor(v),
       };
     default:
       return {};

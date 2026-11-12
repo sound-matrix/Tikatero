@@ -1,7 +1,5 @@
 import { productionPaymentLock } from "@/lib/payments/model";
 
-export const REFUND_WINDOW_MS = 72 * 60 * 60 * 1000;
-
 export const DELETE_TICKETS =
   "You still have upcoming tickets. Those bookings must be refunded or used before you can delete your account.";
 export const DELETE_ORGANISER =
@@ -13,21 +11,6 @@ export const PAYMENTS_REFUND_UNAVAILABLE =
 
 const secretLike =
   /qr_secret|vendor_id|access_token|service_role|sb_secret_|cashfree_secret|bank_account|account_number|eyJ[A-Za-z0-9_-]{10,}/i;
-
-export type PolicyKind = "window" | "none" | "custom";
-
-export function policyKind(policy: string): PolicyKind {
-  if (policy === "72h") return "window";
-  if (policy === "none") return "none";
-  return "custom";
-}
-
-/** True when the event start is at least 72 hours away. Instants are compared; India has no DST. */
-export function withinBuyerWindow(startsAt: string, now: Date) {
-  const start = Date.parse(startsAt);
-  if (!Number.isFinite(start)) return false;
-  return start - now.getTime() >= REFUND_WINDOW_MS;
-}
 
 export function remainingRefundable(buyerTotalPaise: number, processedPaise: number) {
   if (!Number.isSafeInteger(buyerTotalPaise) || !Number.isSafeInteger(processedPaise))
@@ -63,45 +46,6 @@ export function orderStatusAfter(buyerTotalPaise: number, processedPaise: number
   if (processedPaise <= 0) return "paid" as const;
   if (processedPaise >= buyerTotalPaise) return "refunded" as const;
   return "partially_refunded" as const;
-}
-
-export type BuyerRefundDecision =
-  { ok: true; mode: "process" | "request"; amountPaise: number } | { ok: false; reason: string };
-
-export function buyerRefundDecision(input: {
-  policy: string;
-  startsAt: string;
-  now: Date;
-  orderStatus: string;
-  buyerTotalPaise: number;
-  processedPaise: number;
-  ticketStatuses: readonly string[];
-  openRefund: boolean;
-}): BuyerRefundDecision {
-  if (input.openRefund)
-    return { ok: false, reason: "A refund is already in progress for this booking." };
-  if (input.orderStatus === "refunded")
-    return { ok: false, reason: "This booking has already been refunded." };
-  if (input.orderStatus !== "paid" && input.orderStatus !== "partially_refunded")
-    return { ok: false, reason: "This booking cannot be refunded." };
-  let remaining = 0;
-  try {
-    remaining = remainingRefundable(input.buyerTotalPaise, input.processedPaise);
-  } catch {
-    return { ok: false, reason: "This booking cannot be refunded." };
-  }
-  if (remaining <= 0) return { ok: false, reason: "This booking has already been refunded." };
-  const kind = policyKind(input.policy);
-  if (kind === "none") return { ok: false, reason: "This event does not offer refunds." };
-  if (kind === "custom") return { ok: true, mode: "request", amountPaise: remaining };
-  if (input.ticketStatuses.includes("used"))
-    return { ok: false, reason: "A ticket from this booking has already been used." };
-  if (!withinBuyerWindow(input.startsAt, input.now))
-    return {
-      ok: false,
-      reason: "Refunds for this event close 72 hours before the start.",
-    };
-  return { ok: true, mode: "process", amountPaise: remaining };
 }
 
 export type PayoutPlan =

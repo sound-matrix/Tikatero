@@ -1,4 +1,5 @@
 import "server-only";
+import { readRefundPolicyText } from "@/lib/refunds/read";
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -127,6 +128,7 @@ async function deliver(orderId: string) {
       amountPaise: order.total_paise,
       vip,
       testBooking: order.is_test,
+      refundPolicy: await readRefundPolicyText(client, event.id, event.refund_policy),
       tickets: links,
     },
   });

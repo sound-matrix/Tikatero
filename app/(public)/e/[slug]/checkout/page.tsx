@@ -11,7 +11,8 @@ import { checkoutDefaults } from "@/lib/account/checkout";
 import { shareChannel } from "@/lib/sharing/links";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { formatIst } from "@/lib/format";
-import { refundText } from "@/lib/discovery/model";
+import { readRefundPolicyText } from "@/lib/refunds/read";
+import { createAnonClient } from "@/lib/supabase/anon";
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   await connection();
   if (!(await checkoutData((await params).slug))) notFound();
@@ -31,6 +32,7 @@ async function Checkout({ params, searchParams }: Props) {
   ]);
   if (!data) notFound();
   const { event, tiers, version, disabled, mode } = data;
+  const policyText = await readRefundPolicyText(createAnonClient(), event.id, event.refund_policy);
   const siteKey = recaptchaSiteKey();
   const recaptchaReady = Boolean(siteKey);
   const unavailable =
@@ -45,7 +47,7 @@ async function Checkout({ params, searchParams }: Props) {
       <p className="mt-2 text-muted">
         {event.starts_at ? formatIst(event.starts_at) : ""} · {event.venue_name}
       </p>
-      <p className="mt-2 text-sm text-muted">{refundText(event.refund_policy)}</p>
+      <p className="mt-2 text-sm text-muted">{policyText}</p>
       {unavailable ? (
         <section className="mt-8 rounded-2xl border border-line p-8">
           <h2 className="text-xl font-bold">

@@ -374,6 +374,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      event_refund_rules: {
+        Row: {
+          id: string;
+          event_id: string;
+          min_hours_before: number;
+          refund_percent: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          min_hours_before: number;
+          refund_percent: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          min_hours_before?: number;
+          refund_percent?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       events: {
         Row: {
           hidden_at: string | null;
@@ -400,6 +424,10 @@ export type Database = {
           poster_key: string | null;
           published_at: string | null;
           refund_policy: string;
+          refund_auto_approve: boolean;
+          refunds_paused_at: string | null;
+          refunds_paused_by: string | null;
+          refunds_paused_reason: string | null;
           slug: string;
           starts_at: string | null;
           status: Database["public"]["Enums"]["event_status"];
@@ -438,6 +466,10 @@ export type Database = {
           poster_key?: string | null;
           published_at?: string | null;
           refund_policy?: string;
+          refund_auto_approve?: boolean;
+          refunds_paused_at?: string | null;
+          refunds_paused_by?: string | null;
+          refunds_paused_reason?: string | null;
           slug: string;
           starts_at?: string | null;
           status?: Database["public"]["Enums"]["event_status"];
@@ -475,6 +507,10 @@ export type Database = {
           poster_key?: string | null;
           published_at?: string | null;
           refund_policy?: string;
+          refund_auto_approve?: boolean;
+          refunds_paused_at?: string | null;
+          refunds_paused_by?: string | null;
+          refunds_paused_reason?: string | null;
           slug?: string;
           starts_at?: string | null;
           status?: Database["public"]["Enums"]["event_status"];
@@ -1137,6 +1173,11 @@ export type Database = {
       refunds: {
         Row: {
           amount_paise: number;
+          rule_percent: number | null;
+          hours_before_event: number | null;
+          offered_paise: number | null;
+          decided_reason: string | null;
+          dispatch_claimed_at: string | null;
           approved_by: string | null;
           cf_refund_id: string | null;
           created_at: string;
@@ -1605,6 +1646,28 @@ export type Database = {
       };
     };
     Functions: AccountFunctions & {
+      admin_save_refund_rules: {
+        Args: {
+          p_event_id: string;
+          p_policy: string;
+          p_rules: Json;
+          p_auto: boolean;
+          p_reason: string;
+        };
+        Returns: undefined;
+      };
+      admin_pause_refunds: {
+        Args: { p_event_id: string | null; p_pause: boolean; p_reason: string };
+        Returns: undefined;
+      };
+      refund_pause_status: { Args: { p_event_id: string | null }; Returns: Json };
+      buyer_refund_quote: { Args: { p_order_id: string }; Returns: Json };
+      claim_refund_dispatch: { Args: { p_refund_id: string; p_order_id: string }; Returns: string };
+      event_excel_rows: {
+        Args: { p_event_id: string; p_staff: boolean; p_include_orders?: boolean };
+        Returns: Json;
+      };
+
       checkout_hold_with_profile: {
         Args: Database["public"]["Functions"]["checkout_hold"]["Args"] & {
           p_login_email: string | null;

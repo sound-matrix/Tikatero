@@ -51,10 +51,10 @@ export const legalPages = {
     paragraphs: [
       "Tikatero is a product of Sound Matrix.",
       "Each event shows its refund rule before you pay. Times are in India Standard Time (IST). Prices are in Indian rupees and include GST. A refund goes back to your original payment method.",
-      "If the event allows refunds until 72 hours before the start, you can request a full refund from your account while the start is at least 72 hours away and none of the tickets have been used. You receive the full amount you paid, including GST.",
+      "If the event offers refunds, choose Cancel my booking in your account before the event starts and before any ticket from your booking is used. The event rules show how much you can get back, including GST.",
       "If the event says there are no refunds, you cannot request one yourself. The organiser can still refund you, for example if the show cannot go ahead.",
-      "If the event writes its own refund rule, you can send a request. The organiser reviews it. Your tickets stay valid until the request is approved. No money moves until then.",
-      "If an event is cancelled, every paid booking that has not already been refunded in full is refunded in full to the original payment method.",
+      "The organiser or Tikatero usually reviews requests within 2 working days. Some organisers automatically approve requests that follow their event rules. If refunds are on hold, you can still save a request.",
+      "If an event is cancelled, the remaining amount on every paid booking is refunded to the original payment method. If refunds are on hold, payment waits until they reopen.",
       "Once a ticket is refunded it cannot be scanned at the door. A test refund is labelled as a test, and no money is sent to a bank.",
     ],
     support: {

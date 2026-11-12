@@ -15,6 +15,7 @@ export type OpenedRefund = {
   reversal_paise?: number;
   needs_provider?: boolean;
   is_test?: boolean;
+  paused?: boolean;
 };
 
 function currentRoute(isTest: boolean): RefundRoute {
@@ -70,6 +71,12 @@ export async function settleOpenedRefund(opened: OpenedRefund, preserveOnError =
     if (!preserveOnError) await finish(opened.refund_id, "", "failed");
     throw new Error("This organiser is not ready to refund yet.");
   }
+  const { data: dispatch, error: claimError } = await service.rpc("claim_refund_dispatch", {
+    p_refund_id: opened.refund_id,
+    p_order_id: opened.order_id,
+  });
+  if (claimError) throw new Error("The refund could not be saved.");
+  if (dispatch !== "claimed") return { ...opened, paused: dispatch === "paused" };
   const provider = route === "mock" ? new MockPayment() : new Cashfree();
   try {
     const result = await provider.refund({

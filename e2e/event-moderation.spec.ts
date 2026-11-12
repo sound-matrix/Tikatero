@@ -238,7 +238,7 @@ test.describe("Event review", () => {
         await nextBuyer.close();
       }
       await host.goto(`/console/events/${event.id}`);
-      await expect(host.getByText("2 of 2 seats sold")).toBeVisible();
+      await expect(host.getByText(/Seats left at venue: 2 of 2/)).toBeVisible();
     } finally {
       await host.close();
     }

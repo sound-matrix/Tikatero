@@ -1,80 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { formatIst } from "@/lib/format";
 import {
   assertExportSafe,
-  buyerRefundDecision,
   deletionGuard,
   orderStatusAfter,
   payoutPlan,
-  policyKind,
   refundRoute,
   remainingRefundable,
   rowsForBuyer,
   scaledPaise,
   staffRefundConfirm,
-  withinBuyerWindow,
   DELETE_ORGANISER,
   DELETE_TICKETS,
   OWN_ORGANISER_REFUND,
 } from "./model";
-
-const start = "2026-11-15T12:30:00.000Z";
-
-describe("72 hour window in IST", () => {
-  it("allows a request exactly 72 hours before the start and refuses 71 hours", () => {
-    expect(formatIst(start)).toBe("15 Nov 2026, 6:00 PM IST");
-    const exactly = new Date(Date.parse(start) - 72 * 60 * 60 * 1000);
-    expect(formatIst(exactly)).toBe("12 Nov 2026, 6:00 PM IST");
-    expect(withinBuyerWindow(start, exactly)).toBe(true);
-    const seventyOne = new Date(exactly.getTime() + 60 * 60 * 1000);
-    expect(formatIst(seventyOne)).toBe("12 Nov 2026, 7:00 PM IST");
-    expect(withinBuyerWindow(start, seventyOne)).toBe(false);
-  });
-});
-
-describe("policy behaviour", () => {
-  const base = {
-    startsAt: start,
-    now: new Date(Date.parse(start) - 72 * 60 * 60 * 1000),
-    orderStatus: "paid",
-    buyerTotalPaise: 100000,
-    processedPaise: 0,
-    ticketStatuses: ["valid"],
-    openRefund: false,
-  };
-
-  it("recognises the three launch policies", () => {
-    expect(policyKind("72h")).toBe("window");
-    expect(policyKind("none")).toBe("none");
-    expect(policyKind("custom: Email us a week ahead")).toBe("custom");
-  });
-
-  it("refuses buyer refunds when the event says none", () => {
-    expect(buyerRefundDecision({ ...base, policy: "none" })).toEqual({
-      ok: false,
-      reason: "This event does not offer refunds.",
-    });
-  });
-
-  it("lets a custom policy become a request without taking the money yet", () => {
-    expect(buyerRefundDecision({ ...base, policy: "custom: Seven days" })).toEqual({
-      ok: true,
-      mode: "request",
-      amountPaise: 100000,
-    });
-  });
-
-  it("processes a full 72h refund and refuses a used ticket", () => {
-    expect(buyerRefundDecision({ ...base, policy: "72h" })).toEqual({
-      ok: true,
-      mode: "process",
-      amountPaise: 100000,
-    });
-    expect(
-      buyerRefundDecision({ ...base, policy: "72h", ticketStatuses: ["valid", "used"] }).ok,
-    ).toBe(false);
-  });
-});
 
 describe("paise and split reversal", () => {
   it("scales the organiser share in integer paise and never exceeds what is left", () => {

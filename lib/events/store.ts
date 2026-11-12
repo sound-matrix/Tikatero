@@ -1,4 +1,5 @@
 import "server-only";
+import { settingsFromRules, type Rule } from "@/lib/refunds/rules";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables } from "@/lib/db/types";
 import { categories, emptyValues, toIstInput, priceText, type Values } from "./model";
@@ -15,12 +16,34 @@ export type Draft = {
   values: Values;
 };
 export function rowValues(
-  row: Tables<"events">,
+  row: Pick<
+    Tables<"events">,
+    | "title"
+    | "category"
+    | "description"
+    | "theme"
+    | "is_free"
+    | "starts_at"
+    | "ends_at"
+    | "gates_open_at"
+    | "venue_name"
+    | "address"
+    | "city"
+    | "country"
+    | "maps_url"
+    | "lat"
+    | "lng"
+    | "poster_key"
+    | "capacity"
+    | "fee_payer"
+    | "refund_policy"
+    | "refund_auto_approve"
+  >,
   guests: Tables<"event_guests">[],
   tiers: Tables<"ticket_types">[],
+  rules: Rule[] = [],
 ): Values {
   const initial = emptyValues();
-  const refund = row.refund_policy;
   return {
     ...initial,
     title: row.title,
@@ -63,12 +86,7 @@ export function rowValues(
       vip: t.is_vip,
     })),
     feePayer: row.fee_payer,
-    refundPolicy: refund === "72h" ? "72h" : refund === "none" ? "none" : "custom",
-    refundText: refund.startsWith("custom: ")
-      ? refund.slice(8)
-      : ["72h", "none"].includes(refund)
-        ? ""
-        : refund,
+    ...settingsFromRules(row.refund_policy, rules, row.refund_auto_approve ?? false),
   };
 }
 export async function readDraft(
@@ -79,12 +97,20 @@ export async function readDraft(
     { data: row, error },
     { data: guests, error: guestError },
     { data: tiers, error: tierError },
+    { data: rules, error: rulesError },
   ] = await Promise.all([
-    client.from("events").select("*").eq("id", id).maybeSingle(),
+    client
+      .from("events")
+      .select(
+        "id, organiser_id, slug, title, status, category, description, theme, is_free, starts_at, ends_at, gates_open_at, venue_name, address, city, country, maps_url, lat, lng, poster_key, capacity, fee_payer, refund_policy, refund_auto_approve, wizard_revision, wizard_step, wizard_completed_steps, hidden_at",
+      )
+      .eq("id", id)
+      .maybeSingle(),
     client.from("event_guests").select("*").eq("event_id", id).order("sort"),
     client.from("ticket_types").select("*").eq("event_id", id).order("sort"),
+    client.from("event_refund_rules").select("min_hours_before, refund_percent").eq("event_id", id),
   ]);
-  if (error || guestError || tierError)
+  if (error || guestError || tierError || rulesError)
     throw new Error("Your saved event could not be loaded. Try again.");
   if (!row) return null;
   return {
@@ -96,7 +122,7 @@ export async function readDraft(
     slug: row.slug,
     status: row.status,
     hiddenAt: row.hidden_at,
-    values: rowValues(row, guests ?? [], tiers ?? []),
+    values: rowValues(row, guests ?? [], tiers ?? [], rules ?? []),
   };
 }
 export function publicMediaBase() {

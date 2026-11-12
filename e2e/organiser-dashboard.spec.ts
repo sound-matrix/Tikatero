@@ -1,3 +1,4 @@
+import ExcelJS from "exceljs";
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
@@ -158,8 +159,8 @@ test("organiser sees sales and a test payout; staff cannot hold their own organi
   await page.screenshot({ path: testInfo.outputPath("console.png"), fullPage: true });
   await page.goto(`/console/events/${eventId}`);
   await expect(page.getByRole("heading", { name: "River Night" })).toBeVisible();
-  await expect(page.getByText("VIP")).toBeVisible();
-  await expect(page.getByText("1 checked in of 1 tickets sold")).toBeVisible();
+  await expect(page.getByRole("rowheader", { name: "VIP lounge" })).toBeVisible();
+  await expect(page.getByText("Checked in", { exact: true }).first()).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("event-sales.png"), fullPage: true });
   const [download] = await Promise.all([
     page.waitForEvent("download"),
@@ -171,6 +172,61 @@ test("organiser sees sales and a test payout; staff cannot hold their own organi
   expect(csv).toContain("95339");
   expect(csv).toContain("₹953.39");
   expect(csv).not.toMatch(/sb_secret_|account_number|CASHFREE/i);
+  const liveSale = crypto.randomUUID();
+  expect(
+    (
+      await admin.from("orders").insert({
+        id: liveSale,
+        event_id: eventId,
+        buyer_name: "Second Buyer",
+        buyer_email: "second@example.test",
+        subtotal_paise: 200000,
+        total_paise: 200000,
+        organiser_share_paise: 200000,
+        platform_share_paise: 0,
+        fee_payer: "organiser",
+        status: "pending",
+        is_test: false,
+      })
+    ).error,
+  ).toBeNull();
+  expect(
+    (
+      await admin
+        .from("order_items")
+        .insert({ order_id: liveSale, ticket_type_id: vipId, qty: 1, unit_price_paise: 200000 })
+    ).error,
+  ).toBeNull();
+  expect(
+    (
+      await admin
+        .from("orders")
+        .update({ status: "paid", paid_at: new Date().toISOString() })
+        .eq("id", liveSale)
+    ).error,
+  ).toBeNull();
+  await expect(page.getByText("₹2,953.39", { exact: true }).first()).toBeVisible({
+    timeout: 22000,
+  });
+  const [excelDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("link", { name: "Download Excel" }).click(),
+  ]);
+  const workbook = new ExcelJS.Workbook();
+  const xlsxPath = testInfo.outputPath("pr24-event-sales.xlsx");
+  await excelDownload.saveAs(xlsxPath);
+  await workbook.xlsx.readFile(xlsxPath);
+  expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual([
+    "Summary",
+    "Ticket types",
+    "Orders",
+    "Payouts",
+    "Sales by day",
+  ]);
+  expect(workbook.getWorksheet("Summary")?.getCell("B15").value).toBe(2953.39);
+  expect(workbook.getWorksheet("Orders")?.rowCount).toBe(3);
+  expect(workbook.getWorksheet("Orders")?.getRow(1).values).not.toContain("Email");
+  await page.screenshot({ path: testInfo.outputPath("pr24-live-sales.png"), fullPage: true });
   await page.goto("/console/payouts");
   await expect(
     page.getByText("Usually paid within 2 days after the payment clears."),

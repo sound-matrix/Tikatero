@@ -4,6 +4,8 @@ import { Suspense } from "react";
 import { SideNav } from "@/components/layout/side-nav";
 import { PublicHeader, PublicHeaderFallback } from "@/components/layout/public-header";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { loadRefundPause } from "@/lib/refunds/read";
+import Link from "next/link";
 import { adminNav } from "@/lib/nav";
 
 function NavFallback() {
@@ -25,6 +27,19 @@ async function AdminNav() {
   return <SideNav title="Tikatero admin" items={items} />;
 }
 
+async function RefundPauseBanner() {
+  const { client } = await requireStaff();
+  const { site_paused } = await loadRefundPause(client, null);
+  return site_paused ? (
+    <p className="bg-danger-soft px-5 py-3 font-semibold text-danger">
+      All refunds on Tikatero are paused.{" "}
+      <Link className="underline" href="/admin/settings">
+        Refund settings
+      </Link>
+    </p>
+  ) : null;
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-full flex-col bg-white">
@@ -37,7 +52,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </Suspense>
         <div id="content" className="min-w-0 flex-1">
           <Suspense fallback={<p className="p-8">Loading your account…</p>}>
-            <SurfaceGuard surface="admin">{children}</SurfaceGuard>
+            <SurfaceGuard surface="admin">
+              <RefundPauseBanner />
+              {children}
+            </SurfaceGuard>
           </Suspense>
         </div>
       </div>

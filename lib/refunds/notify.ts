@@ -59,3 +59,25 @@ export async function notifyEventCancelled(input: {
     },
   });
 }
+
+export async function notifyRefundRejected(refundId: string) {
+  const service = createServiceClient();
+  const { data: refund, error } = await service
+    .from("refunds")
+    .select(
+      "status, decided_reason, orders!inner(buyer_email, buyer_name, is_test, events!inner(title))",
+    )
+    .eq("id", refundId)
+    .maybeSingle();
+  if (error || !refund || refund.status !== "rejected" || !refund.decided_reason) return null;
+  return send({
+    template: "refund_request_rejected",
+    entityRef: `refund/${refundId}/rejected`,
+    to: refund.orders.buyer_email,
+    data: {
+      recipientName: refund.orders.buyer_name,
+      eventTitle: refund.orders.events.title,
+      reason: refund.decided_reason,
+    },
+  });
+}

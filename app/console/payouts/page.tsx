@@ -50,9 +50,14 @@ async function Payouts() {
             shown in India time.
           </p>
         </div>
-        <Button href="/console/payouts/export" variant="primary">
-          Download CSV
-        </Button>
+        <div className="flex flex-wrap gap-3">
+          <Button href="/console/payouts/export.xlsx" variant="primary" prefetch={false}>
+            Export all my events
+          </Button>
+          <Button href="/console/payouts/export" prefetch={false}>
+            Download CSV
+          </Button>
+        </div>
       </header>
       {testMode && (
         <p className="rounded-2xl border border-line bg-gold-soft p-4 text-sm">
