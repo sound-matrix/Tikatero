@@ -34,9 +34,7 @@ function SalesByDay({ days }: { days: LiveSales["sales_by_day"] }) {
             rx="2"
             className="fill-teal"
           >
-            <title>
-              {day.date} · {day.orders} bookings · {formatInr(day.money_paise)}
-            </title>
+            <title>{`${day.date} · ${day.orders} bookings · ${formatInr(day.money_paise)}`}</title>
           </rect>
         );
       })}

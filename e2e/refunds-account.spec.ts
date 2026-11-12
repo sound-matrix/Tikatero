@@ -98,7 +98,7 @@ test("buyer sees tickets and orders, a test refund, and the legal footer", async
   const host = await browser.newPage({ baseURL });
   await login(host, ownerEmail);
   await host.goto(`/console/events/${eventId}/edit?step=7`);
-  await host.getByLabel("Refund rules", { exact: true }).selectOption("schedule");
+  await host.getByRole("combobox", { name: "Refund rules", exact: true }).selectOption("schedule");
   await expect(host.getByText(/100% back.*50% back.*no refund/)).toBeVisible();
   await host.screenshot({ path: testInfo.outputPath("pr24-rules-editor.png"), fullPage: true });
   await host.getByRole("button", { name: "Save changes" }).click();
