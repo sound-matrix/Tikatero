@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../lib/db/types";
+import { templateNames } from "../lib/email/templates";
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const configured = !!url && !!key;
@@ -45,7 +46,11 @@ test.describe("staff email preview gallery", () => {
         await expect(
           page.getByRole("heading", { name: "Email previews", exact: true }),
         ).toBeVisible();
-        await expect(page.locator("iframe")).toHaveCount(15);
+        await expect(page.locator("iframe")).toHaveCount(templateNames.length);
+        await expect(page.locator('iframe[title="welcome_attendee email preview"]')).toHaveCount(1);
+        await expect(page.locator('iframe[title="welcome_organiser email preview"]')).toHaveCount(
+          1,
+        );
         const receipt = page.frameLocator('iframe[title="order_confirmed email preview"]');
         await expect(
           receipt.getByRole("heading", { name: "Your booking is confirmed" }),

@@ -40,6 +40,9 @@ export async function proxy(request: NextRequest) {
     });
     const account = await readAccount(client);
     if (!account) return finish(request.nextUrl.pathname === "/login" ? undefined : "/login");
+    // Verification must reach its route handler before ordinary role routing.
+    // It creates the first draft organiser and schedules the welcome email.
+    if (request.nextUrl.pathname === "/auth/complete") return finish();
     return finish(routeRedirect(account, request.nextUrl.pathname) ?? undefined);
   } catch {
     // No provider errors, tokens, keys or personal data in logs or responses.
