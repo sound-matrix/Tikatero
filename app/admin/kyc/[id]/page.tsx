@@ -2,8 +2,17 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireStaff } from "@/lib/admin/access";
-import { checks, isSimulated, statusLabels, waitingStatuses, uuid } from "@/lib/admin/model";
+import {
+  checks,
+  isSimulated,
+  object,
+  statusLabels,
+  waitingStatuses,
+  uuid,
+} from "@/lib/admin/model";
 import { createServiceClient } from "@/lib/supabase/service";
+import { countryFlag, countryName } from "@/lib/kyc/countries";
+import { documentTypes } from "@/lib/kyc/model";
 import { formatIst } from "@/lib/format";
 import { AdminPage } from "@/components/admin/page";
 import { ReviewForm } from "@/components/admin/forms";
@@ -16,7 +25,7 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
   const { data: app, error } = await client
     .from("kyc_applications")
     .select(
-      "id,organiser_id,status,step_progress,revision,flagged_steps,reviewer_note,submitted_at,decided_at,pan_last4,aadhaar_last4,gstin,bank_acct_last4,pan_name,bank_holder_name,pan_name_match,liveness_score,face_match_score",
+      "id,organiser_id,region,status,step_progress,revision,flagged_steps,reviewer_note,submitted_at,decided_at,pan_last4,aadhaar_last4,gstin,bank_acct_last4,pan_name,bank_holder_name,pan_name_match,liveness_score,face_match_score",
     )
     .eq("id", id)
     .maybeSingle();
@@ -36,6 +45,108 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
     .limit(1);
   if (memberError) throw new Error("Review permissions could not be loaded.");
   const own = org.owner_id === account.profile.id || !!membership?.length;
+  if (app.region === "INTL") {
+    const { data: idData, error: idError } = await createServiceClient()
+      .from("kyc_applications")
+      .select("id_country,id_doc_type,id_doc_last4,id_doc_expiry")
+      .eq("id", id)
+      .single();
+    if (idError || !idData) throw new Error("Identity details could not be loaded.");
+    const progress = object(app.step_progress);
+    const details = object(progress.intlDetails);
+    const country = idData.id_country?.trim() || "";
+    const type = idData.id_doc_type as keyof typeof documentTypes | null;
+    const expiry = idData.id_doc_expiry;
+    const expired = !!expiry && expiry <= new Date().toISOString().slice(0, 10);
+    const documents = [
+      { slot: "front", label: "ID front", key: progress.idFront },
+      { slot: "back", label: "ID back", key: progress.idBack },
+      { slot: "selfie", label: "selfie with ID", key: object(progress.selfie).docKey },
+    ];
+    const waiting = app.status === "submitted" && !!app.submitted_at;
+    return (
+      <AdminPage title={org.display_name} description="Verification review · Outside India">
+        <Link href="/admin/kyc" className="text-teal underline">
+          ← Back to queue
+        </Link>
+        <Card>
+          <h2 className="text-xl font-bold">{org.legal_name || "Legal name not provided"}</h2>
+          <p className="mt-1 text-muted">{statusLabels[app.status]}</p>
+          {app.submitted_at && (
+            <p className="mt-2 text-sm text-muted">Submitted {formatIst(app.submitted_at)}</p>
+          )}
+          <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div>
+              <dt className="text-sm text-muted">Country</dt>
+              <dd>
+                <span aria-hidden="true">{countryFlag(country)}</span> {countryName(country) || "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm text-muted">City</dt>
+              <dd>{typeof details.city === "string" ? details.city : "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-muted">Phone</dt>
+              <dd>{typeof details.phone === "string" ? details.phone : "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-muted">Document type</dt>
+              <dd>{type ? documentTypes[type] : "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-muted">Document number</dt>
+              <dd>{idData.id_doc_last4 ? `•••• ${idData.id_doc_last4}` : "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-muted">Expiry date</dt>
+              <dd className={expired ? "font-semibold text-danger" : undefined}>
+                {expiry ?? "—"}
+                {expired ? " · Expired" : ""}
+              </dd>
+            </div>
+          </dl>
+        </Card>
+        <Card>
+          <h2 className="mb-4 text-xl font-bold">Private documents & selfie</h2>
+          {account.profile.role === "admin" && app.submitted_at ? (
+            <div className="grid gap-5 lg:grid-cols-2">
+              {documents.flatMap(({ key, slot, label }) =>
+                typeof key === "string"
+                  ? [
+                      <DocumentPreview
+                        key={slot}
+                        label={label}
+                        document={{ applicationId: id, slot, pdf: key.endsWith(".pdf") }}
+                      />,
+                    ]
+                  : [],
+              )}
+            </div>
+          ) : (
+            <p className="text-muted">
+              Only Tikatero admins can open submitted identity documents.
+            </p>
+          )}
+        </Card>
+        <Card>
+          {app.reviewer_note && (
+            <p className="mb-4 rounded-xl bg-soft p-4">Previous note: {app.reviewer_note}</p>
+          )}
+          {own && <p className="mb-4 font-semibold">You cannot review your own organiser.</p>}
+          {!waiting && (
+            <p className="mb-4 text-muted">This application is not waiting for review.</p>
+          )}
+          <ReviewForm
+            id={id}
+            revision={app.revision}
+            region={app.region}
+            disabled={own || !waiting}
+          />
+        </Card>
+      </AdminPage>
+    );
+  }
   // PR 2 deliberately hides doc_keys; fetch only those after staff authorization.
   const { data: docs, error: docsError } = await createServiceClient()
     .from("kyc_applications")
@@ -124,7 +235,7 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
             {docKeys.map((key, index) => (
               <DocumentPreview
                 key={key}
-                docKey={key}
+                document={{ docKey: key }}
                 label={results.find((c) => c.docKey === key)?.label ?? `document ${index + 1}`}
               />
             ))}

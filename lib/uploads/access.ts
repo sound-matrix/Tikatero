@@ -2,8 +2,10 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db/types";
+import { canEdit } from "@/lib/kyc/model";
+import { loadApplication } from "@/lib/kyc/store";
 import type { Account } from "@/lib/auth/routing";
-import { UploadError, type UploadInput } from "./policy";
+import { isInternationalUpload, UploadError, type UploadInput } from "./policy";
 
 export function requireActiveAccount(account: Account | null): asserts account is Account {
   if (!account) throw new UploadError("Please sign in to continue.", 401);
@@ -32,6 +34,19 @@ export async function requireUploadMembership(
   // Staff do not get an upload override: they must also be organiser members.
   if (!account.organisers.some((org) => org.id === organiserId)) {
     throw new UploadError("You don’t have permission to upload here.", 403);
+  }
+  if (isInternationalUpload(input.kind)) {
+    const app = await loadApplication(client, organiserId);
+    const step = input.kind === "intl_selfie" ? "selfie" : "id";
+    if (
+      !app ||
+      app.id !== input.applicationId ||
+      app.region !== "INTL" ||
+      !app.step_progress.intlDetails ||
+      (step === "selfie" && !app.step_progress.idDocument) ||
+      !canEdit(app, step)
+    )
+      throw new UploadError("You can only upload files for your current verification step.", 403);
   }
 }
 

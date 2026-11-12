@@ -30,6 +30,7 @@ vi.mock("@/lib/supabase/service", () => ({
 }));
 import { submitCheckout } from "@/app/(public)/e/[slug]/checkout/actions";
 import { checkoutData } from "@/lib/checkout/store";
+import { INTERNATIONAL_PAID_TICKETS } from "@/lib/kyc/paid-tickets";
 import { PAYMENTS_UNAVAILABLE } from "@/lib/payments/model";
 import { computePricing } from "@/lib/pricing/compute";
 import { launchPricing } from "@/lib/pricing";
@@ -40,13 +41,16 @@ const fixture: {
   event: Record<string, unknown>;
   organiser: Record<string, unknown>;
   tiers: Record<string, unknown>[];
-} = { event: {}, organiser: {}, tiers: [] };
+  international: boolean;
+} = { event: {}, organiser: {}, tiers: [], international: false };
 
 function query(load: () => { data: unknown; error: null }) {
   const builder = {
     select: () => builder,
     eq: () => builder,
     order: () => builder,
+    or: () => builder,
+    limit: () => builder,
     update: () => builder,
     maybeSingle: () => Promise.resolve(load()),
     single: () => Promise.resolve(load()),
@@ -105,6 +109,7 @@ function holdCall() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  fixture.international = false;
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
   vi.stubEnv("RECAPTCHA_SECRET_KEY", "");
   vi.stubEnv("NEXT_PUBLIC_SITE_URL", "http://localhost:3000");
@@ -112,6 +117,8 @@ beforeEach(() => {
     query(() => {
       if (table === "events") return { data: fixture.event, error: null };
       if (table === "organisers") return { data: fixture.organiser, error: null };
+      if (table === "kyc_applications")
+        return { data: fixture.international ? [{ id: "intl" }] : [], error: null };
       if (table === "ticket_types") return { data: fixture.tiers, error: null };
       return { data: null, error: null };
     }),
@@ -263,4 +270,24 @@ it.each([0.1, 0.49])("low score %s creates no buyer/order/hold", async (score) =
   } finally {
     vi.unstubAllGlobals();
   }
+});
+
+it("blocks international paid checkout before creating a hold or buyer", async () => {
+  useEvent("international-paid", false);
+  fixture.international = true;
+  expect(await submitCheckout(booking("international-paid", false))).toEqual({
+    error: INTERNATIONAL_PAID_TICKETS,
+  });
+  expect(holdCall()).toBeUndefined();
+  expect(mock.createUser).not.toHaveBeenCalled();
+});
+
+it("keeps international free RSVP available", async () => {
+  useEvent("international-free", true);
+  fixture.international = true;
+  fixture.tiers = [{ id: tierId, price_paise: 0 }];
+  expect((await submitCheckout(booking("international-free", true))).url).toMatch(
+    /^\/orders\/[0-9a-f-]+\/status$/,
+  );
+  expect(holdCall()?.[1]).toMatchObject({ p_provider: "free" });
 });

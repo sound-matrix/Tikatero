@@ -1,7 +1,10 @@
 "use client";
+import Image from "next/image";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-export function DocumentPreview({ docKey, label }: { docKey: string; label: string }) {
+type Document = { docKey: string } | { applicationId: string; slot: string; pdf: boolean };
+export function DocumentPreview({ document, label }: { document: Document; label: string }) {
+  const intl = "applicationId" in document;
   const [url, setUrl] = useState<string | null>(null),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(false);
@@ -13,7 +16,11 @@ export function DocumentPreview({ docKey, label }: { docKey: string; label: stri
       const response = await fetch("/api/uploads/read", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: docKey, ttlSeconds: 300 }),
+        body: JSON.stringify(
+          intl
+            ? { applicationId: document.applicationId, slot: document.slot }
+            : { key: document.docKey, ttlSeconds: 300 },
+        ),
         cache: "no-store",
       });
       const data = await response.json();
@@ -33,12 +40,26 @@ export function DocumentPreview({ docKey, label }: { docKey: string; label: stri
       {error && <p role="alert">{error}</p>}
       {url && (
         <>
-          <object
-            data={url}
-            type={/\.pdf$/i.test(docKey) ? "application/pdf" : undefined}
-            aria-label={label}
-            className="h-96 w-full rounded-xl border border-line"
-          />
+          {intl ? (
+            !document.pdf && (
+              <Image
+                src={url}
+                unoptimized
+                width={640}
+                height={480}
+                alt={label}
+                referrerPolicy="no-referrer"
+                className="max-h-96 w-full rounded-xl border border-line object-contain"
+              />
+            )
+          ) : (
+            <object
+              data={url}
+              type={/\.pdf$/i.test(document.docKey) ? "application/pdf" : undefined}
+              aria-label={label}
+              className="h-96 w-full rounded-xl border border-line"
+            />
+          )}
           <a href={url} target="_blank" rel="noreferrer" className="text-teal underline">
             Open {label} in a new tab
           </a>

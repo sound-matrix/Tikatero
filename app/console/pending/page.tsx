@@ -1,13 +1,29 @@
 import { Suspense } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { INTERNATIONAL_PENDING } from "@/lib/kyc/model";
 import { requireAccount } from "@/lib/auth/account";
-async function Status() {
-  const { account } = await requireAccount();
-  const editing = account.organisers.some(
-    (org) => org.kyc_status === "draft" || org.kyc_status === "needs_docs",
+async function Status({ searchParams }: { searchParams: Promise<{ organiser?: string }> }) {
+  const { client, account } = await requireAccount();
+  const { organiser } = await searchParams;
+  const ids = account.organisers.map((org) => org.id);
+  const selected = organiser && ids.includes(organiser) ? [organiser] : ids;
+  const { data: intl, error } = selected.length
+    ? await client
+        .from("kyc_applications")
+        .select("id")
+        .in("organiser_id", selected)
+        .eq("region", "INTL")
+        .eq("status", "submitted")
+        .limit(1)
+    : { data: [], error: null };
+  if (error) throw new Error("Verification status could not be loaded.");
+  const editing = account.organisers
+    .filter((org) => selected.includes(org.id))
+    .some((org) => org.kyc_status === "draft" || org.kyc_status === "needs_docs");
+  const needsDocs = account.organisers.some(
+    (org) => selected.includes(org.id) && org.kyc_status === "needs_docs",
   );
-  const needsDocs = account.organisers.some((org) => org.kyc_status === "needs_docs");
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-10">
       <p className="mb-3 font-semibold text-teal">Organiser verification</p>
@@ -22,7 +38,9 @@ async function Status() {
         <h2 className="text-xl font-bold">
           {editing
             ? "Finish your verification"
-            : "We’re checking your details — usually within 1 working day."}
+            : intl?.length
+              ? INTERNATIONAL_PENDING
+              : "We’re checking your details — usually within 1 working day."}
         </h2>
         <p className="mt-3 text-muted">
           {editing
@@ -30,7 +48,15 @@ async function Status() {
             : "You’ll hear from us when your account is approved or if we need another document."}
         </p>
         {editing && (
-          <Button className="mt-5" variant="primary" href="/console/onboarding">
+          <Button
+            className="mt-5"
+            variant="primary"
+            href={
+              organiser && ids.includes(organiser)
+                ? `/console/onboarding?organiser=${organiser}`
+                : "/console/onboarding"
+            }
+          >
             {needsDocs ? "Check requested details" : "Start or continue verification"}
           </Button>
         )}
@@ -49,10 +75,10 @@ async function Status() {
     </main>
   );
 }
-export default function PendingPage() {
+export default function PendingPage(props: { searchParams: Promise<{ organiser?: string }> }) {
   return (
     <Suspense fallback={<p className="p-8">Loading your verification status…</p>}>
-      <Status />
+      <Status {...props} />
     </Suspense>
   );
 }

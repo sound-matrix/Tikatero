@@ -68,7 +68,7 @@ const definitions: {
         "Your organiser account is ready. Complete verification before you publish events or sell tickets.",
         [
           detail("In India", "PAN, Aadhaar, and bank account details"),
-          detail("Outside India", "Identity document — coming soon"),
+          detail("Outside India", "Passport or national ID"),
         ],
         "Start verification",
         "/console/onboarding",
@@ -198,7 +198,10 @@ const definitions: {
     build: (d) =>
       notice(
         "Your organiser account is approved",
-        "Your verification is complete. You can now open your organiser console and get ready for your next event.",
+        "Your verification is complete. You can now open your organiser console and get ready for your next event." +
+          (d.international
+            ? " You can publish free events now. For paid tickets, contact support."
+            : ""),
         [detail("Organiser", d.organiserName)],
         "Open organiser console",
         "/console",

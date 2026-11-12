@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
+import { InternationalOnboarding } from "./international-onboarding";
 import { ImageUpload } from "@/components/image-upload";
 import {
   canEdit,
+  COUNTRY_LOCKED,
   editableSteps,
   nextStep,
   stepNames,
@@ -19,7 +21,11 @@ import {
 
 export function Onboarding({ initial }: { initial: FlowState }) {
   const [state, setState] = useState(initial);
-  const [country, setCountry] = useState(initial.application ? "IN" : "");
+  const [country, setCountry] = useState(
+    initial.application ? (initial.application.region ?? "IN") : "",
+  );
+  const [intlSaving, setIntlSaving] = useState(false);
+  const [intlLocked, setIntlLocked] = useState(initial.application?.region === "INTL");
   const [current, setCurrent] = useState(() => nextStep(initial.application));
   const [method, setMethod] = useState("digilocker");
   const [uploadKey, setUploadKey] = useState("");
@@ -46,6 +52,10 @@ export function Onboarding({ initial }: { initial: FlowState }) {
     startTransition(async () => {
       const result = await saveKycStep(state, data);
       setState(result);
+      if (result.application?.region === "INTL") {
+        setCountry("INTL");
+        return;
+      }
       if (result.redirectUrl) {
         window.location.assign(result.redirectUrl);
         return;
@@ -74,7 +84,7 @@ export function Onboarding({ initial }: { initial: FlowState }) {
         Takes about 5 minutes. Your documents are encrypted and seen only by Tikatero&apos;s
         verification team.
       </p>
-      {initial.mode === "mock" && (
+      {initial.mode === "mock" && country !== "INTL" && (
         <p className="mt-3 rounded-xl bg-soft p-4 text-sm text-ink">
           <strong>
             Test mode — checks are simulated; the verification team will review your documents.
@@ -87,7 +97,8 @@ export function Onboarding({ initial }: { initial: FlowState }) {
         <Select
           label="Where is your organiser based?"
           value={country}
-          disabled={busy}
+          disabled={busy || intlSaving || !!application || intlLocked}
+          hint={application || intlLocked ? COUNTRY_LOCKED : undefined}
           onChange={(event) => setCountry(event.target.value)}
           options={[
             { value: "", label: "Choose your country" },
@@ -97,12 +108,14 @@ export function Onboarding({ initial }: { initial: FlowState }) {
         />
       </div>
       {country === "INTL" && (
-        <Card>
-          <h2 className="text-xl font-bold">Coming soon — please contact support</h2>
-          <Button className="mt-4" href="/help">
-            Contact support
-          </Button>
-        </Card>
+        <InternationalOnboarding
+          initial={state.application?.region === "INTL" ? state : initial}
+          onSaving={setIntlSaving}
+          onLock={() => {
+            setIntlLocked(true);
+            setCountry("INTL");
+          }}
+        />
       )}
       {country === "IN" && (
         <>

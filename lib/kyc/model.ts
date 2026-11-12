@@ -31,10 +31,40 @@ export type Check = {
   docKey?: string;
   skipped?: boolean;
 };
-export type Progress = { details?: Details } & Partial<Record<CheckStep, Check>>;
+export type InternationalDetails = Omit<Details, "type"> & { country: string };
+export const documentTypes = {
+  passport: "Passport",
+  national_id: "National ID card",
+  driving_licence: "Driving licence",
+  residence_permit: "Residence permit",
+} as const;
+export type InternationalDocument = {
+  type: keyof typeof documentTypes;
+  last4: string;
+  expiry: string;
+};
+export const internationalSteps = ["details", "id", "selfie"] as const;
+export type InternationalStep = (typeof internationalSteps)[number];
+export const internationalStepLabels = {
+  details: "About you",
+  id: "Your ID",
+  selfie: "Selfie with your ID",
+} as const;
+export const COUNTRY_LOCKED = "To change country, contact support";
+export const INTERNATIONAL_PENDING = "We check documents by hand, usually within 2 working days.";
+
+export type Progress = {
+  details?: Details;
+  intlDetails?: InternationalDetails;
+  idDocument?: InternationalDocument;
+  idFront?: string;
+  idBack?: string;
+  intlUpdatedSteps?: InternationalStep[];
+} & Partial<Record<CheckStep, Check>>;
 export type Application = {
   id: string;
   organiser_id: string;
+  region?: "IN" | "INTL";
   status: string;
   revision: number;
   step_progress: Progress;
@@ -113,7 +143,7 @@ export function autoResult(progress: Progress, threshold = 85) {
   });
   return { status: flagged.length ? ("needs_docs" as const) : ("auto_passed" as const), flagged };
 }
-export function canEdit(application: Application | null, step: Step) {
+export function canEdit(application: Application | null, step: Step | InternationalStep) {
   if (!application || application.status === "draft") return true;
   return application.status === "needs_docs" && application.flagged_steps.includes(step);
 }
@@ -128,4 +158,30 @@ export function nextStep(application: Application | null): number {
     step === "details" ? !progress.details : !progress[step]?.completed,
   );
   return first < 0 ? 6 : first;
+}
+
+export function assertVerificationRegion(application: Application | null, region: "IN" | "INTL") {
+  if (application && (application.region ?? "IN") !== region) throw new KycError(COUNTRY_LOCKED);
+}
+
+export function internationalStepComplete(
+  application: Application | null,
+  step: InternationalStep,
+) {
+  const progress = application?.step_progress;
+  if (!progress) return false;
+  if (
+    application?.status === "needs_docs" &&
+    application.flagged_steps.includes(step) &&
+    !progress.intlUpdatedSteps?.includes(step)
+  )
+    return false;
+  if (step === "details") return !!progress.intlDetails;
+  if (step === "id")
+    return (
+      !!progress.idDocument &&
+      !!progress.idFront &&
+      (progress.idDocument.type === "passport" || !!progress.idBack)
+    );
+  return !!progress.selfie?.completed;
 }

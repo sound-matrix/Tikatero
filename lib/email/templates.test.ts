@@ -54,3 +54,15 @@ it("rejects incomplete template data before it can be delivered", () => {
     ),
   ).toThrow();
 });
+
+it("renders and snapshots international KYC approval with the free-events message", async () => {
+  const result = await renderEmail(
+    "kyc_approved",
+    { ...emailSamples.kyc_approved, international: true },
+    site,
+  );
+  expect(result.text).toContain(
+    "You can publish free events now. For paid tickets, contact support.",
+  );
+  expect(result).toMatchSnapshot();
+});

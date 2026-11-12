@@ -5,6 +5,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { storagePublicBase } from "@/lib/uploads/public-base";
 import {
   buildUploadKey,
+  isPrivateUpload,
   validateUpload,
   validatePrivateKey,
   validateReadTtl,
@@ -50,7 +51,7 @@ export async function signUpload(value: UploadInput): Promise<SignedUpload> {
     mime: input.mime,
     expiresIn: UPLOAD_TTL_SECONDS,
     headers: { "x-upload-token": `${payload}.${signature(payload).toString("base64url")}` },
-    ...(input.kind === "kyc_doc"
+    ...(isPrivateUpload(input.kind)
       ? {}
       : { publicUrl: `${storagePublicBase(process.env.NEXT_PUBLIC_SUPABASE_URL)}${key}` }),
   };
@@ -142,11 +143,11 @@ export async function putUploadChunk(ticket: UploadTicket, part: number, body: U
     }
     validateBytes(input, file);
     const result = await storage
-      .from(input.kind === "kyc_doc" ? PRIVATE_BUCKET : PUBLIC_BUCKET)
+      .from(isPrivateUpload(input.kind) ? PRIVATE_BUCKET : PUBLIC_BUCKET)
       .upload(key, file, {
         contentType: input.mime,
         upsert: false,
-        cacheControl: input.kind === "kyc_doc" ? "0" : "3600",
+        cacheControl: isPrivateUpload(input.kind) ? "0" : "3600",
       });
     if (result.error) throw new Error("File could not be uploaded.");
   } finally {
@@ -192,7 +193,7 @@ export async function putPrivatePdf(key: string, body: Buffer) {
     .upload(key, body, { contentType: "application/pdf", cacheControl: "0", upsert: true });
   if (error) throw new Error("Ticket file could not be saved.");
 }
-async function signedRead(key: string, ttl: number, filename: string) {
+async function signedRead(key: string, ttl: number, filename: string | false) {
   validateReadTtl(ttl);
   const { data, error } = await createServiceClient()
     .storage.from(PRIVATE_BUCKET)
@@ -209,5 +210,9 @@ export async function signTicketPdf(key: string, filename: string) {
 // HTTP callers retain staff-only authorisation before issuing KYC links.
 export async function getSignedReadUrl(key: string, ttlSeconds = UPLOAD_TTL_SECONDS) {
   validatePrivateKey(key);
-  return signedRead(key, ttlSeconds, `verification-document.${key.split(".").pop()}`);
+  return signedRead(
+    key,
+    ttlSeconds,
+    key.startsWith("kyc/") ? false : `verification-document.${key.split(".").pop()}`,
+  );
 }

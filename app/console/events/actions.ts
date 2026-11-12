@@ -8,6 +8,9 @@ import {
   validateSavedInput,
   stepPayload,
 } from "@/lib/events/validation";
+import { toPaise } from "@/lib/events/model";
+import { hasInternationalKyc } from "@/lib/kyc/store";
+import { internationalPaidTicketError } from "@/lib/kyc/paid-tickets";
 import { readDraft, type Draft } from "@/lib/events/store";
 import type { Json } from "@/lib/db/types";
 export type SaveResult = { error?: string; draft?: Draft };
@@ -21,6 +24,17 @@ export async function saveEvent(input: unknown): Promise<SaveResult> {
     return { error: "You do not have permission to edit this event." };
   let payload: Json;
   try {
+    const international =
+      (data.publish || data.step === 0 || data.step === 5) &&
+      (await hasInternationalKyc(client, data.organiserId));
+    if (international && !data.publish) {
+      const error = internationalPaidTicketError(
+        true,
+        data.values.free,
+        data.step === 5 ? data.values.tiers.map((tier) => toPaise(tier.price || "0")) : [],
+      );
+      if (error) return { error };
+    }
     validateSavedInput(data.values, data.step, data.eventId);
     let complete = true;
     try {
@@ -36,6 +50,14 @@ export async function saveEvent(input: unknown): Promise<SaveResult> {
       const saved = await readDraft(client, data.eventId);
       if (!saved || saved.organiserId !== data.organiserId)
         return { error: "Save your event before publishing." };
+      if (international) {
+        const error = internationalPaidTicketError(
+          true,
+          saved.values.free,
+          saved.values.tiers.map((tier) => toPaise(tier.price || "0")),
+        );
+        if (error) return { error };
+      }
       validatePublish(saved.values, data.eventId);
     }
   } catch (error) {

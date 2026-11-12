@@ -38,9 +38,11 @@ export async function notifyKycSubmitted(application: Application) {
           data: {
             title: "An organiser is ready for verification",
             summary:
-              "An India verification application has been submitted. Please check the saved results and documents before approving.",
+              application.region === "INTL"
+                ? "An international identity application is ready for manual review."
+                : "An India verification application has been submitted. Please check the saved results and documents before approving.",
             entityLabel: application.id,
-            actionPath: "/admin/organisers",
+            actionPath: application.region === "INTL" ? "/admin/kyc" : "/admin/organisers",
           },
         }),
       );
