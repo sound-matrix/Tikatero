@@ -46,8 +46,16 @@ export function readModerationForm(form: FormData) {
   }
   const asStaff = get("as_staff") === "yes";
   const command = parsed.data;
-  if (command.operation === "hide" && command.reason === "Other") reason.parse(command.note);
-  if (command.operation === "unhide" && asStaff) reason.parse(command.reason);
+  const requiredNote =
+    command.operation === "hide" && command.reason === "Other"
+      ? command.note
+      : command.operation === "unhide" && asStaff
+        ? command.reason
+        : undefined;
+  if (requiredNote !== undefined) {
+    const parsedReason = reason.safeParse(requiredNote);
+    if (!parsedReason.success) throw new Error(parsedReason.error.issues[0].message);
+  }
   return { id: id.data, asStaff, confirmOwn: get("confirm_own") === "yes", command };
 }
 

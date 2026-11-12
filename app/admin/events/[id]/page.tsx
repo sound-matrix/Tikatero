@@ -43,12 +43,10 @@ async function Review({ params, searchParams }: Props) {
     loadRefundDesk(client, id),
   ]);
   if (!review) notFound();
-  const { event, host, tickets, request, history, hasOrders } = review;
+  const { event, host, tickets, request, history, hasOrders, grossPaise } = review;
   const own =
     account.organisers.some((org) => org.id === event.organiser_id) ||
     account.assignments?.some((item) => item.eventId === id && item.role === "manager");
-  const gross =
-    desk?.orders.reduce((total, order) => total + (order.isTest ? 0 : order.totalPaise), 0) ?? 0;
   const sold = tickets.reduce((total, ticket) => total + ticket.qty_sold, 0);
   const queued =
     event.status === "cancelled" &&
@@ -94,7 +92,7 @@ async function Review({ params, searchParams }: Props) {
             <dt className="font-semibold">Tickets sold</dt>
             <dd>{event.capacity ? `${sold} of ${event.capacity} seats` : sold}</dd>
             <dt className="font-semibold">Gross sales</dt>
-            <dd>{formatInr(gross)} incl. GST</dd>
+            <dd>{formatInr(grossPaise)} incl. GST</dd>
           </dl>
           <h3 className="pt-2 font-bold">Ticket types</h3>
           {tickets.length ? (

@@ -88,7 +88,7 @@ export function SalesFigures({ event, detail = false }: { event: EventSales; det
               </span>
               <span className="text-sm text-muted">
                 {tier.sold_real} sold of {tier.qty_total} · {money(tier.price_paise)} incl. GST ·
-                inventory {tier.qty_sold}
+                {tier.qty_sold} seats taken (including test bookings)
               </span>
             </li>
           ))}

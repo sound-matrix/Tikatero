@@ -36,7 +36,7 @@ export async function loadAdminEventReview(eventId: string, client: Client) {
   const service = createServiceClient();
   const event = await loadModerationEvent(service, eventId);
   if (!event) return null;
-  const [host, tickets, bookings, history, request] = await Promise.all([
+  const [host, tickets, bookings, history, request, summary] = await Promise.all([
     service
       .from("organisers")
       .select("display_name,kyc_status")
@@ -56,8 +56,15 @@ export async function loadAdminEventReview(eventId: string, client: Client) {
       .order("created_at", { ascending: false })
       .limit(50),
     latestRemovalRequest(client, eventId),
+    client.rpc("admin_event_review_list", {
+      p_search: "",
+      p_status: "",
+      p_filter: "",
+      p_offset: 0,
+      p_event_id: eventId,
+    }),
   ]);
-  if (host.error || tickets.error || bookings.error || history.error)
+  if (host.error || tickets.error || bookings.error || history.error || summary.error)
     throw new Error("The event review could not be loaded.");
   return {
     event,
@@ -65,6 +72,7 @@ export async function loadAdminEventReview(eventId: string, client: Client) {
     tickets: tickets.data,
     hasOrders: (bookings.count ?? 0) > 0,
     history: history.data,
+    grossPaise: summary.data[0]?.gross_paise ?? 0,
     request,
   };
 }
@@ -101,5 +109,8 @@ export async function sweepDeletedEventMedia() {
     .order("created_at")
     .limit(10);
   if (error) throw error;
-  await Promise.allSettled(data.map(({ event_id }) => cleanDeletedEventMedia(event_id)));
+  const results = await Promise.allSettled(
+    data.map(({ event_id }) => cleanDeletedEventMedia(event_id)),
+  );
+  return results.filter((result) => result.status === "rejected").length;
 }

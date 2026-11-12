@@ -4,7 +4,7 @@ export const steps = [
   "Venue",
   "Poster",
   "VIP & guests",
-  "Ticket tiers",
+  "Ticket types",
   "Fees & refunds",
   "Review & publish",
 ] as const;

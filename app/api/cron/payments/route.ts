@@ -50,12 +50,7 @@ export async function GET(request: Request) {
   } catch {
     ticketFailures = 1;
   }
-  let mediaFailures = 0;
-  try {
-    await sweepDeletedEventMedia();
-  } catch {
-    mediaFailures = 1;
-  }
+  const mediaFailures = await sweepDeletedEventMedia().catch(() => 1);
   const refundFailures = await sweepEventRefunds().catch(() => 1);
   const unsettled = failed + ticketFailures + mediaFailures + refundFailures;
   return Response.json(

@@ -846,7 +846,7 @@ $$;
 
 -- Staff cannot list financial data before their account is authorised.
 create function public.admin_event_review_list(
-  p_search text, p_status text, p_filter text, p_offset integer
+  p_search text, p_status text, p_filter text, p_offset integer, p_event_id uuid default null
 )
 returns table (
   id uuid, title text, organiser_name text, city text, starts_at timestamptz,
@@ -867,7 +867,8 @@ begin
     join public.organisers o on o.id = e.organiser_id
     cross join lateral (select exists (select 1 from public.event_removal_requests request
       where request.event_id = e.id and request.status = 'pending') as pending) r
-    where (coalesce(p_search, '') = '' or strpos(lower(e.title), lower(p_search)) > 0
+    where (p_event_id is null or e.id = p_event_id)
+      and (coalesce(p_search, '') = '' or strpos(lower(e.title), lower(p_search)) > 0
       or strpos(lower(o.display_name), lower(p_search)) > 0)
       and (coalesce(p_status, '') = '' or e.status::text = p_status)
       and (coalesce(p_filter, '') = '' or p_filter = 'hidden' and e.status = 'unpublished' and e.hidden_at is not null
@@ -876,8 +877,8 @@ begin
     limit 30 offset greatest(0, least(coalesce(p_offset, 0), 30000));
 end;
 $$;
-revoke all on function public.admin_event_review_list(text, text, text, integer) from public, anon;
-grant execute on function public.admin_event_review_list(text, text, text, integer) to authenticated;
+revoke all on function public.admin_event_review_list(text, text, text, integer, uuid) from public, anon;
+grant execute on function public.admin_event_review_list(text, text, text, integer, uuid) to authenticated;
 
 create function public.admin_emergency_cancel_event(
   p_event_id uuid, p_reason text, p_title text, p_confirm boolean default false

@@ -1839,7 +1839,13 @@ export type Database = {
         Returns: Json;
       };
       admin_event_review_list: {
-        Args: { p_search: string; p_status: string; p_filter: string; p_offset: number };
+        Args: {
+          p_search: string;
+          p_status: string;
+          p_filter: string;
+          p_offset: number;
+          p_event_id?: string;
+        };
         Returns: {
           id: string;
           title: string;

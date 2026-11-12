@@ -118,7 +118,7 @@ export function CheckoutForm({
                       {publicPrice(tier.price_paise, isFree)}
                     </p>
                     {reason && <p className="text-sm text-muted">{reason}</p>}
-                    <p className="mt-1 text-xs text-muted">Up to {Math.max(max, 0)} per order</p>
+                    <p className="mt-1 text-xs text-muted">Up to {Math.max(max, 0)} at a time</p>
                   </div>
                   <select
                     id={`qty-${tier.id}`}
