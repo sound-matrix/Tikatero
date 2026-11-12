@@ -7,6 +7,8 @@ import { checkoutData } from "@/lib/checkout/store";
 import { recaptchaRequired } from "@/lib/checkout/security";
 import { PAYMENTS_UNAVAILABLE } from "@/lib/payments/model";
 import { recaptchaSiteKey } from "@/lib/security/recaptcha";
+import { checkoutDefaults } from "@/lib/account/checkout";
+import { shareChannel } from "@/lib/sharing/links";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { formatIst } from "@/lib/format";
 import { refundText } from "@/lib/discovery/model";
@@ -15,10 +17,18 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!(await checkoutData((await params).slug))) notFound();
   return { title: "Checkout", robots: { index: false, follow: false } };
 }
-async function Checkout({ params }: { params: Promise<{ slug: string }> }) {
+type Props = {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ tier?: string; ref?: string }>;
+};
+async function Checkout({ params, searchParams }: Props) {
   await connection();
   const now = await requestTime();
-  const data = await checkoutData((await params).slug);
+  const [data, defaults, query] = await Promise.all([
+    checkoutData((await params).slug),
+    checkoutDefaults(),
+    searchParams,
+  ]);
   if (!data) notFound();
   const { event, tiers, version, disabled, mode } = data;
   const siteKey = recaptchaSiteKey();
@@ -46,6 +56,9 @@ async function Checkout({ params }: { params: Promise<{ slug: string }> }) {
       ) : (
         <CheckoutForm
           slug={event.slug}
+          defaults={defaults}
+          selectedTier={typeof query.tier === "string" ? query.tier : undefined}
+          refChannel={shareChannel(query.ref)}
           tiers={tiers}
           version={version}
           feePayer={event.fee_payer}
@@ -59,7 +72,7 @@ async function Checkout({ params }: { params: Promise<{ slug: string }> }) {
     </main>
   );
 }
-export default function Page(props: { params: Promise<{ slug: string }> }) {
+export default function Page(props: Props) {
   return (
     <Suspense fallback={<p className="p-8">Loading checkout…</p>}>
       <Checkout {...props} />

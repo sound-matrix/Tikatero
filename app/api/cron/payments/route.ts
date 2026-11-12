@@ -1,3 +1,4 @@
+import { sweepAvatarCleanup } from "@/lib/account/avatar-store";
 import { sweepEventRefunds } from "@/lib/refunds/event-refunds";
 import { sweepDeletedEventMedia } from "@/lib/events/moderation-store";
 import { timingSafeEqual } from "node:crypto";
@@ -50,7 +51,11 @@ export async function GET(request: Request) {
   } catch {
     ticketFailures = 1;
   }
-  const mediaFailures = await sweepDeletedEventMedia().catch(() => 1);
+  const [eventMediaFailures, avatarFailures] = await Promise.all([
+    sweepDeletedEventMedia().catch(() => 1),
+    sweepAvatarCleanup().catch(() => 1),
+  ]);
+  const mediaFailures = eventMediaFailures + avatarFailures;
   const refundFailures = await sweepEventRefunds().catch(() => 1);
   const unsettled = failed + ticketFailures + mediaFailures + refundFailures;
   return Response.json(

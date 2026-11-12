@@ -49,7 +49,7 @@ export async function ownOrder(id: string): Promise<CheckoutOrder | null> {
   const { data, error } = await client
     .from("orders")
     .select(
-      "id, event_id, buyer_id, buyer_name, buyer_email, buyer_phone, subtotal_paise, total_paise, fee_payer, status, cf_order_id, cf_payment_id, pricing_version_id, created_at, paid_at, payment_provider, payment_session_id, access_token_hash, hold_expires_at, attendee_names, consent_at, is_test, reconciled_at, emailed_at",
+      "id, event_id, buyer_id, buyer_name, buyer_email, buyer_phone, subtotal_paise, total_paise, fee_payer, status, cf_order_id, cf_payment_id, pricing_version_id, created_at, paid_at, payment_provider, payment_session_id, access_token_hash, hold_expires_at, attendee_names, consent_at, is_test, reconciled_at, emailed_at, ref_channel",
     )
     .eq("id", id)
     .eq("buyer_id", user.id)

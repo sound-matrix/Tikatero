@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireAccount } from "@/lib/auth/account";
 import { createClient } from "@/lib/supabase/server";
+import { signOutPath } from "@/lib/auth/return-path";
 import { landingPath } from "@/lib/auth/routing";
 import { profileValues } from "@/lib/auth/validation";
 import { createDraftOrganiser } from "@/lib/auth/organiser";
@@ -39,10 +40,10 @@ export async function becomeOrganiser(_previous: FormState, data: FormData): Pro
   redirect("/console/pending");
 }
 
-export async function signOut() {
+export async function signOut(data: FormData) {
   const client = await createClient();
   const { error } = await client.auth.signOut();
   if (error) throw new Error("Sign-out failed. Please try again.");
   revalidatePath("/", "layout");
-  redirect("/login");
+  redirect(signOutPath(data.get("next")));
 }

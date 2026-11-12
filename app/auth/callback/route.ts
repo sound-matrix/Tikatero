@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { withReturnPath } from "@/lib/auth/return-path";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
@@ -7,17 +8,18 @@ export async function GET(request: NextRequest) {
     const client = await createClient();
     const code = params.get("code");
     const tokenHash = params.get("token_hash");
-    // Only sign-in confirmation tokens are accepted; never trust a supplied next URL.
+    // Only sign-in confirmation tokens are accepted.
     const result = code
       ? await client.auth.exchangeCodeForSession(code)
       : tokenHash && params.get("type") === "email"
         ? await client.auth.verifyOtp({ token_hash: tokenHash, type: "email" })
         : null;
-    if (result && !result.error) return response("/auth/complete");
+    if (result && !result.error)
+      return response(withReturnPath("/auth/complete", params.get("next")));
   } catch {
     /* Provider failures use the same plain-English error. */
   }
-  return response("/login?error=link");
+  return response(withReturnPath("/login?error=link", params.get("next")));
 }
 
 function response(path: string) {

@@ -10,8 +10,10 @@ import { eventJsonLd, siteOrigin } from "@/lib/discovery/seo";
 import { formatIst } from "@/lib/format";
 import { openMaps } from "@/lib/events/model";
 import { EventMedia, mediaUrl } from "@/components/discovery/media";
-import { ShareButton } from "@/components/discovery/share-button";
-type Props = { params: Promise<{ slug: string }> };
+import { createAnonClient } from "@/lib/supabase/anon";
+import { bookingPath, shareChannel } from "@/lib/sharing/links";
+import { ShareButton, TrackEventReferral } from "@/components/discovery/share-button";
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ ref?: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   await connection();
   const e = await publicEvent((await params).slug);
@@ -40,7 +42,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
   };
 }
-async function Detail({ params }: Props) {
+async function Detail({ params, searchParams }: Props) {
   await connection();
   const e = await publicEvent((await params).slug);
   if (!e) notFound();
@@ -49,6 +51,11 @@ async function Detail({ params }: Props) {
     seatsLeft = e.capacity === null ? null : Math.max(0, e.capacity - e.tickets_sold),
     available = seatsLeft !== 0 && e.tiers.some((t) => tierState(t, end, now) === "Available"),
     origin = await siteOrigin();
+  const [{ ref }, host] = await Promise.all([
+    searchParams,
+    createAnonClient().rpc("event_host_slug", { p_event_id: e.id }),
+  ]);
+  const channel = shareChannel(ref);
   const maps = openMaps({
     lat: e.lat === null ? "" : String(e.lat),
     lng: e.lng === null ? "" : String(e.lng),
@@ -60,7 +67,7 @@ async function Detail({ params }: Props) {
   const bookClass =
     "inline-flex min-h-12 items-center justify-center rounded-xl bg-[linear-gradient(135deg,var(--coral),var(--orange))] px-7 py-3 text-xl font-bold text-ink";
   const book = available ? (
-    <Link href={`/e/${e.slug}/book`} className={bookClass}>
+    <Link href={bookingPath(e.slug, "book", undefined, channel)} className={bookClass}>
       {e.is_free ? "Get free pass" : "Book"}
     </Link>
   ) : (
@@ -74,6 +81,7 @@ async function Detail({ params }: Props) {
   );
   return (
     <main data-sticky-booking className="mx-auto max-w-6xl px-4 pb-12 pt-6 md:px-6">
+      {channel && <TrackEventReferral slug={e.slug} channel={channel} />}
       <Link
         href="/events"
         className="mb-5 inline-block text-sm font-semibold underline underline-offset-4"
@@ -89,7 +97,17 @@ async function Detail({ params }: Props) {
           <h1 className="mt-3 text-3xl font-extrabold leading-tight md:text-4xl">{e.title}</h1>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <p className="text-muted">
-              By <strong className="text-ink">{e.organiser_name}</strong>
+              By{" "}
+              {host.data ? (
+                <Link
+                  href={`/hosts/${encodeURIComponent(host.data)}`}
+                  className="font-bold text-ink underline"
+                >
+                  {e.organiser_name}
+                </Link>
+              ) : (
+                <strong className="text-ink">{e.organiser_name}</strong>
+              )}
             </p>
             {e.verified && (
               <span className="rounded-full bg-teal-soft px-3 py-1 text-sm font-bold text-[#087570]">
@@ -234,7 +252,7 @@ async function Detail({ params }: Props) {
                   {state === "Available" ? (
                     <Link
                       className="mt-3 inline-flex min-h-11 items-center font-semibold underline underline-offset-4"
-                      href={`/e/${e.slug}/book?tier=${encodeURIComponent(t.id)}`}
+                      href={bookingPath(e.slug, "book", t.id, channel)}
                     >
                       {e.is_free ? "Get free pass" : "Book"} · {t.name}
                     </Link>
@@ -253,7 +271,15 @@ async function Detail({ params }: Props) {
             )}
           </div>
           <div className="mt-5 hidden md:block">{book}</div>
-          <ShareButton title={e.title} />
+          <ShareButton
+            event={{
+              slug: e.slug,
+              title: e.title,
+              date: formatIst(e.starts_at),
+              city: e.city,
+              url: `${origin}/e/${e.slug}`,
+            }}
+          />
         </aside>
       </div>
       <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-line bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:hidden">

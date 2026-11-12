@@ -6,6 +6,7 @@ const event: EventDetails = {
 };
 const recipientName = "Alex";
 export const emailSamples: TemplateData = {
+  backup_email_verification: { actionPath: "/api/account/verify-email?token=example" },
   welcome_attendee: { recipientName },
   welcome_organiser: { recipientName },
   order_confirmed: {

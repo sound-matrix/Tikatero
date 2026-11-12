@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { requestSignInCode, verifySignInCode } from "@/app/(public)/login/actions";
+import { withReturnPath } from "@/lib/auth/return-path";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -9,14 +10,18 @@ import { Card } from "@/components/ui/card";
 export function LoginForm({
   linkError,
   initialHost,
+  next,
+  initialEmail,
 }: {
   linkError: boolean;
   initialHost: boolean;
+  next: string | null;
+  initialEmail: string;
 }) {
   const [choice, setChoice] = useState<"attendee" | "organiser" | "existing" | null>(
-    initialHost ? "organiser" : null,
+    initialHost ? "organiser" : initialEmail ? "attendee" : null,
   );
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [token, setToken] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -32,6 +37,7 @@ export function LoginForm({
       const result = await requestSignInCode(
         email,
         choice === "organiser" ? "organiser" : "attendee",
+        next,
       );
       if (result.error) setMessage(result.error);
       else {
@@ -60,8 +66,7 @@ export function LoginForm({
       if (result.error) setMessage(result.error);
       else {
         // A document navigation discards any anonymous prefetched RSC/session state.
-        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-        window.location.assign("/auth/complete");
+        window.location.assign(withReturnPath("/auth/complete", next));
         return;
       }
     } catch {

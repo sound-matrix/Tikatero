@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { connection } from "next/server";
 import type { Database } from "@/lib/db/types";
 import { publicSupabaseEnv } from "./env";
+import { isAuthCookie } from "./auth-cookie";
 
 // Supabase constructors read the clock before reading storage. Defer them until
 // request time so Cache Components never tries to prerender session work.
@@ -26,4 +27,9 @@ export async function createClient() {
       },
     },
   });
+}
+
+export async function sessionClient() {
+  if (!(await cookies()).getAll().some(({ name }) => isAuthCookie(name))) return null;
+  return createClient();
 }

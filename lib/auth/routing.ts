@@ -9,7 +9,8 @@ export type Account = {
   profile: Pick<
     Tables<"profiles">,
     "id" | "full_name" | "phone" | "role" | "blocked_at" | "block_reason"
-  >;
+  > &
+    Partial<Pick<Tables<"profiles">, "display_name" | "avatar_path">>;
   organisers: Pick<Tables<"organisers">, "id" | "kyc_status">[];
   assignments?: EventAssignment[];
 };

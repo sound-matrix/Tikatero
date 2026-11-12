@@ -1,36 +1,43 @@
-"use client";
-
-import { usePathname } from "next/navigation";
-import { Logo } from "@/components/brand/logo";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { Logo } from "@/components/brand/logo";
+import { readAccount } from "@/lib/auth/account";
+import { sessionClient } from "@/lib/supabase/server";
+import { AccountMenu, type HeaderAccount } from "./account-menu";
 
-export function PublicHeader() {
-  const pathname = usePathname();
-  const inAccount = pathname === "/blocked" || pathname === "/me" || pathname.startsWith("/me/");
-
+export async function PublicHeader({ compact = false }: { compact?: boolean }) {
+  const client = await sessionClient();
+  const account = client ? await readAccount(client).catch(() => null) : null;
+  const profile = account?.profile;
+  const menu: HeaderAccount | null =
+    account && profile
+      ? {
+          name: profile.display_name || profile.full_name || "Your account",
+          avatar:
+            profile.avatar_path && client
+              ? client.storage.from("avatars").getPublicUrl(profile.avatar_path).data.publicUrl
+              : null,
+          host: account.organisers.length > 0,
+          staff: profile.role === "admin" || profile.role === "staff",
+          blocked: Boolean(profile.blocked_at),
+        }
+      : null;
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-white">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:px-6">
-        <div className="flex items-center justify-between gap-3">
-          <Logo />
-          <div className="md:hidden">
-            <Button href={inAccount ? "/me" : "/login"} variant="secondary">
-              {inAccount ? "Your account" : "Sign in"}
-            </Button>
-          </div>
-        </div>
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 px-4 py-3 md:grid-cols-[auto_1fr_auto] md:px-6">
+        <Logo />
         <nav
           aria-label="Main navigation"
-          className="flex flex-1 items-center justify-end gap-5 text-sm font-semibold"
+          className="col-span-2 row-start-2 flex items-center gap-5 text-sm font-semibold md:col-span-1 md:col-start-2 md:row-start-1 md:justify-end"
         >
           <Link href="/events">Find events</Link>
-          <Link href="/login?as=host">Host an event</Link>
+          {!compact && (
+            <Link href={menu ? (menu.host ? "/console" : "/me") : "/login?as=host"}>
+              Host an event
+            </Link>
+          )}
         </nav>
-        <div className="hidden md:block">
-          <Button href={inAccount ? "/me" : "/login"} variant="secondary">
-            {inAccount ? "Your account" : "Sign in"}
-          </Button>
+        <div className="col-start-2 row-start-1 md:col-start-3">
+          <AccountMenu account={menu} />
         </div>
       </div>
     </header>

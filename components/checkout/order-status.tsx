@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { publicPrice } from "@/lib/discovery/model";
 export type OrderStatus = {
   id: string;
@@ -12,7 +13,7 @@ export type OrderStatus = {
   canPay: boolean;
   tickets: { href: string; label: string }[];
 };
-export function OrderStatusView({ initial }: { initial: OrderStatus }) {
+export function OrderStatusView({ initial, guest }: { initial: OrderStatus; guest: boolean }) {
   const [order, setOrder] = useState(initial);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -102,6 +103,14 @@ export function OrderStatusView({ initial }: { initial: OrderStatus }) {
         >
           Continue payment
         </Link>
+      )}
+      {guest && !order.cancelled && order.status === "paid" && (
+        <aside className="mt-6 space-y-3 rounded-xl border border-line p-4">
+          <p className="text-sm text-muted">Save these details for next time?</p>
+          <Button href={`/orders/${order.id}/signup`} prefetch={false}>
+            Create an account with this email
+          </Button>
+        </aside>
       )}
       <Link className="mt-6 block underline" href="/events">
         Browse events

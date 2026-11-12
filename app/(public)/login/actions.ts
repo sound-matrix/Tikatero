@@ -2,6 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { allowRequest, requestIp } from "@/lib/security/rate-limit";
+import { cookies } from "next/headers";
+import { returnPath } from "@/lib/auth/return-path";
 import { signupIntent } from "@/lib/auth/signup-intent";
 
 const LIMITED = "Too many sign-in attempts. Please wait 10 minutes and try again.";
@@ -25,7 +27,11 @@ function siteOrigin() {
   return "http://127.0.0.1:3000";
 }
 
-export async function requestSignInCode(emailInput: string, intentInput?: string) {
+export async function requestSignInCode(
+  emailInput: string,
+  intentInput?: string,
+  next?: string | null,
+) {
   const email = emailOf(emailInput);
   if (!email) return { error: "Enter the email address for your account." };
   const parsed = signupIntent.safeParse(intentInput ?? "attendee");
@@ -47,6 +53,16 @@ export async function requestSignInCode(emailInput: string, intentInput?: string
     });
     if (error)
       return { error: "We could not send your email. Please wait a minute and try again." };
+    const jar = await cookies();
+    const destination = returnPath(next);
+    jar.set("tikatero_auth_return", destination ?? "", {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/auth",
+      maxAge: destination ? 1800 : 0,
+      secure: siteOrigin().startsWith("https:"),
+    });
+    jar.set("tikatero_signup_email", "", { path: "/login", maxAge: 0 });
     return { sent: true as const };
   } catch {
     return { error: UNAVAILABLE };

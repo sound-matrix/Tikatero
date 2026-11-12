@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireAccount } from "@/lib/auth/account";
+import { ShareEventCard } from "@/components/console/share-event";
 import { SalesFigures } from "@/components/console/sales-view";
 import { Button } from "@/components/ui/button";
 import { loadEventSales } from "@/lib/payouts/read";
@@ -58,6 +59,9 @@ async function EventSales({
           notice={query.notice}
           error={query.review_error}
         />
+      )}
+      {event && ownsEvent && event.status === "published" && !event.hidden_at && (
+        <ShareEventCard client={client} event={event} />
       )}
       {desk && (
         <RefundDeskView

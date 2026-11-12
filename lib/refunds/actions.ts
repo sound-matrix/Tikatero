@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { sweepAvatarCleanup } from "@/lib/account/avatar-store";
 import { redirect } from "next/navigation";
 import { requireAccount } from "@/lib/auth/account";
 import { allowRequest } from "@/lib/security/rate-limit";
@@ -142,12 +144,13 @@ export async function deleteMyAccount(
   _previous: { error?: string },
   formData: FormData,
 ): Promise<{ error?: string }> {
-  const { client } = await requireAccount();
+  const { client, account } = await requireAccount();
   if (formData.get("confirm_delete") !== "yes") {
     return { error: "Tick the box to confirm you want to delete your account." };
   }
   const { error } = await client.rpc("delete_my_account");
   if (error) return { error: dbMessage(error, "Your account could not be deleted.") };
+  after(() => sweepAvatarCleanup(account.profile.id).catch(() => {}));
   await client.auth.signOut();
   redirect("/login");
 }

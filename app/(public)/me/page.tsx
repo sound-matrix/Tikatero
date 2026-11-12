@@ -132,6 +132,7 @@ async function AccountContent({ notice, error }: { notice?: string; error?: stri
           <OrganiserForm />
         </Card>
       )}
+      <Button href="/me/profile">My profile</Button>
       <form action={signOut}>
         <Button type="submit">Sign out</Button>
       </form>

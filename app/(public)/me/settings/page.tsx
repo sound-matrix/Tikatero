@@ -18,6 +18,9 @@ async function Settings() {
       <p className="text-muted">Keep your name and phone number up to date.</p>
       <Card>
         <ProfileForm name={account.profile.full_name} phone={account.profile.phone} />
+        <Button href="/me/profile" className="mt-4">
+          Open my profile
+        </Button>
       </Card>
       <Card>
         <h2 className="text-xl font-bold">Your data</h2>
