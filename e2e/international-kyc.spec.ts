@@ -189,7 +189,7 @@ test("international organiser uploads ID, corrects requested documents and gets 
       .single();
     expect(approved.data).toEqual({ kyc_status: "approved", cashfree_vendor_id: null });
     await owner.goto("/console/events/new");
-    const free = owner.getByLabel("Free event — RSVP only");
+    const free = owner.getByLabel("Free entry");
     await expect(free).toBeChecked();
     await expect(free).toBeDisabled();
     await expect(
@@ -210,10 +210,10 @@ test("international organiser uploads ID, corrects requested documents and gets 
       .single();
     expect(eventError).toBeNull();
     await owner.goto(`/console/events/${event!.id}/edit?step=6`);
-    await expect(owner.getByRole("heading", { name: "RSVP groups" })).toBeVisible();
-    await owner.getByRole("button", { name: "Add RSVP group" }).click();
-    await expect(owner.getByLabel("Tier 1 name")).toHaveValue("RSVP");
-    await expect(owner.getByLabel("Tier 1 price incl. GST (₹)")).toHaveCount(0);
+    await expect(owner.getByRole("heading", { name: "Free pass types" })).toBeVisible();
+    await owner.getByRole("button", { name: "Add another free pass type" }).click();
+    await expect(owner.getByLabel("Name")).toHaveValue("Free pass");
+    await expect(owner.getByLabel("Price incl. GST (₹)")).toHaveCount(0);
     const blocked = await service.from("ticket_types").insert({
       event_id: event!.id,
       name: "Paid ticket",

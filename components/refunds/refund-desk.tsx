@@ -1,4 +1,4 @@
-import { cancelEventRefunds, issueRefund, reviewRefund } from "@/lib/refunds/actions";
+import { issueRefund, reviewRefund } from "@/lib/refunds/actions";
 import type { RefundDesk } from "@/lib/refunds/desk";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -33,30 +33,6 @@ export function RefundDeskView({
           before you refund.
         </p>
       )}
-      {!desk.cancelled && (
-        <Card>
-          <h3 className="text-lg font-bold">Cancel this event</h3>
-          <p className="mt-2 text-muted">
-            Cancelling refunds every paid booking in full to the original payment method.
-          </p>
-          <form action={cancelEventRefunds} className="mt-4 space-y-4">
-            <input type="hidden" name="event_id" value={desk.eventId} />
-            <input type="hidden" name="as" value={asStaff ? "staff" : "organiser"} />
-            <Input label="Reason" name="reason" maxLength={300} required />
-            {asStaff && (
-              <label className="flex items-start gap-3">
-                <input className="mt-1" type="checkbox" name="confirm_own" value="yes" />
-                <span>
-                  I belong to this organiser. Confirm you are refunding your own organiser.
-                </span>
-              </label>
-            )}
-            <Button type="submit" variant="primary">
-              Cancel event and refund buyers
-            </Button>
-          </form>
-        </Card>
-      )}
       {desk.orders.length === 0 && <p className="text-muted">No paid bookings yet.</p>}
       {desk.orders.map((order) => (
         <Card key={order.id}>
@@ -85,7 +61,8 @@ export function RefundDeskView({
             {order.refunds.map((refund) => (
               <li key={refund.id} className="rounded-xl bg-soft p-3">
                 <p>
-                  {refund.amountLabel} · {refund.status} · {refund.whenLabel}
+                  {refund.amountLabel} · {refund.queued ? "Refund queued" : refund.status} ·{" "}
+                  {refund.whenLabel}
                 </p>
                 {refund.open && (
                   <form action={reviewRefund} className="mt-3 flex flex-wrap gap-3">

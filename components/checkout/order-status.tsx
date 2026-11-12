@@ -8,6 +8,7 @@ export type OrderStatus = {
   total: number;
   isTest: boolean;
   review: boolean;
+  cancelled?: boolean;
   canPay: boolean;
   tickets: { href: string; label: string }[];
 };
@@ -36,13 +37,32 @@ export function OrderStatusView({ initial }: { initial: OrderStatus }) {
       controller.abort();
     };
   }, [order.id, order.status]);
-  const title = order.review
-    ? "Payment needs review"
-    : order.status === "paid"
-      ? "Booking confirmed"
-      : ["failed", "expired"].includes(order.status)
-        ? "Booking not completed"
-        : "Checking your payment";
+  let title = "Checking your payment";
+  let message = "Please wait while we confirm your payment. Do not pay again.";
+  if (order.status === "refunded") {
+    title = "Booking refunded";
+    message = "The refund was sent to the original payment method.";
+  } else if (order.cancelled) {
+    title = "Event cancelled";
+    message =
+      order.total > 0 && ["paid", "partially_refunded"].includes(order.status)
+        ? "Your full refund is being processed."
+        : "Your booking is no longer available.";
+  } else if (order.status === "partially_refunded") {
+    title = "Booking partly refunded";
+    message = "A partial refund was sent to the original payment method.";
+  } else if (order.review) {
+    title = "Payment needs review";
+    message = "Please contact support with your order number so we can check your payment.";
+  } else if (order.status === "paid") {
+    title = "Booking confirmed";
+    message = order.tickets.length
+      ? "Your tickets are ready below. A copy is on its way to your email."
+      : "Your tickets are being prepared. Refresh this page in a moment.";
+  } else if (["failed", "expired"].includes(order.status)) {
+    title = "Booking not completed";
+    message = "Your seats have been released. You can start a new booking.";
+  }
   return (
     <main className="mx-auto max-w-lg px-4 py-16">
       <p className="text-sm text-muted">Order {order.id}</p>
@@ -55,23 +75,13 @@ export function OrderStatusView({ initial }: { initial: OrderStatus }) {
         </p>
       )}
       <p className="mt-5 text-xl font-bold">{publicPrice(order.total)}</p>
-      <p className="mt-4 text-muted">
-        {order.review
-          ? "Your payment arrived after the seats were reallocated. Please contact support with your order number."
-          : order.status === "paid"
-            ? order.tickets.length
-              ? "Your tickets are ready below. A copy is on its way to your email."
-              : "Your booking is confirmed. Your tickets are being prepared. Refresh this page in a moment."
-            : ["failed", "expired"].includes(order.status)
-              ? "Your seats have been released. You can start a new booking."
-              : "Please wait while we confirm your payment. Do not pay again."}
-      </p>
+      <p className="mt-4 text-muted">{message}</p>
       {error && (
         <p role="status" className="mt-4 text-muted">
           {error}
         </p>
       )}
-      {order.status === "paid" && order.tickets.length > 0 && (
+      {!order.cancelled && order.status === "paid" && order.tickets.length > 0 && (
         <ul className="mt-6 space-y-3">
           {order.tickets.map((ticket) => (
             <li key={ticket.href}>
@@ -85,7 +95,7 @@ export function OrderStatusView({ initial }: { initial: OrderStatus }) {
           ))}
         </ul>
       )}
-      {order.canPay && order.status === "pending" && (
+      {!order.cancelled && order.canPay && order.status === "pending" && (
         <Link
           className="mt-6 inline-flex min-h-12 items-center rounded-xl bg-linear-to-r from-coral to-orange px-5 font-bold"
           href={`/orders/${order.id}/pay`}

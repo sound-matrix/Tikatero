@@ -33,11 +33,20 @@ const clientReady = () => true;
 const serverReady = () => false;
 const fieldClass =
   "min-h-12 w-full rounded-xl border border-line bg-white px-3 text-ink outline-none";
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({
+  label,
+  description,
+  children,
+}: {
+  label: string;
+  description?: string;
+  children: ReactNode;
+}) {
   return (
     <label className="block space-y-2 font-semibold text-ink">
       <span>{label}</span>
       {children}
+      {description && <span className="block text-sm font-normal text-muted">{description}</span>}
     </label>
   );
 }
@@ -122,9 +131,14 @@ export function EventWizard({
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
     [dirty, setDirty] = useState(false);
-  const canPublish = approved && !paused,
+  const hidden = Boolean(draft?.hiddenAt);
+  const canPublish = approved && !paused && !hidden,
     complete = draft?.completed ?? [],
     alreadyPublished = draft?.status === "published";
+  const totalTicketQuantity = values.tiers.reduce(
+    (total, ticket) => total + (Number(ticket.quantity) || 0),
+    0,
+  );
   const preview = previewPricing(
     { ticketPaise: 100000, feePayer: values.feePayer },
     pricingVersion,
@@ -194,7 +208,7 @@ export function EventWizard({
       ...values.tiers,
       {
         id: crypto.randomUUID(),
-        name: values.free ? "RSVP" : "General admission",
+        name: values.tiers.length ? "" : values.free ? "Free pass" : "General",
         price: values.free ? "0" : "1000",
         quantity: "100",
         perOrderMax: "10",
@@ -364,7 +378,7 @@ export function EventWizard({
                         );
                     }}
                   />
-                  Free event — RSVP only
+                  Free entry
                 </label>
                 {freeOnly && <p className="text-sm text-muted">{INTERNATIONAL_PAID_TICKETS}</p>}
               </Section>
@@ -372,7 +386,7 @@ export function EventWizard({
             {step === 1 && (
               <Section
                 title="When is your event?"
-                description="All dates and times are in India Standard Time (IST), including sales windows."
+                description="All dates and times are in Indian time."
               >
                 <div className="grid gap-5 sm:grid-cols-2">
                   <Field label="Starts (IST)">
@@ -687,13 +701,34 @@ export function EventWizard({
             )}
             {step === 5 && (
               <Section
-                title={values.free ? "RSVP groups" : "Build your ticket tiers"}
+                title={values.free ? "Free pass types" : "What tickets are you selling?"}
                 description={
                   values.free
-                    ? "Choose how many people can RSVP. There is no ticket charge."
-                    : "Prices include GST. Add a tier for each type of entry and check its design preview."
+                    ? "Choose how many free passes people can book."
+                    : "Prices include GST. Add each type of ticket you want to sell."
                 }
               >
+                <Field
+                  label="Total seats at your venue"
+                  description="Leave empty if each ticket type has its own limit. If you fill this, we stop selling when this many tickets are sold in total, across all ticket types."
+                >
+                  <input
+                    type="number"
+                    min="1"
+                    max="1000000"
+                    step="1"
+                    className={fieldClass}
+                    value={values.capacity}
+                    onChange={(event) => update("capacity", event.target.value)}
+                  />
+                </Field>
+                {Number(values.capacity) > 0 && totalTicketQuantity > Number(values.capacity) && (
+                  <p className="rounded-lg bg-teal-soft p-3 text-sm">
+                    Your ticket types add up to {totalTicketQuantity}, but only{" "}
+                    {Number(values.capacity)} seats are available. Sales will stop at{" "}
+                    {Number(values.capacity)}.
+                  </p>
+                )}
                 {values.tiers.map((tier, index) => (
                   <div
                     key={tier.id}
@@ -701,9 +736,10 @@ export function EventWizard({
                   >
                     <fieldset className="min-w-0 space-y-4">
                       <legend className="mb-3 text-lg font-bold">
-                        {values.free ? "RSVP group" : "Tier"} {index + 1}
+                        {values.free ? "Free pass type" : "Ticket type"}
+                        {tier.name ? `: ${tier.name}` : ` ${index + 1}`}
                       </legend>
-                      <Field label={`Tier ${index + 1} name`}>
+                      <Field label="Name">
                         <input
                           className={fieldClass}
                           value={tier.name}
@@ -713,7 +749,7 @@ export function EventWizard({
                       </Field>
                       <div className="grid gap-4 sm:grid-cols-2">
                         {!values.free && !freeOnly && (
-                          <Field label={`Tier ${index + 1} price incl. GST (₹)`}>
+                          <Field label="Price incl. GST (₹)">
                             <input
                               inputMode="decimal"
                               className={fieldClass}
@@ -722,7 +758,7 @@ export function EventWizard({
                             />
                           </Field>
                         )}
-                        <Field label={`Tier ${index + 1} quantity`}>
+                        <Field label="How many tickets of this type?">
                           <input
                             type="number"
                             min="1"
@@ -732,7 +768,7 @@ export function EventWizard({
                             onChange={(e) => changeTier(index, "quantity", e.target.value)}
                           />
                         </Field>
-                        <Field label={`Tier ${index + 1} per-order max (optional)`}>
+                        <Field label="Most tickets one person can buy at once (optional)">
                           <input
                             type="number"
                             min="1"
@@ -742,7 +778,7 @@ export function EventWizard({
                           />
                         </Field>
                       </div>
-                      <Field label={`Tier ${index + 1} sales open (IST, optional)`}>
+                      <Field label="Start selling on (Indian time, optional)">
                         <input
                           type="datetime-local"
                           className={fieldClass}
@@ -750,7 +786,7 @@ export function EventWizard({
                           onChange={(e) => changeTier(index, "salesStart", e.target.value)}
                         />
                       </Field>
-                      <Field label={`Tier ${index + 1} sales close (IST, optional)`}>
+                      <Field label="Stop selling on (Indian time, optional)">
                         <input
                           type="datetime-local"
                           className={fieldClass}
@@ -765,7 +801,7 @@ export function EventWizard({
                           checked={tier.vip}
                           onChange={(e) => changeTier(index, "vip", e.target.checked)}
                         />
-                        VIP tier
+                        VIP ticket
                       </label>
                       <Button
                         onClick={() =>
@@ -775,7 +811,7 @@ export function EventWizard({
                           )
                         }
                       >
-                        Remove tier
+                        Remove this type
                       </Button>
                     </fieldset>
                     <div className="space-y-3">
@@ -787,7 +823,7 @@ export function EventWizard({
                   </div>
                 ))}
                 <Button onClick={addTier} disabled={values.tiers.length >= 20}>
-                  {values.free ? "Add RSVP group" : "Add ticket tier"}
+                  {values.free ? "Add another free pass type" : "Add another ticket type"}
                 </Button>
               </Section>
             )}
@@ -902,8 +938,18 @@ export function EventWizard({
                       ? "You can keep working on your draft. Complete verification and wait for approval before publishing."
                       : paused
                         ? "Ticket sales have been paused for this organiser. Contact support before publishing."
-                        : "You can publish after every step is saved."}
+                        : hidden
+                          ? "This event is hidden. Open the event page to manage who can see it."
+                          : "You can publish after every step is saved."}
                   </p>
+                  {hidden && draft && (
+                    <Link
+                      href={`/console/events/${draft.id}`}
+                      className="block font-semibold text-teal underline"
+                    >
+                      Manage event visibility
+                    </Link>
+                  )}
                   {!approved && (
                     <Link
                       href="/console/onboarding"
@@ -945,11 +991,11 @@ export function EventWizard({
                   <dd>{values.guests.map((g) => g.name).join(", ") || "None"}</dd>
                   <dt className="font-semibold">Entry</dt>
                   <dd>
-                    {values.free ? "Free · RSVP only" : "Paid tickets"}
+                    {values.free ? "Free entry" : "Paid tickets"}
                     <ul className="mt-2 space-y-2">
                       {values.tiers.map((t) => (
                         <li key={t.id}>
-                          {t.name} · {values.free ? "Free RSVP" : price(t.price)} · {t.quantity}{" "}
+                          {t.name} · {values.free ? "Free entry" : price(t.price)} · {t.quantity}{" "}
                           places {t.vip ? "· VIP" : ""}
                         </li>
                       ))}

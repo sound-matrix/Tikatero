@@ -47,7 +47,7 @@ export function istDayEnd(day: string) {
 }
 export function publicPrice(paise: number | null, free = false) {
   return free
-    ? "Free — RSVP"
+    ? "Free entry"
     : paise === null
       ? "Tickets coming soon"
       : `${formatInr(paise).replace("₹", "₹ ")} incl. GST`;

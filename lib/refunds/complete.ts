@@ -44,11 +44,15 @@ async function finish(
   return data;
 }
 
-export async function settleOpenedRefund(opened: OpenedRefund) {
+export function refundPaymentsReady(isTest: boolean) {
+  return currentRoute(isTest) !== "refuse";
+}
+
+export async function settleOpenedRefund(opened: OpenedRefund, preserveOnError = false) {
   if (!opened.needs_provider || !opened.refund_id || !opened.order_id) return opened;
   const route = currentRoute(opened.is_test === true);
   if (route === "refuse") {
-    await finish(opened.refund_id, "", "failed");
+    if (!preserveOnError) await finish(opened.refund_id, "", "failed");
     throw new Error(PAYMENTS_REFUND_UNAVAILABLE);
   }
   const service = createServiceClient();
@@ -58,12 +62,12 @@ export async function settleOpenedRefund(opened: OpenedRefund) {
     .eq("id", opened.order_id)
     .single();
   if (error || !order) {
-    await finish(opened.refund_id, "", "failed");
+    if (!preserveOnError) await finish(opened.refund_id, "", "failed");
     throw new Error("The refund could not be saved.");
   }
   const reversal = opened.reversal_paise ?? 0;
   if (route === "cashfree" && reversal > 0 && !order.vendor_id) {
-    await finish(opened.refund_id, "", "failed");
+    if (!preserveOnError) await finish(opened.refund_id, "", "failed");
     throw new Error("This organiser is not ready to refund yet.");
   }
   const provider = route === "mock" ? new MockPayment() : new Cashfree();
@@ -94,7 +98,7 @@ export async function settleOpenedRefund(opened: OpenedRefund) {
     )
       throw error;
     try {
-      await finish(opened.refund_id, "", "failed");
+      if (!preserveOnError) await finish(opened.refund_id, "", "failed");
     } catch {
       // The open refund stays approved so a webhook can still finish it.
     }
@@ -122,13 +126,17 @@ export async function applyRefundWebhook(command: {
   }
   const { data: order } = await service
     .from("orders")
-    .select("is_test")
+    .select("id,is_test,event_id")
     .eq("id", refund.order_id)
     .maybeSingle();
   await finish(command.refundId, command.cfRefundId, command.outcome);
   if (command.outcome === "processed") {
     try {
       await notifyRefundProcessed(command.refundId, order?.is_test === true);
+      if (order) {
+        const { processCancelledOrder } = await import("./event-refunds");
+        await processCancelledOrder(order);
+      }
     } catch {
       // Saved. Email can be claimed again.
     }

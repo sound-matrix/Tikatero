@@ -80,7 +80,7 @@ async function Events({ searchParams }: { searchParams: Promise<{ page?: string 
                     {row.title}
                     {"is_free" in row && (
                       <small className="mt-1 block font-normal text-muted">
-                        {row.is_free ? "Free · RSVP only" : "Paid entry"}
+                        {row.is_free ? "Free entry" : "Paid entry"}
                       </small>
                     )}
                   </td>

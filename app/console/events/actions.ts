@@ -1,5 +1,5 @@
 "use server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { requireAccount } from "@/lib/auth/account";
 import {
   inputSchema,
@@ -73,6 +73,13 @@ export async function saveEvent(input: unknown): Promise<SaveResult> {
     p_publish: data.publish,
   });
   if (error?.message === INTERNATIONAL_PAID_TICKETS) return { error: INTERNATIONAL_PAID_TICKETS };
+  if (error?.message.startsWith("You've already sold ")) return { error: error.message };
+  if (error?.message === "Use the event review actions.")
+    return { error: "Unhide this event before publishing again." };
+  if (error?.message === "A tier with sold tickets cannot be removed")
+    return { error: "People have already booked this ticket type, so it can't be removed." };
+  if (error?.message === "A tier with sold tickets cannot change price")
+    return { error: "People have already booked this ticket type, so its price can't change." };
   if (error)
     return {
       error:
@@ -83,11 +90,13 @@ export async function saveEvent(input: unknown): Promise<SaveResult> {
             : error.message.includes("publish blocked")
               ? "Your draft is safe. Publishing needs approved verification and ticket sales must not be paused."
               : error.code === "23505"
-                ? "A guest or tier could not be saved. Reload and try again."
+                ? "Something didn't save. Please reload the page and try again."
                 : error.code === "23503"
-                  ? "A ticket tier already in use cannot be removed."
+                  ? "People have already booked this ticket type, so it can't be removed."
                   : "Your event could not be saved. Check your details and try again.",
     };
+  const draft = await readDraft(client, data.eventId);
+  if (draft?.status === "published") updateTag("public-events");
   revalidatePath("/console/events", "layout");
-  return { draft: (await readDraft(client, data.eventId)) ?? undefined };
+  return { draft: draft ?? undefined };
 }

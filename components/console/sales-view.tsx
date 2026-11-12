@@ -40,7 +40,7 @@ export function SalesFigures({ event, detail = false }: { event: EventSales; det
       {event.is_free ? (
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <p>
-            <span className="block text-sm text-muted">RSVPs</span>
+            <span className="block text-sm text-muted">Free passes booked</span>
             <strong className="text-3xl">{event.tickets_sold}</strong>
           </p>
           <p>
@@ -88,7 +88,7 @@ export function SalesFigures({ event, detail = false }: { event: EventSales; det
               </span>
               <span className="text-sm text-muted">
                 {tier.sold_real} sold of {tier.qty_total} · {money(tier.price_paise)} incl. GST ·
-                inventory {tier.qty_sold}
+                {tier.qty_sold} seats taken (including test bookings)
               </span>
             </li>
           ))}

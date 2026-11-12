@@ -118,11 +118,11 @@ export function CheckoutForm({
                       {publicPrice(tier.price_paise, isFree)}
                     </p>
                     {reason && <p className="text-sm text-muted">{reason}</p>}
-                    <p className="mt-1 text-xs text-muted">Up to {Math.max(max, 0)} per order</p>
+                    <p className="mt-1 text-xs text-muted">Up to {Math.max(max, 0)} at a time</p>
                   </div>
                   <select
                     id={`qty-${tier.id}`}
-                    aria-label={`${tier.name} quantity`}
+                    aria-label={`How many ${tier.name} tickets?`}
                     disabled={!!reason || pending}
                     value={quantities[tier.id] ?? 0}
                     onChange={(e) =>
@@ -268,7 +268,7 @@ export function CheckoutForm({
           {pending
             ? "Holding your tickets…"
             : total.buyer_total === 0
-              ? "Confirm RSVP"
+              ? "Confirm my free pass"
               : `Pay ${publicPrice(total.buyer_total)}`}
         </button>
         <RecaptchaNotice />

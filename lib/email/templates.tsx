@@ -136,9 +136,41 @@ const definitions: {
     build: (d) =>
       notice(
         "Your event has been cancelled",
-        "We’re sorry this event can’t go ahead. Any refund updates will be sent separately.",
+        d.free
+          ? "This event can’t go ahead. Your free pass has been cancelled."
+          : "Your full refund has started; it usually reaches your account in 5–7 working days.",
         [detail("Event", d.eventTitle), detail("Reason", d.reason)],
         "Open your account",
+      ),
+  },
+  event_hidden_by_admin: {
+    label: "Event hidden by Tikatero",
+    build: (d) =>
+      notice(
+        "Tikatero has hidden your event",
+        "People can’t find this event or book tickets right now. Existing tickets still work. Contact us if you have questions.",
+        [detail("Event", d.eventTitle), detail("Reason", d.reason)],
+        "Open your event",
+      ),
+  },
+  event_removal_approved: {
+    label: "Event cancellation confirmed",
+    build: (d) =>
+      notice(
+        "Your event has been cancelled",
+        "Tikatero has cancelled your event. Full refunds are being arranged for all paid bookings.",
+        [detail("Event", d.eventTitle), detail("Reason", d.reason)],
+        "Open your event",
+      ),
+  },
+  event_removal_rejected: {
+    label: "Event removal request declined",
+    build: (d) =>
+      notice(
+        "Tikatero declined your removal request",
+        "Your event is still hidden. Open the event to see who can make it visible again.",
+        [detail("Event", d.eventTitle), detail("Tikatero’s note", d.reason)],
+        "Open your event",
       ),
   },
   refund_processed: {

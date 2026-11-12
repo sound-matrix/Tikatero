@@ -48,6 +48,7 @@ function query(load: () => { data: unknown; error: null }) {
   const builder = {
     select: () => builder,
     eq: () => builder,
+    is: () => builder,
     order: () => builder,
     or: () => builder,
     limit: () => builder,

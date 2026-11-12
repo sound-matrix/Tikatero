@@ -9,6 +9,7 @@ import { cn } from "@/lib/cn";
 type Item = {
   href: ComponentProps<typeof Link>["href"];
   label: string;
+  count?: number;
 };
 
 export function SideNav({
@@ -43,6 +44,14 @@ export function SideNav({
                 )}
               >
                 {item.label}
+                {!!item.count && (
+                  <span
+                    aria-label={`${item.count} pending removal requests`}
+                    className="ml-2 rounded-full bg-teal-soft px-2 py-0.5 text-xs font-bold text-teal"
+                  >
+                    {item.count}
+                  </span>
+                )}
               </Link>
             );
           })}

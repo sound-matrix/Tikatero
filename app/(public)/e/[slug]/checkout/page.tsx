@@ -38,8 +38,10 @@ async function Checkout({ params }: { params: Promise<{ slug: string }> }) {
       <p className="mt-2 text-sm text-muted">{refundText(event.refund_policy)}</p>
       {unavailable ? (
         <section className="mt-8 rounded-2xl border border-line p-8">
-          <h2 className="text-xl font-bold">Booking unavailable</h2>
-          <p className="mt-3 text-muted">{unavailable}</p>
+          <h2 className="text-xl font-bold">
+            {unavailable === "Sold out" ? "Sold out" : "Booking unavailable"}
+          </h2>
+          {unavailable !== "Sold out" && <p className="mt-3 text-muted">{unavailable}</p>}
         </section>
       ) : (
         <CheckoutForm

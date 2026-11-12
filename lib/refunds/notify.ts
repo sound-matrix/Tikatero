@@ -44,15 +44,17 @@ export async function notifyEventCancelled(input: {
   buyerEmail: string;
   buyerName: string;
   reason: string;
+  free?: boolean;
 }) {
   return send({
     template: "event_cancelled",
-    entityRef: `event/${input.eventId}/cancelled/${input.buyerEmail}`,
+    entityRef: `event/${input.eventId}/cancelled/${input.buyerEmail}`.slice(0, 200),
     to: input.buyerEmail,
     data: {
       recipientName: input.buyerName,
       eventTitle: input.eventTitle,
       reason: input.reason,
+      free: input.free,
       actionPath: "/me",
     },
   });

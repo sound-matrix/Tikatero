@@ -172,7 +172,9 @@ test("organiser sees sales and a test payout; staff cannot hold their own organi
   expect(csv).toContain("₹953.39");
   expect(csv).not.toMatch(/sb_secret_|account_number|CASHFREE/i);
   await page.goto("/console/payouts");
-  await expect(page.getByText("Usually paid within 2 days of settlement.")).toBeVisible();
+  await expect(
+    page.getByText("Usually paid within 2 days after the payment clears."),
+  ).toBeVisible();
   await expect(page.getByText("T+2")).toHaveCount(0);
   await expect(
     page.getByText("Payouts are in test mode. No money has been sent to a bank."),

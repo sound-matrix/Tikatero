@@ -11,12 +11,12 @@ export type RefundDesk = {
   eventId: string;
   title: string;
   policyText: string;
-  cancelled: boolean;
   orders: {
     id: string;
     buyerName: string;
     status: string;
     totalLabel: string;
+    totalPaise: number;
     paidLabel: string;
     isTest: boolean;
     remainingLabel: string;
@@ -28,6 +28,7 @@ export type RefundDesk = {
       amountLabel: string;
       whenLabel: string;
       open: boolean;
+      queued: boolean;
     }[];
   }[];
 };
@@ -66,7 +67,7 @@ export async function loadRefundDesk(
     ids.length
       ? service
           .from("refunds")
-          .select("id, order_id, amount_paise, status, created_at")
+          .select("id, order_id, amount_paise, status, created_at, cf_refund_id")
           .in("order_id", ids)
       : Promise.resolve({ data: [] }),
   ]);
@@ -74,7 +75,6 @@ export async function loadRefundDesk(
     eventId,
     title: event.title,
     policyText: refundText(event.refund_policy),
-    cancelled: event.status === "cancelled",
     orders: (orders ?? []).map((order) => {
       const orderRefunds = (refunds ?? []).filter((refund) => refund.order_id === order.id);
       const processed = orderRefunds
@@ -85,6 +85,7 @@ export async function loadRefundDesk(
         id: order.id,
         buyerName: order.buyer_name,
         status: order.status,
+        totalPaise: order.total_paise,
         totalLabel: `${formatInr(order.total_paise)} incl. GST`,
         paidLabel: order.paid_at ? formatIst(order.paid_at) : "Not paid",
         isTest: order.is_test,
@@ -104,6 +105,8 @@ export async function loadRefundDesk(
           amountLabel: `${formatInr(refund.amount_paise)} incl. GST`,
           whenLabel: formatIst(refund.created_at),
           open: refund.status === "requested",
+          queued:
+            event.status === "cancelled" && refund.status === "approved" && !refund.cf_refund_id,
         })),
       };
     }),

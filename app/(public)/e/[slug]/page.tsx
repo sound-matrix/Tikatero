@@ -46,7 +46,8 @@ async function Detail({ params }: Props) {
   if (!e) notFound();
   const now = await requestTime(),
     end = e.ends_at ?? e.starts_at,
-    available = e.tiers.some((t) => tierState(t, end, now) === "Available"),
+    seatsLeft = e.capacity === null ? null : Math.max(0, e.capacity - e.tickets_sold),
+    available = seatsLeft !== 0 && e.tiers.some((t) => tierState(t, end, now) === "Available"),
     origin = await siteOrigin();
   const maps = openMaps({
     lat: e.lat === null ? "" : String(e.lat),
@@ -60,13 +61,13 @@ async function Detail({ params }: Props) {
     "inline-flex min-h-12 items-center justify-center rounded-xl bg-[linear-gradient(135deg,var(--coral),var(--orange))] px-7 py-3 text-xl font-bold text-ink";
   const book = available ? (
     <Link href={`/e/${e.slug}/book`} className={bookClass}>
-      {e.is_free ? "RSVP" : "Book"}
+      {e.is_free ? "Get free pass" : "Book"}
     </Link>
   ) : (
     <button disabled className="min-h-12 rounded-xl bg-soft px-7 font-bold text-muted">
       {Date.parse(end) <= now
         ? "Event ended"
-        : e.tiers.length && e.tiers.every((t) => t.qty_sold >= t.qty_total)
+        : seatsLeft === 0 || (e.tiers.length && e.tiers.every((t) => t.qty_sold >= t.qty_total))
           ? "Sold out"
           : "Booking not available yet"}
     </button>
@@ -199,15 +200,21 @@ async function Detail({ params }: Props) {
         >
           <div className="flex items-start justify-between gap-3">
             <h2 className="text-2xl font-bold">
-              {e.is_free ? "Free — RSVP" : "Choose your ticket"}
+              {e.is_free ? "Free entry" : "Choose your ticket"}
             </h2>
           </div>
           <p className="mt-2 text-sm text-muted">
-            {e.is_free ? "Reserve your place with an RSVP." : "Ticket prices include GST."}
+            {e.is_free ? "Book your free pass." : "Ticket prices include GST."}
           </p>
+          {seatsLeft !== null && seatsLeft > 0 && seatsLeft <= 20 && available && (
+            <p className="mt-3 font-semibold text-teal">
+              Only {seatsLeft} {seatsLeft === 1 ? "seat" : "seats"} left
+            </p>
+          )}
           <div className="mt-5 space-y-3">
             {e.tiers.map((t) => {
-              const state = tierState(t, end, now);
+              const state =
+                seatsLeft === 0 && Date.parse(end) > now ? "Sold out" : tierState(t, end, now);
               return (
                 <div
                   key={t.id}
@@ -229,7 +236,7 @@ async function Detail({ params }: Props) {
                       className="mt-3 inline-flex min-h-11 items-center font-semibold underline underline-offset-4"
                       href={`/e/${e.slug}/book?tier=${encodeURIComponent(t.id)}`}
                     >
-                      {e.is_free ? "RSVP" : "Book"} · {t.name}
+                      {e.is_free ? "Get free pass" : "Book"} · {t.name}
                     </Link>
                   ) : (
                     <button disabled className="mt-3 min-h-11 text-sm font-semibold text-muted">
@@ -246,15 +253,12 @@ async function Detail({ params }: Props) {
             )}
           </div>
           <div className="mt-5 hidden md:block">{book}</div>
-          <p className="my-5 text-xs text-muted">
-            Booking opens soon. No payment is collected yet.
-          </p>
           <ShareButton title={e.title} />
         </aside>
       </div>
       <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-line bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:hidden">
         <p className="text-sm font-bold">
-          {e.is_free ? "Free — RSVP" : publicPrice(e.min_price_paise)}
+          {e.is_free ? "Free entry" : publicPrice(e.min_price_paise)}
         </p>
         {book}
       </div>

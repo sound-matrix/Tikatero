@@ -30,7 +30,7 @@ async function Dashboard() {
     throw new Error("The dashboard could not be loaded. Try again.");
   const tiles = [
     {
-      label: "KYC waiting",
+      label: "ID checks waiting",
       value: results[0].count ?? 0,
       detail: results[0].data?.[0]?.submitted_at
         ? `Oldest: ${ageLabel(results[0].data[0].submitted_at)}`

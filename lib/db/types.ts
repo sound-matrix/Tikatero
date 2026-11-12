@@ -374,6 +374,11 @@ export type Database = {
       };
       events: {
         Row: {
+          hidden_at: string | null;
+          hidden_by: string | null;
+          hidden_reason: string | null;
+          hidden_by_staff: boolean;
+          status_before_hide: Database["public"]["Enums"]["event_status"] | null;
           address: string | null;
           capacity: number | null;
           category: string | null;
@@ -407,6 +412,11 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          hidden_at?: string | null;
+          hidden_by?: string | null;
+          hidden_reason?: string | null;
+          hidden_by_staff?: boolean;
+          status_before_hide?: Database["public"]["Enums"]["event_status"] | null;
           address?: string | null;
           capacity?: number | null;
           category?: string | null;
@@ -439,6 +449,11 @@ export type Database = {
           venue_name?: string | null;
         };
         Update: {
+          hidden_at?: string | null;
+          hidden_by?: string | null;
+          hidden_reason?: string | null;
+          hidden_by_staff?: boolean;
+          status_before_hide?: Database["public"]["Enums"]["event_status"] | null;
           address?: string | null;
           capacity?: number | null;
           category?: string | null;
@@ -486,6 +501,29 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      event_removal_requests: {
+        Row: {
+          id: string;
+          event_id: string;
+          organiser_id: string;
+          requested_by: string | null;
+          reason: string;
+          status: "pending" | "approved" | "rejected" | "withdrawn";
+          reviewer_id: string | null;
+          reviewer_note: string | null;
+          created_at: string;
+          decided_at: string | null;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      event_media_cleanup: {
+        Row: { event_id: string; created_at: string };
+        Insert: never;
+        Update: never;
+        Relationships: [];
       };
       kyc_applications: {
         Row: {
@@ -1489,6 +1527,7 @@ export type Database = {
           organiser_name: string;
           verified: boolean;
           tickets_sold: number;
+          capacity: number | null;
           min_price_paise: number | null;
           tiers: Json;
           guests: Json;
@@ -1776,6 +1815,54 @@ export type Database = {
           p_confirm: boolean | null;
         };
         Returns: Json;
+      };
+      hide_event: {
+        Args: { p_event_id: string; p_reason: string; p_as_staff?: boolean; p_confirm?: boolean };
+        Returns: undefined;
+      };
+      unhide_event: {
+        Args: { p_event_id: string; p_reason?: string; p_as_staff?: boolean; p_confirm?: boolean };
+        Returns: undefined;
+      };
+      request_event_removal: { Args: { p_event_id: string; p_reason: string }; Returns: string };
+      withdraw_event_removal: { Args: { p_request_id: string }; Returns: undefined };
+      admin_decide_event_removal: {
+        Args: { p_request_id: string; p_decision: string; p_note: string; p_confirm?: boolean };
+        Returns: Json;
+      };
+      admin_delete_event: {
+        Args: { p_event_id: string; p_reason: string; p_confirm?: boolean };
+        Returns: undefined;
+      };
+      admin_emergency_cancel_event: {
+        Args: { p_event_id: string; p_reason: string; p_title: string; p_confirm?: boolean };
+        Returns: Json;
+      };
+      admin_event_review_list: {
+        Args: {
+          p_search: string;
+          p_status: string;
+          p_filter: string;
+          p_offset: number;
+          p_event_id?: string;
+        };
+        Returns: {
+          id: string;
+          title: string;
+          organiser_name: string;
+          city: string | null;
+          starts_at: string | null;
+          status: Database["public"]["Enums"]["event_status"];
+          hidden: boolean;
+          removal_requested: boolean;
+          tickets_sold: number;
+          gross_paise: number;
+          total_count: number;
+        }[];
+      };
+      queued_event_refunds: {
+        Args: { p_limit: number };
+        Returns: { id: string; event_id: string }[];
       };
       cancel_event_refunds: {
         Args: {

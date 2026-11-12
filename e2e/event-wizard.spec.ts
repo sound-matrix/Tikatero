@@ -125,13 +125,13 @@ test.describe("Organiser event wizard", () => {
     await page.getByLabel("Guest 1 name", { exact: true }).fill("Alex Rao");
     await page.getByLabel("Guest 1 title", { exact: true }).fill("Chief guest & musician");
     await shot(page, info, 5);
-    await next(page, "Build your ticket tiers");
-    await page.getByRole("button", { name: "Add ticket tier", exact: true }).click();
-    await page.getByLabel("Tier 1 name", { exact: true }).fill("VIP admission");
-    await page.getByLabel("Tier 1 price incl. GST (₹)", { exact: true }).fill("1000");
-    await page.getByLabel("Tier 1 quantity", { exact: true }).fill("100");
-    await page.getByLabel("Tier 1 per-order max (optional)").fill("4");
-    await page.getByLabel("VIP tier", { exact: true }).check();
+    await next(page, "What tickets are you selling?");
+    await page.getByRole("button", { name: "Add another ticket type", exact: true }).click();
+    await page.getByLabel("Name", { exact: true }).fill("VIP admission");
+    await page.getByLabel("Price incl. GST (₹)", { exact: true }).fill("1000");
+    await page.getByLabel("How many tickets of this type?", { exact: true }).fill("100");
+    await page.getByLabel("Most tickets one person can buy at once (optional)").fill("4");
+    await page.getByLabel("VIP ticket", { exact: true }).check();
     await expect(page.getByLabel("VIP admission design preview")).toContainText("₹1,000 incl. GST");
     await shot(page, info, 6);
     await next(page, "Fees & refunds");
@@ -210,6 +210,8 @@ test.describe("Organiser event wizard", () => {
       .getByLabel("Description", { exact: true })
       .fill("A live music evening for local audiences.");
     await next(page, "When is your event?");
+    await expect(page).toHaveURL(/\/events\/[0-9a-f-]+\/edit\?step=2$/);
+    await page.reload();
     await dates(page);
     expect(loaderRequests).toBe(0);
     await next(page, "Where will people meet?");
@@ -313,7 +315,7 @@ test.describe("Organiser event wizard", () => {
     const owner = await setup(page, false);
     await page.goto("/console/events/new");
     await page.getByLabel("Event name", { exact: true }).fill("Community Music Meetup");
-    await page.getByLabel("Free event — RSVP only", { exact: true }).check();
+    await page.getByLabel("Free entry", { exact: true }).check();
     await page.getByRole("button", { name: "Save draft", exact: true }).click();
     await expect(page).toHaveURL(/\/edit\?step=1$/);
     await page.reload();
@@ -330,10 +332,10 @@ test.describe("Organiser event wizard", () => {
     await venue(page);
     await next(page, "Give your event a poster");
     await next(page, "VIPs & chief guests");
-    await next(page, "RSVP groups");
-    await page.getByRole("button", { name: "Add RSVP group", exact: true }).click();
-    await expect(page.getByLabel("Tier 1 price incl. GST (₹)", { exact: true })).toHaveCount(0);
-    await expect(page.getByLabel("RSVP design preview")).toContainText("Free entry · RSVP");
+    await next(page, "Free pass types");
+    await page.getByRole("button", { name: "Add another free pass type", exact: true }).click();
+    await expect(page.getByLabel("Price incl. GST (₹)", { exact: true })).toHaveCount(0);
+    await expect(page.getByLabel("Free pass design preview")).toContainText("Free entry");
     await next(page, "Fees & refunds");
     await next(page, "Review & publish");
     await expect(page.getByText("Publishing is locked", { exact: true })).toBeVisible();

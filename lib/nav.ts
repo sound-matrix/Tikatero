@@ -16,7 +16,7 @@ export function consoleNavFor(account: Pick<Account, "organisers" | "assignments
 
 export const adminNav = [
   { href: "/admin", label: "Overview" },
-  { href: "/admin/kyc", label: "KYC queue" },
+  { href: "/admin/kyc", label: "Host ID checks" },
   { href: "/admin/events", label: "Events" },
   { href: "/admin/pricing", label: "Pricing" },
   { href: "/admin/accounts", label: "Accounts" },

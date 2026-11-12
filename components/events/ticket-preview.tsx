@@ -29,12 +29,12 @@ export function TicketPreview({ values, tier }: { values: Values; tier: Tier }) 
         {tier.vip && <span className="rounded-full bg-gold px-3 py-1 font-bold text-ink">VIP</span>}
       </div>
       <div className="space-y-2 bg-white p-4">
-        <p className="font-bold">{tier.name || "Ticket tier"}</p>
+        <p className="font-bold">{tier.name || "Ticket type"}</p>
         <p className="text-sm text-muted">{date}</p>
         <p className="text-sm text-muted">{values.venue || "Venue to be confirmed"}</p>
         <p className="text-xl font-extrabold">
           {values.free
-            ? "Free entry · RSVP"
+            ? "Free entry"
             : price === null
               ? "Price to be confirmed"
               : `${formatInr(price)} incl. GST`}

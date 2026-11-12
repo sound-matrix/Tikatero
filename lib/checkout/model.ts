@@ -22,7 +22,7 @@ export const checkoutSchema = z.object({
     .max(30)
     .refine(
       (lines) => new Set(lines.map((l) => l.id)).size === lines.length,
-      "Choose each tier once.",
+      "Choose each ticket type once.",
     )
     .refine(
       (lines) => lines.reduce((n, l) => n + l.qty, 0) <= 50,

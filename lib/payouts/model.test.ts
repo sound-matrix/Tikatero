@@ -38,12 +38,14 @@ describe("expected payout date", () => {
     expect(expected.toISOString()).toBe("2026-11-11T12:30:00.000Z");
   });
   it("says payout within the saved number of days, in plain English", () => {
-    expect(payoutWindowCopy(2)).toBe("Usually paid within 2 days of settlement.");
-    expect(payoutWindowCopy(payoutWindowDays(4))).toBe("Usually paid within 4 days of settlement.");
-    expect(payoutWindowCopy(payoutWindowDays(null))).toBe(
-      "Usually paid within 2 days of settlement.",
+    expect(payoutWindowCopy(2)).toBe("Usually paid within 2 days after the payment clears.");
+    expect(payoutWindowCopy(payoutWindowDays(4))).toBe(
+      "Usually paid within 4 days after the payment clears.",
     );
-    expect(payoutWindowCopy(1)).toBe("Usually paid within 1 day of settlement.");
+    expect(payoutWindowCopy(payoutWindowDays(null))).toBe(
+      "Usually paid within 2 days after the payment clears.",
+    );
+    expect(payoutWindowCopy(1)).toBe("Usually paid within 1 day after the payment clears.");
     expect(vendorFollowUp(new Error("boom"))).toBe(LIVE_VENDOR_UNAVAILABLE);
     expect(vendorFollowUp(new Error("bank account 123456789012"))).toBe(LIVE_VENDOR_UNAVAILABLE);
   });
