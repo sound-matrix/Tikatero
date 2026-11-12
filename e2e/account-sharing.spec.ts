@@ -123,7 +123,7 @@ test.describe("Profile, booking and event sharing", () => {
     await page.getByLabel("Phone number", { exact: true }).fill("98765 43210");
     await page.getByRole("button", { name: "Add number" }).click();
     await expect(page.getByText("+919876543210", { exact: false })).toBeVisible();
-    await page.getByText("Instagram", { exact: true }).click();
+    await page.getByRole("main").getByText("Instagram", { exact: true }).click();
     await page.getByLabel("Instagram handle or link").fill("@anthony.rao");
     await page.getByRole("button", { name: "Save Instagram" }).click();
     await expect(page.getByText("Instagram · Saved")).toBeVisible();

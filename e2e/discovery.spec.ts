@@ -50,7 +50,7 @@ test.describe("Attendee discovery", () => {
     expect(structured).toMatchObject({
       "@type": "Event",
       name: "Sample Music Night",
-      url: "http://127.0.0.1:3000/e/sample-music-night?ref=copy",
+      url: "http://127.0.0.1:3000/e/sample-music-night",
     });
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
       "href",
