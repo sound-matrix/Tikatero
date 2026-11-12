@@ -32,6 +32,21 @@ export const emailSamples: TemplateData = {
     eventTitle: event.title,
     reason: "The venue is unavailable on the event date.",
   },
+  event_hidden_by_admin: {
+    eventTitle: "Hyderabad Music Night",
+    reason: "Safety concern",
+    actionPath: "/console/events",
+  },
+  event_removal_approved: {
+    eventTitle: "Hyderabad Music Night",
+    reason: "Venue closed",
+    actionPath: "/console/events",
+  },
+  event_removal_rejected: {
+    eventTitle: "Hyderabad Music Night",
+    reason: "Please confirm the updated date.",
+    actionPath: "/console/events",
+  },
   refund_processed: {
     recipientName,
     eventTitle: event.title,

@@ -2,6 +2,8 @@ import { expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 const fulfil = vi.hoisted(() => vi.fn());
+const processCancelled = vi.hoisted(() => vi.fn().mockResolvedValue(false));
+vi.mock("@/lib/refunds/event-refunds", () => ({ processCancelledOrder: processCancelled }));
 const rpc = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/tickets/fulfil", () => ({
   fulfilPaidOrder: fulfil,
@@ -36,4 +38,13 @@ it("keeps a paid order when ticket delivery fails", async () => {
   await expect(transition(order, { state: "paid", amount: 100, currency: "INR" })).resolves.toBe(
     "paid",
   );
+});
+
+it("queues the refund instead of issuing a ticket when a late payment arrives", async () => {
+  rpc.mockResolvedValue({ data: "paid", error: null });
+  processCancelled.mockResolvedValueOnce(true);
+  fulfil.mockClear();
+  await transition(order, { state: "paid", amount: 100, currency: "INR" });
+  expect(processCancelled).toHaveBeenCalledWith(order);
+  expect(fulfil).not.toHaveBeenCalled();
 });

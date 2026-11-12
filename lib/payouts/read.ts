@@ -31,7 +31,7 @@ export const eventSalesSchema = z.object({
   id: z.uuid(),
   organiser_id: z.uuid(),
   title: z.string(),
-  starts_at: z.string(),
+  starts_at: z.string().nullable(),
   ends_at: z.string().nullable(),
   status: z.string(),
   is_free: z.boolean(),

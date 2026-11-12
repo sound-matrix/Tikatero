@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ownOrder } from "@/lib/checkout/security";
-import { reconcileOnDemand } from "@/lib/checkout/store";
+import { isOrderEventCancelled, reconcileOnDemand } from "@/lib/checkout/store";
 import { createServiceClient } from "@/lib/supabase/service";
 import { OrderStatusView } from "@/components/checkout/order-status";
 import { loadOrderTickets } from "@/lib/tickets/load";
@@ -10,6 +10,7 @@ async function Status({ params }: { params: Promise<{ id: string }> }) {
   const order = await ownOrder((await params).id);
   if (!order) notFound();
   const status = await reconcileOnDemand(order);
+  const cancelled = await isOrderEventCancelled(order.event_id);
   const { data: review, error } = await createServiceClient()
     .from("order_outbox")
     .select("id")
@@ -25,8 +26,9 @@ async function Status({ params }: { params: Promise<{ id: string }> }) {
         total: order.total_paise,
         isTest: order.is_test,
         review: !!review,
+        cancelled,
         canPay: !!order.payment_session_id,
-        tickets: status === "paid" ? await loadOrderTickets(order.id) : [],
+        tickets: !cancelled && status === "paid" ? await loadOrderTickets(order.id) : [],
       }}
     />
   );

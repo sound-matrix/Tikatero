@@ -60,7 +60,9 @@ async function fixture(options: { free?: boolean; paused?: boolean } = {}) {
 }
 async function fill(page: import("@playwright/test").Page, slug: string, free = false) {
   await page.goto(`/e/${slug}/checkout`);
-  await page.getByLabel(free ? "RSVP quantity" : "General admission quantity").selectOption("1");
+  await page
+    .getByLabel(free ? "How many RSVP tickets?" : "How many General admission tickets?")
+    .selectOption("1");
   await page.getByLabel("Full name", { exact: true }).fill("Jamie Rao");
   await page.getByLabel("Email", { exact: true }).fill(`buyer-${randomUUID()}@example.test`);
   await page.getByLabel("Phone", { exact: true }).fill("9876543210");
@@ -137,7 +139,7 @@ test.describe("Guest checkout", () => {
   test("free RSVP skips payment", async ({ page }) => {
     const { id, slug } = await fixture({ free: true });
     await fill(page, slug, true);
-    await page.getByRole("button", { name: "Confirm RSVP", exact: true }).click();
+    await page.getByRole("button", { name: "Confirm my free pass", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Booking confirmed" })).toBeVisible();
     const orderId = /\/orders\/([^/]+)/.exec(page.url())![1];
     expect(

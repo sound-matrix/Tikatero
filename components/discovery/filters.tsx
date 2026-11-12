@@ -85,7 +85,7 @@ export function DiscoveryFilters({
               className={input}
             >
               <option value="">Free and paid</option>
-              <option value="free">Free — RSVP</option>
+              <option value="free">Free entry</option>
               <option value="paid">Paid</option>
             </select>
           </label>

@@ -47,7 +47,7 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
     }
     const lines = values.lines.map((line) => {
       const tier = data.tiers.find((t) => t.id === line.id);
-      if (!tier) throw new Error("Choose a valid ticket tier.");
+      if (!tier) throw new Error("Please choose a ticket.");
       return { ...line, price_paise: tier.price_paise };
     });
     const amounts = computePricing({

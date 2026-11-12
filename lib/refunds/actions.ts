@@ -5,10 +5,7 @@ import { redirect } from "next/navigation";
 import { requireAccount } from "@/lib/auth/account";
 import { allowRequest } from "@/lib/security/rate-limit";
 import { parseHundredths } from "@/lib/pricing/settings";
-import { createServiceClient } from "@/lib/supabase/service";
 import { settleOpenedRefund, type OpenedRefund } from "./complete";
-import { notifyEventCancelled } from "./notify";
-import { PAYMENTS_REFUND_UNAVAILABLE, refundRoute } from "./model";
 
 function dbMessage(error: { message?: string } | null, fallback: string) {
   const line = (error?.message ?? "").split("\n")[0].replace(/^.*ERROR:\s*/i, "");
@@ -139,103 +136,6 @@ export async function issueRefund(formData: FormData) {
   }
   revalidatePath(back);
   redirect(`${back}?refund=updated`);
-}
-
-function paymentsReady(isTest: boolean) {
-  return (
-    refundRoute(
-      {
-        NODE_ENV: process.env.NODE_ENV,
-        VERCEL_ENV: process.env.VERCEL_ENV,
-        CASHFREE_ENV: process.env.CASHFREE_ENV,
-        PAYMENTS_ALLOW_MOCK: process.env.PAYMENTS_ALLOW_MOCK,
-        hasCredentials: Boolean(process.env.CASHFREE_APP_ID && process.env.CASHFREE_SECRET_KEY),
-      },
-      isTest,
-    ) !== "refuse"
-  );
-}
-
-export async function cancelEventRefunds(formData: FormData) {
-  const { client, account } = await requireAccount();
-  const eventId = uuid(formData.get("event_id"));
-  const asStaff = formData.get("as") === "staff";
-  const back = asStaff ? `/admin/events/${eventId}` : `/console/events/${eventId}`;
-  if (!eventId) redirect("/console");
-  if (!(await refundAllowed(account.profile.id)))
-    redirect(`${back}?refund_error=${encodeURIComponent(REFUND_LIMIT)}`);
-  const reason = String(formData.get("reason") ?? "")
-    .trim()
-    .slice(0, 300);
-  if (!reason)
-    redirect(
-      `${back}?refund_error=${encodeURIComponent("Add a short reason for the cancellation.")}`,
-    );
-  const { data: rows, error: listError } = await client
-    .from("orders")
-    .select("is_test, status")
-    .eq("event_id", eventId)
-    .in("status", ["paid", "partially_refunded"]);
-  if (listError)
-    redirect(`${back}?refund_error=${encodeURIComponent("This event could not be cancelled.")}`);
-  if ((rows ?? []).some((row) => !paymentsReady(row.is_test))) {
-    redirect(`${back}?refund_error=${encodeURIComponent(PAYMENTS_REFUND_UNAVAILABLE)}`);
-  }
-  const { data, error } = await client.rpc("cancel_event_refunds", {
-    p_event_id: eventId,
-    p_reason: reason,
-    p_as: asStaff ? "staff" : "organiser",
-    p_confirm: formData.get("confirm_own") === "yes",
-  });
-  if (error)
-    redirect(
-      `${back}?refund_error=${encodeURIComponent(dbMessage(error, "This event could not be cancelled."))}`,
-    );
-  const payload = (data ?? {}) as { refunds?: OpenedRefund[] };
-  try {
-    for (const opened of payload.refunds ?? []) await settle(opened);
-  } catch (caught) {
-    const message = caught instanceof Error ? caught.message : "A refund could not be completed.";
-    redirect(`${back}?refund_error=${encodeURIComponent(message)}`);
-  }
-  const service = createServiceClient();
-  const { data: event } = await service
-    .from("events")
-    .select("title")
-    .eq("id", eventId)
-    .maybeSingle();
-  const { data: buyers } = await service
-    .from("orders")
-    .select("buyer_email, buyer_name")
-    .eq("event_id", eventId)
-    .in("status", ["paid", "refunded", "partially_refunded"]);
-  const seen = new Set<string>();
-  for (const buyer of buyers ?? []) {
-    const email = buyer.buyer_email.toLowerCase();
-    if (seen.has(email) || email.endsWith("@users.invalid")) continue;
-    seen.add(email);
-    try {
-      await notifyEventCancelled({
-        eventId,
-        eventTitle: event?.title || "Your event",
-        buyerEmail: buyer.buyer_email,
-        buyerName: buyer.buyer_name,
-        reason,
-      });
-    } catch {
-      // The cancellation is saved.
-    }
-  }
-  revalidatePath(back);
-  redirect(`${back}?refund=updated`);
-}
-
-export async function openAdminEvent(formData: FormData) {
-  const { account } = await requireAccount();
-  if (!["staff", "admin"].includes(account.profile.role)) redirect("/me");
-  const eventId = uuid(formData.get("event_id"));
-  if (!eventId) redirect("/admin/events");
-  redirect(`/admin/events/${eventId}`);
 }
 
 export async function deleteMyAccount(

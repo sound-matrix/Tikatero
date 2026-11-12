@@ -43,7 +43,7 @@ async function Queue({
   if (orgError) throw new Error("Organiser names could not be loaded.");
   return (
     <AdminPage
-      title="KYC queue"
+      title="Host ID checks"
       description="Oldest submissions first. Review the results and documents before making a decision."
     >
       <form className="flex flex-wrap items-end gap-3">

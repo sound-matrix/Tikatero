@@ -115,3 +115,13 @@ it("validates the complete saved event before publication", () => {
     }).success,
   ).toBe(false);
 });
+
+it("keeps total seats optional and rejects fractions, zero and limits above ten lakh", () => {
+  const v = emptyValues();
+  expect(stepPayload(v, 5)).toMatchObject({ capacity: null });
+  for (const capacity of ["0", "1.5", "-1", "1000001"]) {
+    expect(() => validateSavedInput({ ...v, capacity }, 5, "event")).toThrow("Total seats");
+  }
+  expect(() => validateSavedInput({ ...v, capacity: "1000000" }, 5, "event")).not.toThrow();
+  expect(stepPayload({ ...v, capacity: "2" }, 5)).toMatchObject({ capacity: 2 });
+});

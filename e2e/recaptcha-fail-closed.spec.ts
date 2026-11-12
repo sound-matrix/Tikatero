@@ -65,7 +65,7 @@ test("live paid checkout fails closed without captcha keys while free checkout w
   await page.screenshot({ path: info.outputPath("checkout-fail-closed.png"), fullPage: true });
   expect((await db.from("events").update({ is_free: true }).eq("id", id)).error).toBeNull();
   await page.reload();
-  await expect(page.getByRole("button", { name: "Confirm RSVP" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Confirm my free pass" })).toBeVisible();
   await expect(
     page.getByText("This site is protected by reCAPTCHA", { exact: false }),
   ).toBeVisible();

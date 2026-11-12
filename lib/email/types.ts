@@ -14,7 +14,10 @@ export type TemplateData = {
   payment_failed: EmailBase & { eventTitle: string; orderRef: string; amountPaise: number };
   event_reminder: EmailBase & { event: EventDetails };
   event_changed: EmailBase & { event: EventDetails; changes: string };
-  event_cancelled: EmailBase & { eventTitle: string; reason: string };
+  event_cancelled: EmailBase & { eventTitle: string; reason: string; free?: boolean };
+  event_hidden_by_admin: EmailBase & { eventTitle: string; reason: string };
+  event_removal_approved: EmailBase & { eventTitle: string; reason: string };
+  event_removal_rejected: EmailBase & { eventTitle: string; reason: string };
   refund_processed: EmailBase & {
     eventTitle: string;
     refundRef: string;

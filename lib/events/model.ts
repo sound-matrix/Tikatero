@@ -72,6 +72,7 @@ export type Values = {
   posterKey: string;
   guests: Guest[];
   tiers: Tier[];
+  capacity: string;
   feePayer: "organiser" | "buyer";
   refundPolicy: "72h" | "none" | "custom";
   refundText: string;
@@ -96,6 +97,7 @@ export function emptyValues(): Values {
     posterKey: "",
     guests: [],
     tiers: [],
+    capacity: "",
     feePayer: "organiser",
     refundPolicy: "72h",
     refundText: "",
@@ -194,5 +196,9 @@ export function statusLabel(
   if (status === "ended" || (status === "published" && !!endsAt && Date.parse(endsAt) < now))
     return "Ended";
   void startsAt;
-  return status === "published" ? "Published" : status === "cancelled" ? "Cancelled" : "Draft";
+  if (status === "published") return "Published";
+  if (status === "cancelled") return "Cancelled";
+  if (status === "unpublished") return "Hidden";
+  if (status === "pending") return "Pending";
+  return "Draft";
 }

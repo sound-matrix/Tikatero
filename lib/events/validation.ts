@@ -43,6 +43,7 @@ export const valuesSchema = z
     posterKey: text.max(300),
     guests: z.array(guest).max(20),
     tiers: z.array(tier).max(20),
+    capacity: text.max(12).default(""),
     feePayer: z.enum(["organiser", "buyer"]),
     refundPolicy: z.enum(["72h", "none", "custom"]),
     refundText: text.max(2000),
@@ -129,19 +130,27 @@ export function validateStep(v: Values, step: number, eventId: string) {
       }
       break;
     case 5:
-      requireValue(v.tiers.length, "Add at least one ticket tier or RSVP group.");
+      if (v.capacity) positive(v.capacity, "Total seats");
+      requireValue(v.tiers.length, "Add at least one ticket type or free pass type.");
       requireValue(
         new Set(v.tiers.map((t) => t.id)).size === v.tiers.length,
-        "Each ticket tier must be unique.",
+        "Please add each ticket type once.",
+      );
+      requireValue(
+        v.tiers.every((t) => t.name),
+        "Please give every ticket type a name.",
+      );
+      requireValue(
+        new Set(v.tiers.map((t) => t.name.trim().toLowerCase())).size === v.tiers.length,
+        "Two ticket types have the same name; please change one.",
       );
       for (const t of v.tiers) {
-        requireValue(t.name, "Give every tier a name.");
         if (!v.free) toPaise(t.price);
-        const qty = positive(t.quantity, "Quantity");
+        const qty = positive(t.quantity, "Number of tickets");
         if (t.perOrderMax)
           requireValue(
-            positive(t.perOrderMax, "Per-order maximum") <= qty,
-            "Per-order maximum cannot exceed quantity.",
+            positive(t.perOrderMax, "Most tickets per person") <= qty,
+            "One person can't buy more tickets than this type has.",
           );
         const start = fromIstInput(t.salesStart),
           end = fromIstInput(t.salesEnd);
@@ -205,6 +214,7 @@ export function stepPayload(v: Values, step: number) {
       };
     case 5:
       return {
+        capacity: v.capacity ? Number(v.capacity) : null,
         tiers: v.tiers.map((t, sort) => ({
           id: t.id,
           name: t.name,
@@ -255,16 +265,17 @@ export function validateSavedInput(v: Values, step: number, eventId: string) {
     for (const g of v.guests) imageKey(g.photoKey, "guest_photo", eventId);
   }
   if (step === 5) {
+    if (v.capacity) positive(v.capacity, "Total seats");
     requireValue(
       new Set(v.tiers.map((t) => t.id)).size === v.tiers.length,
-      "Each tier must be unique.",
+      "Please add each ticket type once.",
     );
     for (const t of v.tiers) {
       if (t.price && !v.free) toPaise(t.price);
       for (const number of [t.quantity, t.perOrderMax])
         requireValue(
           !number || (/^\d+$/.test(number) && Number(number) <= 1000000),
-          "Use a whole quantity up to 10,00,000.",
+          "Please enter a whole number (up to 10,00,000).",
         );
       fromIstInput(t.salesStart);
       fromIstInput(t.salesEnd);

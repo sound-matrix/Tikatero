@@ -1,11 +1,12 @@
 import { ownOrder } from "@/lib/checkout/security";
-import { reconcileOnDemand } from "@/lib/checkout/store";
+import { isOrderEventCancelled, reconcileOnDemand } from "@/lib/checkout/store";
 import { createServiceClient } from "@/lib/supabase/service";
 import { loadOrderTickets } from "@/lib/tickets/load";
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const order = await ownOrder((await params).id);
   if (!order) return new Response(null, { status: 404 });
   const status = await reconcileOnDemand(order);
+  const cancelled = await isOrderEventCancelled(order.event_id);
   const { data: review, error } = await createServiceClient()
     .from("order_outbox")
     .select("id")
@@ -20,8 +21,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       total: order.total_paise,
       isTest: order.is_test,
       review: !!review,
+      cancelled,
       canPay: !!order.payment_session_id && Date.parse(order.hold_expires_at ?? "") > Date.now(),
-      tickets: status === "paid" ? await loadOrderTickets(order.id) : [],
+      tickets: !cancelled && status === "paid" ? await loadOrderTickets(order.id) : [],
     },
     { headers: { "Cache-Control": "private, no-store" } },
   );

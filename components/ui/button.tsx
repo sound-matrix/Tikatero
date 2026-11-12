@@ -9,6 +9,7 @@ const variants = {
     "border-transparent bg-[linear-gradient(135deg,var(--coral),var(--orange))] text-white shadow-[0_6px_16px_rgba(242,92,84,0.25)] hover:brightness-105",
   secondary: "border-line bg-white text-ink hover:bg-soft",
   trust: "border-transparent bg-teal text-white hover:brightness-105",
+  danger: "border-transparent bg-danger text-white hover:brightness-105",
   vip: "border-transparent bg-gold text-ink hover:brightness-105",
 } as const;
 

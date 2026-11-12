@@ -1,6 +1,7 @@
 import "server-only";
 import { internationalPaidTicketError } from "@/lib/kyc/paid-tickets";
 import { hasInternationalKyc } from "@/lib/kyc/store";
+import { processCancelledOrder } from "@/lib/refunds/event-refunds";
 import { cache } from "react";
 import { createServiceClient } from "@/lib/supabase/service";
 import { activePricing } from "@/lib/pricing/data";
@@ -16,6 +17,7 @@ export const checkoutData = cache(async (slug: string) => {
     .select("*")
     .eq("slug", slug)
     .eq("status", "published")
+    .is("hidden_at", null)
     .maybeSingle();
   if (error) throw new Error("Checkout is temporarily unavailable.");
   if (!event) return null;
@@ -57,6 +59,12 @@ export const checkoutData = cache(async (slug: string) => {
     disabled = "This organiser is not ready to accept payments. Please come back soon.";
   else if (Date.parse(event.ends_at ?? event.starts_at ?? "") <= Date.now())
     disabled = "This event has ended.";
+  else if (
+    event.capacity !== null &&
+    event.capacity !== undefined &&
+    (tiers ?? []).reduce((sold, ticket) => sold + ticket.qty_sold, 0) >= event.capacity
+  )
+    disabled = "Sold out";
   return { event, tiers: tiers ?? [], version, disabled, mode };
 });
 
@@ -81,7 +89,7 @@ export async function transition(
   if (error) throw new Error("Payment status could not be saved.");
   if (data === "paid") {
     try {
-      await fulfilPaidOrder(order.id);
+      if (!(await processCancelledOrder(order))) await fulfilPaidOrder(order.id);
     } catch {
       // The paid ledger stands. The payments cron retries tickets and email.
     }
@@ -131,4 +139,14 @@ export async function reconcileOnDemand(order: CheckoutOrder) {
     }
     return order.status;
   }
+}
+
+export async function isOrderEventCancelled(eventId: string) {
+  const { data, error } = await createServiceClient()
+    .from("events")
+    .select("status")
+    .eq("id", eventId)
+    .single();
+  if (error) throw error;
+  return data.status === "cancelled";
 }

@@ -14,7 +14,7 @@ const examplePrices = [50_000, 100_000, 250_000] as const;
 
 function payoutSentence(days: number) {
   const unit = days === 1 ? "day" : "days";
-  return `Organisers are usually paid within ${days} ${unit} of settlement.`;
+  return `Organisers are usually paid within ${days} ${unit} after the payment clears.`;
 }
 
 function StartSelling() {

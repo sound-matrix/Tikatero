@@ -32,7 +32,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
         {[e.venue_name, e.city].filter(Boolean).join(" · ")}
       </div>
       <div style={{ display: "flex", fontSize: 25, marginTop: "auto" }}>
-        {e.is_free ? "Free — RSVP" : e.organiser_name}
+        {e.is_free ? "Free entry" : e.organiser_name}
       </div>
     </div>,
     { width: 1200, height: 630, headers: { "Cache-Control": "no-store" } },

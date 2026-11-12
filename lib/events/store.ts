@@ -11,6 +11,7 @@ export type Draft = {
   completed: number[];
   slug: string;
   status: string;
+  hiddenAt?: string | null;
   values: Values;
 };
 export function rowValues(
@@ -50,6 +51,7 @@ export function rowValues(
       photoKey: g.photo_key?.startsWith("media/") ? g.photo_key : "",
       vip: g.is_vip,
     })),
+    capacity: row.capacity === null ? "" : String(row.capacity),
     tiers: tiers.map((t) => ({
       id: t.id,
       name: t.name,
@@ -93,6 +95,7 @@ export async function readDraft(
     completed: row.wizard_completed_steps,
     slug: row.slug,
     status: row.status,
+    hiddenAt: row.hidden_at,
     values: rowValues(row, guests ?? [], tiers ?? []),
   };
 }

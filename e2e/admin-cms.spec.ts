@@ -100,7 +100,9 @@ test.describe("Admin CMS", () => {
       await login(page, staff.email);
       await expect(page).toHaveURL(/\/admin$/);
       await page.goto("/admin/kyc?status=auto_passed");
-      await expect(page.getByRole("heading", { name: "KYC queue", exact: true })).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: "Host ID checks", exact: true }),
+      ).toBeVisible();
       await expect(page.getByText("Test mode — simulated").first()).toBeVisible();
       await page.screenshot({ path: testInfo.outputPath("queue.png"), fullPage: true });
       await page.goto(`/admin/kyc/${org.appId}`);

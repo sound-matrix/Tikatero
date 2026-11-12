@@ -122,7 +122,7 @@ export function CheckoutForm({
                   </div>
                   <select
                     id={`qty-${tier.id}`}
-                    aria-label={`${tier.name} quantity`}
+                    aria-label={`How many ${tier.name} tickets?`}
                     disabled={!!reason || pending}
                     value={quantities[tier.id] ?? 0}
                     onChange={(e) =>
@@ -268,7 +268,7 @@ export function CheckoutForm({
           {pending
             ? "Holding your tickets…"
             : total.buyer_total === 0
-              ? "Confirm RSVP"
+              ? "Confirm my free pass"
               : `Pay ${publicPrice(total.buyer_total)}`}
         </button>
         <RecaptchaNotice />

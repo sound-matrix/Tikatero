@@ -26,7 +26,7 @@ describe("attendee discovery", () => {
     expect(publicPrice(100099)).toBe("₹ 1,000.99 incl. GST");
     expect(publicPrice(1)).toBe("₹ 0.01 incl. GST");
     expect(publicPrice(0)).toBe("₹ 0 incl. GST");
-    expect(publicPrice(null, true)).toBe("Free — RSVP");
+    expect(publicPrice(null, true)).toBe("Free entry");
     expect(publicPrice(null)).toBe("Tickets coming soon");
   });
   it("formats IST across the UTC date boundary", () => {

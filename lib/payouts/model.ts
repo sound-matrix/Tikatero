@@ -108,7 +108,7 @@ export function payoutWindowDays(stored: number | null | undefined) {
 export function payoutWindowCopy(payoutDays: number) {
   const days = payoutWindowDays(payoutDays);
   const noun = days === 1 ? "day" : "days";
-  return `Usually paid within ${days} ${noun} of settlement.`;
+  return `Usually paid within ${days} ${noun} after the payment clears.`;
 }
 
 export const LIVE_VENDOR_UNAVAILABLE = "A live payout account cannot be created yet.";

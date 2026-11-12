@@ -84,9 +84,9 @@ test.describe("Attendee discovery", () => {
     await page.goto("/events?city=&country=&price=free");
     await expect(page.getByRole("heading", { name: "Community RSVP", exact: true })).toBeVisible();
     await page.getByRole("heading", { name: "Community RSVP", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Free — RSVP", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Free entry", exact: true })).toBeVisible();
     await expect(
-      page.getByRole("link", { name: "RSVP", exact: true }).filter({ visible: true }),
+      page.getByRole("link", { name: "Get free pass", exact: true }).filter({ visible: true }),
     ).toBeVisible();
     await page.goto("/events?city=NoSuchCity&country=");
     await expect(page.getByRole("heading", { name: "No events here yet" })).toBeVisible();

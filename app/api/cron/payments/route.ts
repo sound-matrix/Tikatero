@@ -1,3 +1,5 @@
+import { sweepEventRefunds } from "@/lib/refunds/event-refunds";
+import { sweepDeletedEventMedia } from "@/lib/events/moderation-store";
 import { timingSafeEqual } from "node:crypto";
 import { createServiceClient } from "@/lib/supabase/service";
 import { reconcile, transition } from "@/lib/checkout/store";
@@ -48,9 +50,16 @@ export async function GET(request: Request) {
   } catch {
     ticketFailures = 1;
   }
-  const unsettled = failed + ticketFailures;
+  let mediaFailures = 0;
+  try {
+    await sweepDeletedEventMedia();
+  } catch {
+    mediaFailures = 1;
+  }
+  const refundFailures = await sweepEventRefunds().catch(() => 1);
+  const unsettled = failed + ticketFailures + mediaFailures + refundFailures;
   return Response.json(
-    { checked, failed, ticketFailures },
+    { checked, failed, ticketFailures, mediaFailures, refundFailures },
     { status: unsettled ? 503 : 200, headers: { "Cache-Control": "no-store" } },
   );
 }
