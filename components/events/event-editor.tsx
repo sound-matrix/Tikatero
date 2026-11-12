@@ -23,7 +23,7 @@ export async function EventEditor({
   if (!account.organisers.some((o) => o.id === organiserId)) notFound();
   const { data: organisers, error } = await client
     .from("organisers")
-    .select("id,display_name,kyc_status,sales_paused")
+    .select("id,display_name,country,kyc_status,sales_paused")
     .in(
       "id",
       account.organisers.map((o) => o.id),
@@ -74,6 +74,7 @@ export async function EventEditor({
         id={id ?? randomUUID()}
         organiserId={organiserId}
         organiserName={organiser.display_name}
+        organiserCountry={organiser.country}
         approved={organiser.kyc_status === "approved"}
         freeOnly={freeOnly}
         paused={organiser.sales_paused}

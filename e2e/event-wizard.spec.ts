@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { previewPricing } from "../lib/pricing";
@@ -8,6 +9,11 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
 const configured = !!url && !!key;
 if (configured && !["127.0.0.1", "localhost"].includes(new URL(url!).hostname))
   throw new Error("Event wizard tests must only use local Supabase.");
+const fixtureKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY === "playwright-maps-fixture";
+const mapsScript = "https://maps.googleapis.com/maps/api/js";
+const manualFallback =
+  "Map search is unavailable right now. Type the address or paste a Google Maps link.";
+const placeLink = "https://maps.google.com/?cid=123456789";
 const client = () =>
   createClient<Database>(url!, key!, { auth: { persistSession: false, autoRefreshToken: false } });
 async function setup(page: Page, approved: boolean) {
@@ -72,6 +78,12 @@ async function shot(page: Page, info: TestInfo, step: number) {
 
 test.describe("Organiser event wizard", () => {
   test.skip(!configured, "Start local Supabase for saved drafts and role checks.");
+  test.beforeEach(async ({ page }) => {
+    await page.route(
+      /^https:\/\/(?:[^/]+\.)?(?:googleapis\.com|gstatic\.com|ggpht\.com)\//,
+      (route) => route.abort("blockedbyclient"),
+    );
+  });
   test("approved organiser creates Sample Music Night, resumes it and publishes", async ({
     page,
   }, info) => {
@@ -91,9 +103,14 @@ test.describe("Organiser event wizard", () => {
     await expect(page.getByRole("heading", { name: "When is your event?" })).toBeVisible();
     await dates(page);
     await shot(page, info, 2);
+    const blockedScript = fixtureKey
+      ? page.waitForEvent("requestfailed", (request) => request.url().startsWith(mapsScript))
+      : null;
     await next(page, "Where will people meet?");
+    await expect(page.getByText(manualFallback)).toBeVisible();
+    await blockedScript;
     await venue(page);
-    await expect(page.locator(".leaflet-container")).toBeVisible();
+    await expect(page.getByRole("region", { name: "Venue map" })).toHaveCount(0);
     await shot(page, info, 3);
     await next(page, "Give your event a poster");
     await expect(page.getByLabel("Choose a photo")).toBeVisible();
@@ -147,7 +164,7 @@ test.describe("Organiser event wizard", () => {
     const { data: event } = await client()
       .from("events")
       .select(
-        "title,status,organiser_id,starts_at,fee_payer,refund_policy,lat,lng,wizard_completed_steps",
+        "title,status,organiser_id,starts_at,fee_payer,refund_policy,lat,lng,maps_url,wizard_completed_steps",
       )
       .eq("id", eventId)
       .single();
@@ -159,6 +176,7 @@ test.describe("Organiser event wizard", () => {
       refund_policy: "72h",
       lat: 17.385,
       lng: 78.4867,
+      maps_url: "https://www.google.com/maps?q=17.385,78.4867",
     });
     expect(event?.wizard_completed_steps).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
     const { data: tiers } = await client()
@@ -171,6 +189,114 @@ test.describe("Organiser event wizard", () => {
       "Published",
     );
     await expect(page.getByRole("contentinfo")).toHaveText("© Sound Matrix");
+  });
+  test("searches Google venues, saves a selection and fine-tunes its pin", async ({
+    page,
+  }, info) => {
+    test.skip(!fixtureKey, "Build and run with the Playwright Maps fixture key.");
+    test.setTimeout(120_000);
+    let loaderRequests = 0;
+    await page.route(`${mapsScript}?**`, async (route) => {
+      loaderRequests++;
+      await route.fulfill({
+        path: resolve("e2e/fixtures/google-maps.js"),
+        contentType: "application/javascript",
+      });
+    });
+    const owner = await setup(page, true);
+    await page.goto("/console/events/new");
+    await page.getByLabel("Event name", { exact: true }).fill("Autumn Venue Search");
+    await page
+      .getByLabel("Description", { exact: true })
+      .fill("A live music evening for local audiences.");
+    await next(page, "When is your event?");
+    await dates(page);
+    expect(loaderRequests).toBe(0);
+    await next(page, "Where will people meet?");
+
+    const search = page.getByRole("combobox", { name: "Search for your venue" });
+    const list = page.getByRole("listbox", { name: "Venue suggestions" });
+    await search.fill("Taj");
+    await expect(list.getByRole("option")).toHaveCount(2);
+    await search.fill("Taj Krishna Hyderabad");
+    await expect(list.getByRole("option", { name: /Taj Krishna/ })).toBeVisible();
+    await shot(page, info, 31);
+    const viewport = page.viewportSize()!;
+    await page.setViewportSize({ width: 390, height: 560 });
+    await search.scrollIntoViewIfNeeded();
+    await expect(list.getByRole("option", { name: /Taj Krishna/ })).toBeInViewport();
+    await shot(page, info, 32);
+    await page.setViewportSize(viewport);
+    await search.press("ArrowDown");
+    await search.press("Enter");
+
+    await expect(page.getByLabel("Venue name", { exact: true })).toHaveValue("Taj Krishna");
+    await expect(page.getByLabel("Address", { exact: true })).toHaveValue(
+      "Road No. 1, Banjara Hills, Hyderabad, Telangana, India",
+    );
+    await expect(page.getByLabel("City", { exact: true })).toHaveValue("Hyderabad");
+    await expect(page.getByLabel("Country", { exact: true })).toHaveValue("IN");
+    await expect(page.getByLabel("Latitude (optional)")).toHaveValue("17.417816");
+    await expect(page.getByLabel("Longitude (optional)")).toHaveValue("78.449501");
+    await expect(page.getByLabel("Google Maps link (optional)")).toHaveValue(placeLink);
+    await expect(page.getByRole("link", { name: /Open in Maps/ })).toHaveAttribute(
+      "href",
+      placeLink,
+    );
+
+    const map = page.getByRole("region", { name: "Venue map" });
+    const pin = page.getByRole("button", { name: "Venue pin" });
+    await expect(map).toHaveAttribute("aria-busy", "false");
+    await expect(pin).toHaveAttribute("data-draggable", "true");
+    expect(loaderRequests).toBe(1);
+    const googleFixture = await page.evaluate(() => Reflect.get(window, "venueGoogleFixture"));
+    expect(googleFixture.libraries.sort()).toEqual(["maps", "marker", "places"]);
+    expect(googleFixture.requests).toHaveLength(2);
+    expect(googleFixture.requests[0].sessionToken).toEqual(googleFixture.requests[1].sessionToken);
+    expect(googleFixture.requests[1]).toMatchObject({
+      region: "in",
+      locationBias: { west: 68.18, south: 7.97, east: 97.4, north: 35.49 },
+    });
+    expect(googleFixture.fields).toEqual([
+      ["displayName", "formattedAddress", "location", "addressComponents", "googleMapsURI"],
+    ]);
+    await shot(page, info, 33);
+    await page.getByRole("button", { name: "Save draft", exact: true }).click();
+    await expect(page.getByText("Draft saved.", { exact: true })).toBeVisible();
+    const eventId = /\/events\/([0-9a-f-]+)\/edit/.exec(page.url())![1];
+    const saved = () =>
+      client()
+        .from("events")
+        .select("organiser_id,venue_name,address,city,country,lat,lng,maps_url")
+        .eq("id", eventId)
+        .single();
+    expect((await saved()).data).toMatchObject({
+      organiser_id: owner,
+      venue_name: "Taj Krishna",
+      city: "Hyderabad",
+      country: "IN",
+      lat: 17.417816,
+      lng: 78.449501,
+      maps_url: placeLink,
+    });
+
+    await pin.scrollIntoViewIfNeeded();
+    const point = (await pin.boundingBox())!;
+    await page.mouse.move(point.x + point.width / 2, point.y + point.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(point.x + 30, point.y + 25);
+    await page.mouse.up();
+    await expect(page.getByLabel("Latitude (optional)")).toHaveValue("17.418257");
+    await map.click({ position: { x: 40, y: 50 } });
+    await expect(page.getByLabel("Latitude (optional)")).toHaveValue("17.419006");
+    await page.getByLabel("Venue name", { exact: true }).fill("Taj Krishna, main entrance");
+    await next(page, "Give your event a poster");
+    expect((await saved()).data).toMatchObject({
+      venue_name: "Taj Krishna, main entrance",
+      lat: 17.419006,
+      lng: 78.449408,
+      maps_url: "https://www.google.com/maps/search/?api=1&query=17.419006%2C78.449408",
+    });
   });
   test("pending organiser saves a partial free draft and cannot publish by UI or API", async ({
     page,

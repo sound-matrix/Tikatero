@@ -26,6 +26,8 @@ export function contentSecurityPolicy(input: SecurityHeaderInput = {}) {
     "'self'",
     "https://www.google.com/recaptcha/",
     ...cashfree,
+    "https://maps.googleapis.com",
+    "https://places.googleapis.com",
     "https://*.supabase.co",
     "wss://*.supabase.co",
   ];
@@ -34,11 +36,18 @@ export function contentSecurityPolicy(input: SecurityHeaderInput = {}) {
     const ws = supabase.protocol === "https:" ? "wss:" : "ws:";
     connect.push(`${ws}//${supabase.host}`);
   }
-  const images = ["'self'", "data:", "blob:", "https://tile.openstreetmap.org"];
+  const images = [
+    "'self'",
+    "data:",
+    "blob:",
+    "https://maps.gstatic.com",
+    "https://*.googleapis.com",
+    "https://*.ggpht.com",
+  ];
   if (supabase) images.push(supabase.origin);
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/ https://sdk.cashfree.com`,
+    `script-src 'self' 'unsafe-inline' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/ https://maps.googleapis.com https://sdk.cashfree.com`,
     "style-src 'self' 'unsafe-inline'",
     `img-src ${images.join(" ")}`,
     "font-src 'self'",

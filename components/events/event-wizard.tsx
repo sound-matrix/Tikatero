@@ -13,6 +13,7 @@ import {
   themes,
   emptyValues,
   mapsCoordinates,
+  mapsPointUrl,
   openMaps,
   toPaise,
   fromIstInput,
@@ -23,7 +24,10 @@ import type { Draft } from "@/lib/events/store";
 import { INTERNATIONAL_PAID_TICKETS } from "@/lib/kyc/paid-tickets";
 import { previewPricing, organiserFeeWording, type PricingVersion } from "@/lib/pricing";
 import { formatInr, formatIst } from "@/lib/format";
+import { internationalCountries } from "@/lib/kyc/countries";
+import { VenueGoogle } from "./venue-google";
 import { VenueMap } from "./venue-map";
+import { VenueSearch } from "./venue-search";
 import { TicketPreview } from "./ticket-preview";
 const subscribeToHydration = () => () => {};
 const clientReady = () => true;
@@ -76,6 +80,7 @@ export type WizardProps = {
   id: string;
   organiserId: string;
   organiserName: string;
+  organiserCountry: string;
   approved: boolean;
   freeOnly: boolean;
   paused: boolean;
@@ -90,6 +95,7 @@ export function EventWizard({
   id: initialId,
   organiserId,
   organiserName,
+  organiserCountry,
   approved,
   freeOnly,
   paused,
@@ -130,10 +136,13 @@ export function EventWizard({
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
-  function update<K extends keyof Values>(key: K, value: Values[K]) {
-    setValues((v) => ({ ...v, [key]: value }));
+  function patchValues(patch: Partial<Values>) {
+    setValues((v) => ({ ...v, ...patch }));
     setDirty(true);
     setMessage("");
+  }
+  function update<K extends keyof Values>(key: K, value: Values[K]) {
+    patchValues({ [key]: value });
   }
   function imageUrl(key: string) {
     if (
@@ -402,110 +411,120 @@ export function EventWizard({
                 title="Where will people meet?"
                 description="Add a clear address and a map pin so guests can find the entrance."
               >
-                <Field label="Venue name">
-                  <input
-                    className={fieldClass}
-                    value={values.venue}
-                    maxLength={150}
-                    onChange={(e) => update("venue", e.target.value)}
+                <VenueGoogle apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim()}>
+                  <VenueSearch
+                    country={organiserCountry}
+                    inputClass={fieldClass}
+                    onPick={(venue) =>
+                      patchValues({
+                        ...venue,
+                        country: venue.country || values.country,
+                      })
+                    }
                   />
-                </Field>
-                <Field label="Address">
-                  <input
-                    className={fieldClass}
-                    value={values.address}
-                    maxLength={500}
-                    onChange={(e) => update("address", e.target.value)}
-                  />
-                </Field>
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <Field label="City">
+                  <Field label="Venue name">
                     <input
                       className={fieldClass}
-                      value={values.city}
-                      maxLength={100}
-                      onChange={(e) => update("city", e.target.value)}
+                      value={values.venue}
+                      maxLength={150}
+                      onChange={(e) => update("venue", e.target.value)}
                     />
                   </Field>
-                  <Field label="Country">
-                    <select
+                  <Field label="Address">
+                    <input
                       className={fieldClass}
-                      value={values.country}
-                      onChange={(e) => update("country", e.target.value)}
-                    >
-                      {[
-                        ["IN", "India"],
-                        ["AE", "United Arab Emirates"],
-                        ["GB", "United Kingdom"],
-                        ["US", "United States"],
-                        ["CA", "Canada"],
-                        ["AU", "Australia"],
-                        ["SG", "Singapore"],
-                      ].map(([key, name]) => (
-                        <option key={key} value={key}>
-                          {name}
-                        </option>
-                      ))}
-                    </select>
+                      value={values.address}
+                      maxLength={500}
+                      onChange={(e) => update("address", e.target.value)}
+                    />
                   </Field>
-                </div>
-                <Field label="Google Maps link (optional)">
-                  <input
-                    type="url"
-                    className={fieldClass}
-                    value={values.mapsUrl}
-                    onChange={(e) => {
-                      const link = e.target.value;
-                      update("mapsUrl", link);
-                      const point = mapsCoordinates(link);
-                      if (point) {
-                        update("lat", String(point.lat));
-                        update("lng", String(point.lng));
-                      }
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <Field label="City">
+                      <input
+                        className={fieldClass}
+                        value={values.city}
+                        maxLength={100}
+                        onChange={(e) => update("city", e.target.value)}
+                      />
+                    </Field>
+                    <Field label="Country">
+                      <select
+                        className={fieldClass}
+                        value={values.country}
+                        onChange={(e) => update("country", e.target.value)}
+                      >
+                        <option value="IN">India</option>
+                        {values.country !== "IN" &&
+                          !internationalCountries.some(({ code }) => code === values.country) && (
+                            <option value={values.country}>{values.country}</option>
+                          )}
+                        {internationalCountries.map(({ code, name }) => (
+                          <option key={code} value={code}>
+                            {name}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                  </div>
+                  <Field label="Google Maps link (optional)">
+                    <input
+                      type="url"
+                      className={fieldClass}
+                      value={values.mapsUrl}
+                      onChange={(e) => {
+                        const link = e.target.value;
+                        const point = mapsCoordinates(link);
+                        patchValues(
+                          point
+                            ? { mapsUrl: link, lat: String(point.lat), lng: String(point.lng) }
+                            : { mapsUrl: link },
+                        );
+                      }}
+                      placeholder="Paste a Google Maps link"
+                    />
+                  </Field>
+                  {values.mapsUrl &&
+                    !values.lat &&
+                    !values.lng &&
+                    !mapsCoordinates(values.mapsUrl) && (
+                      <p className="text-sm text-muted">
+                        This link can be saved for directions. Add coordinates below to set the pin.
+                      </p>
+                    )}
+                  <VenueMap
+                    lat={values.lat}
+                    lng={values.lng}
+                    onPick={(lat, lng) => {
+                      patchValues({ lat, lng, mapsUrl: mapsPointUrl(lat, lng) });
                     }}
-                    placeholder="Paste a Google Maps link"
                   />
-                </Field>
-                {values.mapsUrl && !mapsCoordinates(values.mapsUrl) && (
-                  <p className="text-sm text-muted">
-                    Short links are saved as directions. To place a pin, paste a full Maps link with
-                    coordinates or tap the map.
-                  </p>
-                )}
-                <VenueMap
-                  lat={values.lat}
-                  lng={values.lng}
-                  onPick={(lat, lng) => {
-                    update("lat", lat);
-                    update("lng", lng);
-                  }}
-                />
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <Field label="Latitude (optional)">
-                    <input
-                      inputMode="decimal"
-                      className={fieldClass}
-                      value={values.lat}
-                      onChange={(e) => update("lat", e.target.value)}
-                    />
-                  </Field>
-                  <Field label="Longitude (optional)">
-                    <input
-                      inputMode="decimal"
-                      className={fieldClass}
-                      value={values.lng}
-                      onChange={(e) => update("lng", e.target.value)}
-                    />
-                  </Field>
-                </div>
-                <a
-                  className="inline-flex min-h-12 items-center font-semibold text-teal underline"
-                  href={openMaps(values)}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open in Maps ↗
-                </a>
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <Field label="Latitude (optional)">
+                      <input
+                        inputMode="decimal"
+                        className={fieldClass}
+                        value={values.lat}
+                        onChange={(e) => update("lat", e.target.value)}
+                      />
+                    </Field>
+                    <Field label="Longitude (optional)">
+                      <input
+                        inputMode="decimal"
+                        className={fieldClass}
+                        value={values.lng}
+                        onChange={(e) => update("lng", e.target.value)}
+                      />
+                    </Field>
+                  </div>
+                  <a
+                    className="inline-flex min-h-12 items-center font-semibold text-teal underline"
+                    href={openMaps(values)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open in Maps ↗
+                  </a>
+                </VenueGoogle>
               </Section>
             )}
             {step === 3 && (
