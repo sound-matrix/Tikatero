@@ -24,7 +24,6 @@ import type { Draft } from "@/lib/events/store";
 import { INTERNATIONAL_PAID_TICKETS } from "@/lib/kyc/paid-tickets";
 import { previewPricing, organiserFeeWording, type PricingVersion } from "@/lib/pricing";
 import { formatInr, formatIst } from "@/lib/format";
-import { internationalCountries } from "@/lib/kyc/countries";
 import { VenueGoogle } from "./venue-google";
 import { VenueMap } from "./venue-map";
 import { VenueSearch } from "./venue-search";
@@ -81,6 +80,7 @@ export type WizardProps = {
   organiserId: string;
   organiserName: string;
   organiserCountry: string;
+  venueCountries: { code: string; name: string }[];
   approved: boolean;
   freeOnly: boolean;
   paused: boolean;
@@ -96,6 +96,7 @@ export function EventWizard({
   organiserId,
   organiserName,
   organiserCountry,
+  venueCountries,
   approved,
   freeOnly,
   paused,
@@ -453,12 +454,10 @@ export function EventWizard({
                         value={values.country}
                         onChange={(e) => update("country", e.target.value)}
                       >
-                        <option value="IN">India</option>
-                        {values.country !== "IN" &&
-                          !internationalCountries.some(({ code }) => code === values.country) && (
-                            <option value={values.country}>{values.country}</option>
-                          )}
-                        {internationalCountries.map(({ code, name }) => (
+                        {!venueCountries.some(({ code }) => code === values.country) && (
+                          <option value={values.country}>{values.country}</option>
+                        )}
+                        {venueCountries.map(({ code, name }) => (
                           <option key={code} value={code}>
                             {name}
                           </option>

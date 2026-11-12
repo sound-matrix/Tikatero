@@ -280,6 +280,11 @@ test.describe("Organiser event wizard", () => {
       maps_url: placeLink,
     });
 
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    await page.reload();
+    await expect(pin).toBeVisible();
+    await expect(page.getByLabel("Google Maps link (optional)")).toHaveValue(placeLink);
     await pin.scrollIntoViewIfNeeded();
     const point = (await pin.boundingBox())!;
     await page.mouse.move(point.x + point.width / 2, point.y + point.height / 2);
@@ -297,6 +302,7 @@ test.describe("Organiser event wizard", () => {
       lng: 78.449408,
       maps_url: "https://www.google.com/maps/search/?api=1&query=17.419006%2C78.449408",
     });
+    expect(pageErrors).toEqual([]);
   });
   test("pending organiser saves a partial free draft and cannot publish by UI or API", async ({
     page,
