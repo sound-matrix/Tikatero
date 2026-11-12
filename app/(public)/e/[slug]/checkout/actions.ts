@@ -1,7 +1,9 @@
 "use server";
 import { randomUUID } from "node:crypto";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { createServiceClient } from "@/lib/supabase/service";
+import { sessionClient } from "@/lib/supabase/server";
+import { refCookie, shareChannel } from "@/lib/sharing/links";
 import { checkoutSchema, type CheckoutResult, type CheckoutOrder } from "@/lib/checkout/model";
 import { checkoutData, providerOrder, transition } from "@/lib/checkout/store";
 import { grantOrderAccess, tokenHash, verifyCheckoutRecaptcha } from "@/lib/checkout/security";
@@ -76,11 +78,17 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
         throw error;
       }
     }
-    const { data: existing, error: lookupError } = await client.rpc("checkout_user_by_email", {
-      p_email: values.email,
-    });
-    if (lookupError) throw new Error("Buyer profile unavailable.");
-    let buyerId: string | null = existing;
+    const session = await sessionClient();
+    const user = session ? (await session.auth.getUser()).data.user : null;
+    const buyer = user?.email && user.email_confirmed_at ? user : null;
+    let buyerId = buyer?.id ?? null;
+    if (!buyerId) {
+      const { data: existing, error: lookupError } = await client.rpc("checkout_user_by_email", {
+        p_email: values.email,
+      });
+      if (lookupError) throw new Error("Buyer profile unavailable.");
+      buyerId = existing;
+    }
     if (!buyerId) {
       // Unverified Auth record only: claiming an email never signs the buyer in or
       // confirms that email. Existing names/phones are never overwritten.
@@ -96,7 +104,10 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
     }
     const id = randomUUID();
     const hash = await grantOrderAccess(id);
-    const { data: held, error } = await client.rpc("checkout_hold", {
+    const ref =
+      shareChannel(values.ref) ??
+      shareChannel((await cookies()).get(refCookie(values.slug))?.value);
+    const hold = {
       p_order_id: id,
       p_buyer_id: buyerId,
       p_slug: values.slug,
@@ -112,7 +123,15 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
       p_token_hash: hash,
       p_attendees: values.attendees,
       p_is_test: gateway === "free" ? false : orderIsTest(gateway.mode),
-    });
+    };
+    const { data: held, error } =
+      buyer || ref
+        ? await client.rpc("checkout_hold_with_profile", {
+            ...hold,
+            p_login_email: buyer?.email?.toLowerCase() ?? null,
+            p_ref_channel: ref,
+          })
+        : await client.rpc("checkout_hold", hold);
     if (error || !held)
       return {
         error:
@@ -126,7 +145,13 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
     // If the request times out, keep the hold and reconcile; the remote create may
     // have succeeded. Never release inventory based on an ambiguous network error.
     try {
-      const { sessionId } = await gateway.create(providerOrder(order), origin);
+      const { sessionId } = await gateway.create(
+        {
+          ...providerOrder(order),
+          ...(buyer ? { customer_id: buyer.id, preferred_method: values.preferredMethod } : {}),
+        },
+        origin,
+      );
       const saved = await client
         .from("orders")
         .update({ payment_session_id: sessionId })

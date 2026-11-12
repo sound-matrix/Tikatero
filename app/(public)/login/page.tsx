@@ -1,18 +1,33 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { Suspense } from "react";
+import { returnPath } from "@/lib/auth/return-path";
 import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata: Metadata = { title: "Sign in" };
 
-async function Form({ searchParams }: { searchParams: Promise<{ error?: string; as?: string }> }) {
+async function Form({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; as?: string; next?: string }>;
+}) {
   const params = await searchParams;
-  return <LoginForm linkError={params.error === "link"} initialHost={params.as === "host"} />;
+  const initialEmail =
+    params.as === "attendee" ? ((await cookies()).get("tikatero_signup_email")?.value ?? "") : "";
+  return (
+    <LoginForm
+      linkError={params.error === "link"}
+      initialHost={params.as === "host"}
+      next={returnPath(params.next)}
+      initialEmail={initialEmail}
+    />
+  );
 }
 
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; as?: string }>;
+  searchParams: Promise<{ error?: string; as?: string; next?: string }>;
 }) {
   return (
     <main className="mx-auto w-full max-w-md px-4 py-10">

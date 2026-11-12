@@ -124,9 +124,9 @@ test.describe("Supabase role routing", () => {
       }
       await page.goto(role === "blocked" ? "/blocked" : "/me");
       await page.getByRole("button", { name: "Sign out", exact: true }).click();
-      await expect(page).toHaveURL(/\/login$/);
+      await expect(page).toHaveURL(/\/$/);
       await page.goto("/me/settings");
-      await expect(page).toHaveURL(/\/login$/);
+      await expect(page).toHaveURL(/\/login(?:\?next=.*)?$/);
     });
   }
 
@@ -144,8 +144,7 @@ test.describe("Supabase role routing", () => {
     await page.reload();
     await expect(page.getByRole("heading", { name: "Your account" })).toBeVisible();
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
-    // Finish the server-action redirect before testing the consumed link.
-    await expect(page).toHaveURL(/\/login$/);
+    await expect(page).toHaveURL(/\/$/);
     await page.goto(link);
     await expect(page).toHaveURL(/\/login\?error=link$/);
     await expect(page.getByRole("status").filter({ hasText: "expired" })).toBeVisible();
@@ -245,6 +244,6 @@ test("anonymous visitors cannot enter protected routes", async ({ page }) => {
     "/me/settings",
   ]) {
     await page.goto(path);
-    await expect(page).toHaveURL(/\/login$/);
+    await expect(page).toHaveURL(/\/login(?:\?next=.*)?$/);
   }
 });

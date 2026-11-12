@@ -1,7 +1,10 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import type { CheckoutMethod } from "@/lib/db/account-schema";
 import { parseHundredths } from "@/lib/pricing/settings";
 export type ProviderOrder = {
   id: string;
+  customer_id?: string;
+  preferred_method?: CheckoutMethod;
   buyer_name: string;
   buyer_email: string;
   buyer_phone: string;
@@ -48,6 +51,8 @@ export function providerPaise(value: unknown) {
     throw new Error("Invalid provider amount.");
   return parseHundredths(String(value));
 }
+const cashfreeMethods = { upi: "upi", card: "cc,dc", netbanking: "nb" } as const;
+
 export function cashfreeBody(order: ProviderOrder, origin: string) {
   if (
     !order.vendor_id ||
@@ -62,7 +67,7 @@ export function cashfreeBody(order: ProviderOrder, origin: string) {
     order_currency: "INR",
     order_expiry_time: order.hold_expires_at,
     customer_details: {
-      customer_id: order.id,
+      customer_id: order.customer_id ?? order.id,
       customer_name: order.buyer_name,
       customer_email: order.buyer_email,
       customer_phone: order.buyer_phone,
@@ -70,6 +75,9 @@ export function cashfreeBody(order: ProviderOrder, origin: string) {
     order_meta: {
       return_url: `${origin}/orders/${order.id}/status`,
       notify_url: `${origin}/api/cashfree/webhook`,
+      ...(order.preferred_method && order.preferred_method !== "ask"
+        ? { payment_methods: cashfreeMethods[order.preferred_method] }
+        : {}),
     },
     order_splits: [{ vendor: order.vendor_id, amount: rupees(order.organiser_share_paise) }],
   };

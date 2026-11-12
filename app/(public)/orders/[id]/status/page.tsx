@@ -4,6 +4,7 @@ import { ownOrder } from "@/lib/checkout/security";
 import { isOrderEventCancelled, reconcileOnDemand } from "@/lib/checkout/store";
 import { createServiceClient } from "@/lib/supabase/service";
 import { OrderStatusView } from "@/components/checkout/order-status";
+import { sessionClient } from "@/lib/supabase/server";
 import { loadOrderTickets } from "@/lib/tickets/load";
 export const metadata = { title: "Order status", robots: { index: false, follow: false } };
 async function Status({ params }: { params: Promise<{ id: string }> }) {
@@ -18,8 +19,11 @@ async function Status({ params }: { params: Promise<{ id: string }> }) {
     .eq("topic", "payment.review_required")
     .maybeSingle();
   if (error) throw new Error("Your order status could not be loaded.");
+  const session = await sessionClient();
+  const guest = !(session && (await session.auth.getUser()).data.user);
   return (
     <OrderStatusView
+      guest={guest}
       initial={{
         id: order.id,
         status,

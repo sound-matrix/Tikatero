@@ -1,8 +1,10 @@
+import type { AccountFunctions, AccountTables, AccountViews, ShareChannel } from "./account-schema";
+
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
   public: {
-    Tables: {
+    Tables: AccountTables & {
       order_outbox: {
         Row: {
           id: string;
@@ -686,6 +688,7 @@ export type Database = {
       };
       orders: {
         Row: {
+          ref_channel: ShareChannel | null;
           payment_provider: "mock" | "cashfree" | "free" | null;
           payment_session_id: string | null;
           vendor_id: string | null;
@@ -720,6 +723,7 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          ref_channel?: ShareChannel | null;
           payment_provider?: "mock" | "cashfree" | "free" | null;
           payment_session_id?: string | null;
           vendor_id?: string | null;
@@ -753,6 +757,7 @@ export type Database = {
           total_paise: number;
         };
         Update: {
+          ref_channel?: ShareChannel | null;
           payment_provider?: "mock" | "cashfree" | "free" | null;
           payment_session_id?: string | null;
           vendor_id?: string | null;
@@ -1073,6 +1078,12 @@ export type Database = {
       };
       profiles: {
         Row: {
+          updated_at: string;
+          gender: string | null;
+          date_of_birth: string | null;
+          city: string | null;
+          avatar_path: string | null;
+          display_name: string | null;
           block_reason: string | null;
           blocked_at: string | null;
           country: string | null;
@@ -1086,6 +1097,12 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          updated_at?: string;
+          gender?: string | null;
+          date_of_birth?: string | null;
+          city?: string | null;
+          avatar_path?: string | null;
+          display_name?: string | null;
           block_reason?: string | null;
           blocked_at?: string | null;
           country?: string | null;
@@ -1098,6 +1115,12 @@ export type Database = {
           welcome_email_sent_at?: string | null;
         };
         Update: {
+          updated_at?: string;
+          gender?: string | null;
+          date_of_birth?: string | null;
+          city?: string | null;
+          avatar_path?: string | null;
+          display_name?: string | null;
           block_reason?: string | null;
           blocked_at?: string | null;
           country?: string | null;
@@ -1500,7 +1523,7 @@ export type Database = {
         Relationships: [];
       };
     };
-    Views: {
+    Views: AccountViews & {
       discovery_events: {
         Row: {
           id: string;
@@ -1581,7 +1604,14 @@ export type Database = {
         Relationships: [];
       };
     };
-    Functions: {
+    Functions: AccountFunctions & {
+      checkout_hold_with_profile: {
+        Args: Database["public"]["Functions"]["checkout_hold"]["Args"] & {
+          p_login_email: string | null;
+          p_ref_channel: ShareChannel | null;
+        };
+        Returns: Json;
+      };
       checkout_user_by_email: { Args: { p_email: string }; Returns: string };
       checkout_rate_limit: { Args: { p_key: string }; Returns: boolean };
       checkout_hold: {

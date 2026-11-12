@@ -42,13 +42,15 @@ beforeEach(() => {
   mock.refresh = false;
   mock.account.mockReset();
 });
-it("redirects anonymous nested console requests to login without carrying query parameters", async () => {
+it("redirects anonymous nested console requests to login with a same-site return path", async () => {
   mock.account.mockResolvedValue(null);
   const result = await proxy(
     new NextRequest("http://localhost/console/settings?next=https://evil.invalid"),
   );
   expect(result.status).toBe(303);
-  expect(result.headers.get("location")).toBe("http://localhost/login");
+  const location = new URL(result.headers.get("location")!);
+  expect(location.pathname).toBe("/login");
+  expect(location.searchParams.get("next")).toBe("/console/settings?next=https://evil.invalid");
   expect(result.headers.get("cache-control")).toContain("no-store");
 });
 it("preserves refreshed session cookies through a role redirect", async () => {

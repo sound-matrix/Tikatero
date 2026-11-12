@@ -39,7 +39,9 @@ code entry needs the provider to include the code. This PR does not author or
 change email templates or SMTP credentials. Token-hash email links using
 `/auth/callback?token_hash={{ .TokenHash }}&type=email` are also supported.
 
-No user-supplied `next` destination is accepted. Expired/used links return a
+Sign-in accepts a same-site `next` path. Code verification and email links opened
+in the requesting browser return to that page when the account can access it.
+Expired/used links return a
 plain-English error on `/login`. The callback removes token parameters from the
 redirect and sets `no-referrer` and `no-store` headers.
 

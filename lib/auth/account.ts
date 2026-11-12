@@ -15,7 +15,7 @@ export async function readAccount(client: SupabaseClient<Database>): Promise<Acc
   if (error || !user) return null;
   const { data: profile, error: profileError } = await client
     .from("profiles")
-    .select("id, full_name, phone, role, blocked_at, block_reason")
+    .select("id, full_name, phone, role, blocked_at, block_reason, display_name, avatar_path")
     .eq("id", user.id)
     .single();
   if (profileError || !profile)

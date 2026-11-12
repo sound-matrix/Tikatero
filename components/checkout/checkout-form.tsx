@@ -1,4 +1,6 @@
 "use client";
+import { paymentMethods } from "@/lib/account/profile";
+import type { CheckoutMethod, ShareChannel } from "@/lib/db/account-schema";
 import { useState, useTransition } from "react";
 import { RecaptchaScript, RecaptchaNotice, recaptchaToken } from "@/components/recaptcha";
 import Script from "next/script";
@@ -10,6 +12,9 @@ import { tierUnavailable, type CheckoutTier } from "@/lib/checkout/model";
 import { submitCheckout } from "@/app/(public)/e/[slug]/checkout/actions";
 export function CheckoutForm({
   slug,
+  defaults,
+  selectedTier,
+  refChannel,
   tiers,
   version,
   feePayer,
@@ -20,6 +25,9 @@ export function CheckoutForm({
   now,
 }: {
   slug: string;
+  defaults: { name: string; email: string; phone: string; method: CheckoutMethod } | null;
+  selectedTier?: string;
+  refChannel: ShareChannel | null;
   tiers: CheckoutTier[];
   version: PricingVersion;
   feePayer: "buyer" | "organiser";
@@ -29,7 +37,18 @@ export function CheckoutForm({
   useCashfree: boolean;
   now: number;
 }) {
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const ready = Boolean(
+    defaults && defaults.name.trim().length >= 2 && defaults.email && defaults.phone,
+  );
+  const [editing, setEditing] = useState(!ready);
+  const [quantities, setQuantities] = useState<Record<string, number>>(() => {
+    const available = tiers.filter((tier) => !tierUnavailable(tier, now));
+    const initial =
+      available.find((tier) => tier.id === selectedTier) ??
+      (ready && available.length === 1 ? available[0] : null);
+    return initial ? { [initial.id]: 1 } : {};
+  });
+  const quick = ready && !editing;
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const router = useRouter();
@@ -63,7 +82,9 @@ export function CheckoutForm({
             name: form.get("name"),
             email: form.get("email"),
             phone: form.get("phone"),
-            consent: form.get("consent") === "on",
+            consent: quick || form.get("consent") === "on",
+            ref: refChannel,
+            preferredMethod: (form.get("preferred_method") ?? defaults?.method) || undefined,
             lines: lines.filter((l) => l.qty > 0).map(({ id, qty }) => ({ id, qty })),
             attendees: String(form.get("attendees") ?? "")
               .split("\n")
@@ -145,13 +166,31 @@ export function CheckoutForm({
           <h2 id="details-heading" className="text-xl font-bold">
             Your details
           </h2>
-          <p className="mt-1 text-sm text-muted">Book without creating an account.</p>
-          <div className="mt-5 space-y-4">
+          {!defaults && (
+            <p className="mt-1 text-sm text-muted">Book without creating an account.</p>
+          )}
+          {quick && defaults && (
+            <div className="mt-4 rounded-xl bg-soft p-4 text-sm">
+              <p className="font-bold">{defaults.name}</p>
+              <p className="break-all text-muted">
+                {defaults.email} · {defaults.phone}
+              </p>
+              <button
+                type="button"
+                className="mt-2 min-h-10 font-semibold text-teal underline"
+                onClick={() => setEditing(true)}
+              >
+                Change details
+              </button>
+            </div>
+          )}
+          <div hidden={quick} className="mt-5 space-y-4">
             <label className="block font-semibold">
               Full name
               <input
                 required
                 name="name"
+                defaultValue={defaults?.name ?? ""}
                 autoComplete="name"
                 minLength={2}
                 maxLength={120}
@@ -167,6 +206,7 @@ export function CheckoutForm({
                 required
                 type="email"
                 name="email"
+                defaultValue={defaults?.email ?? ""}
                 autoComplete="email"
                 maxLength={254}
                 aria-describedby="email-help"
@@ -182,6 +222,7 @@ export function CheckoutForm({
                 required
                 type="tel"
                 name="phone"
+                defaultValue={defaults?.phone ?? ""}
                 autoComplete="tel-national"
                 inputMode="numeric"
                 pattern="[6-9][0-9]{9}"
@@ -190,6 +231,22 @@ export function CheckoutForm({
                 className="mt-2 block min-h-12 w-full rounded-xl border border-line px-4"
               />
             </label>
+            {defaults && !isFree && (
+              <label className="block font-semibold">
+                How you like to pay
+                <select
+                  name="preferred_method"
+                  defaultValue={defaults.method}
+                  className="mt-2 block min-h-12 w-full rounded-xl border border-line px-4"
+                >
+                  {Object.entries(paymentMethods).map(([method, label]) => (
+                    <option key={method} value={method}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <label className="block font-semibold">
               Attendee names <span className="font-normal text-muted">(optional)</span>
               <textarea
@@ -237,9 +294,11 @@ export function CheckoutForm({
         </dl>
         <p className="mt-4 text-sm text-muted">No hidden fees. What you see is what you pay.</p>
         <label className="mt-5 flex items-start gap-3 text-sm">
-          <input required name="consent" type="checkbox" className="mt-1 h-5 w-5 shrink-0" />
+          {!quick && (
+            <input required name="consent" type="checkbox" className="mt-1 h-5 w-5 shrink-0" />
+          )}
           <span>
-            I agree to the{" "}
+            {quick ? "By booking, you agree to the " : "I agree to the "}
             <Link className="underline" href="/legal/terms">
               terms
             </Link>
@@ -267,10 +326,17 @@ export function CheckoutForm({
         >
           {pending
             ? "Holding your tickets…"
-            : total.buyer_total === 0
-              ? "Confirm my free pass"
-              : `Pay ${publicPrice(total.buyer_total)}`}
+            : quick && defaults
+              ? `Book now as ${defaults.name.split(/\s+/)[0]} · ${total.buyer_total === 0 ? "Free" : publicPrice(total.buyer_total)}`
+              : total.buyer_total === 0
+                ? "Confirm my free pass"
+                : `Pay ${publicPrice(total.buyer_total)}`}
         </button>
+        {quick && !isFree && (
+          <p className="mt-3 text-sm text-muted">
+            You’ll still approve the payment in your UPI app or with your card OTP.
+          </p>
+        )}
         <RecaptchaNotice />
         {!isFree && (
           <p className="mt-4 text-center text-sm font-semibold text-teal">

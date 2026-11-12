@@ -162,3 +162,23 @@ it("retains a pending order on provider network errors", async () => {
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network unavailable")));
   await expect(new Cashfree().get(order)).rejects.toThrow();
 });
+
+it("uses a stable Cashfree identity and preferred payment methods for signed-in checkout", () => {
+  const origin = "https://tickets.example.test";
+  expect(cashfreeBody(order, origin).customer_details.customer_id).toBe(order.id);
+  const customer_id = "afe3721f-2010-4dce-9c16-105e3c9b9b02";
+  for (const [preferred_method, methods] of [
+    ["upi", "upi"],
+    ["card", "cc,dc"],
+    ["netbanking", "nb"],
+    ["ask", undefined],
+  ] as const) {
+    const payload = cashfreeBody({ ...order, customer_id, preferred_method }, origin);
+    expect(payload.customer_details).toMatchObject({
+      customer_id,
+      customer_email: order.buyer_email,
+      customer_phone: order.buyer_phone,
+    });
+    expect(payload.order_meta.payment_methods).toBe(methods);
+  }
+});

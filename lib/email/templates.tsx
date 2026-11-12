@@ -49,6 +49,17 @@ const notice = (
 const definitions: {
   [K in TemplateName]: { label: string; build: (data: TemplateData[K]) => Notice };
 } = {
+  backup_email_verification: {
+    label: "Verify backup email",
+    build: () =>
+      notice(
+        "Verify your backup email",
+        "Follow this link to verify the backup email you added to Tikatero. The link is valid for 24 hours.",
+        [],
+        "Verify email",
+        "/me/profile",
+      ),
+  },
   welcome_attendee: {
     label: "Welcome to Tikatero",
     build: () =>

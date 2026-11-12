@@ -132,9 +132,10 @@ test.describe("Attendee discovery", () => {
     );
     await page.goto("/e/sample-music-night");
     await page.getByRole("button", { name: "Share event" }).click();
-    await expect(page.getByRole("status")).toContainText("Link copied");
+    await page.getByRole("button", { name: "Copy link" }).click();
+    await expect(page.getByRole("dialog").getByRole("status")).toContainText("Link copied");
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-      "http://127.0.0.1:3000/e/sample-music-night",
+      "http://127.0.0.1:3000/e/sample-music-night?ref=copy",
     );
   });
   test("Open Graph image is a real PNG", async ({ request }) => {

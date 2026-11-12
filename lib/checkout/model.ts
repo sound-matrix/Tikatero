@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { CheckoutMethod } from "@/lib/db/account-schema";
 import type { Database } from "@/lib/db/types";
 export const checkoutSchema = z.object({
   slug: z
@@ -31,6 +32,10 @@ export const checkoutSchema = z.object({
   attendees: z.array(z.string().trim().max(120)).max(50).default([]),
   consent: z.literal(true, { error: "Please agree to the terms and privacy policy." }),
   recaptcha: z.string().max(2048).default(""),
+  ref: z.string().max(16).nullish(),
+  preferredMethod: z
+    .enum(["ask", "upi", "card", "netbanking"] satisfies CheckoutMethod[])
+    .optional(),
 });
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
 export type CheckoutTier = Database["public"]["Tables"]["ticket_types"]["Row"];

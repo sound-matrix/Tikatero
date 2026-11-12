@@ -1,6 +1,7 @@
 import { SurfaceGuard } from "@/components/auth/surface-guard";
 import { Suspense } from "react";
 import { SideNav } from "@/components/layout/side-nav";
+import { PublicHeader, PublicHeaderFallback } from "@/components/layout/public-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { requireAccount } from "@/lib/auth/account";
 import { consoleNavFor } from "@/lib/nav";
@@ -22,6 +23,9 @@ async function ConsoleNav() {
 export default function ConsoleLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-full flex-col bg-white">
+      <Suspense fallback={<PublicHeaderFallback />}>
+        <PublicHeader compact />
+      </Suspense>
       <div className="flex flex-1 flex-col md:flex-row">
         <Suspense fallback={<NavFallback />}>
           <ConsoleNav />
