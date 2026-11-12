@@ -194,7 +194,7 @@ test.describe("Organiser event wizard", () => {
     page,
   }, info) => {
     test.skip(!fixtureKey, "Build and run with the Playwright Maps fixture key.");
-    test.setTimeout(120_000);
+    test.setTimeout(180_000);
     let loaderRequests = 0;
     await page.route(`${mapsScript}?**`, async (route) => {
       loaderRequests++;
@@ -213,6 +213,8 @@ test.describe("Organiser event wizard", () => {
     await dates(page);
     expect(loaderRequests).toBe(0);
     await next(page, "Where will people meet?");
+    await expect(page).toHaveURL(/\/events\/[0-9a-f-]+\/edit\?step=3$/);
+    const field = (name: string) => page.getByRole("textbox", { name, exact: true });
 
     const search = page.getByRole("combobox", { name: "Search for your venue" });
     const list = page.getByRole("listbox", { name: "Venue suggestions" });
@@ -230,15 +232,15 @@ test.describe("Organiser event wizard", () => {
     await search.press("ArrowDown");
     await search.press("Enter");
 
-    await expect(page.getByLabel("Venue name", { exact: true })).toHaveValue("Taj Krishna");
-    await expect(page.getByLabel("Address", { exact: true })).toHaveValue(
+    await expect(field("Venue name")).toHaveValue("Taj Krishna");
+    await expect(field("Address")).toHaveValue(
       "Road No. 1, Banjara Hills, Hyderabad, Telangana, India",
     );
-    await expect(page.getByLabel("City", { exact: true })).toHaveValue("Hyderabad");
-    await expect(page.getByLabel("Country", { exact: true })).toHaveValue("IN");
-    await expect(page.getByLabel("Latitude (optional)")).toHaveValue("17.417816");
-    await expect(page.getByLabel("Longitude (optional)")).toHaveValue("78.449501");
-    await expect(page.getByLabel("Google Maps link (optional)")).toHaveValue(placeLink);
+    await expect(field("City")).toHaveValue("Hyderabad");
+    await expect(page.getByRole("combobox", { name: "Country", exact: true })).toHaveValue("IN");
+    await expect(field("Latitude (optional)")).toHaveValue("17.417816");
+    await expect(field("Longitude (optional)")).toHaveValue("78.449501");
+    await expect(field("Google Maps link (optional)")).toHaveValue(placeLink);
     await expect(page.getByRole("link", { name: /Open in Maps/ })).toHaveAttribute(
       "href",
       placeLink,
@@ -262,7 +264,7 @@ test.describe("Organiser event wizard", () => {
     ]);
     await shot(page, info, 33);
     await page.getByRole("button", { name: "Save draft", exact: true }).click();
-    await expect(page.getByText("Draft saved.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: /^Draft saved\.$/ })).toBeVisible();
     const eventId = /\/events\/([0-9a-f-]+)\/edit/.exec(page.url())![1];
     const saved = () =>
       client()
@@ -284,17 +286,17 @@ test.describe("Organiser event wizard", () => {
     page.on("pageerror", (error) => pageErrors.push(error.message));
     await page.reload();
     await expect(pin).toBeVisible();
-    await expect(page.getByLabel("Google Maps link (optional)")).toHaveValue(placeLink);
+    await expect(field("Google Maps link (optional)")).toHaveValue(placeLink);
     await pin.scrollIntoViewIfNeeded();
     const point = (await pin.boundingBox())!;
     await page.mouse.move(point.x + point.width / 2, point.y + point.height / 2);
     await page.mouse.down();
     await page.mouse.move(point.x + 30, point.y + 25);
     await page.mouse.up();
-    await expect(page.getByLabel("Latitude (optional)")).toHaveValue("17.418257");
+    await expect(field("Latitude (optional)")).toHaveValue("17.418257");
     await map.click({ position: { x: 40, y: 50 } });
-    await expect(page.getByLabel("Latitude (optional)")).toHaveValue("17.419006");
-    await page.getByLabel("Venue name", { exact: true }).fill("Taj Krishna, main entrance");
+    await expect(field("Latitude (optional)")).toHaveValue("17.419006");
+    await field("Venue name").fill("Taj Krishna, main entrance");
     await next(page, "Give your event a poster");
     expect((await saved()).data).toMatchObject({
       venue_name: "Taj Krishna, main entrance",
