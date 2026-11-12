@@ -111,6 +111,11 @@ test("international organiser uploads ID, corrects requested documents and gets 
       owner.getByText("We check documents by hand, usually within 2 working days."),
     ).toBeVisible();
 
+    await owner.goto("/console/onboarding");
+    await expect(
+      owner.getByText("We check documents by hand, usually within 2 working days."),
+    ).toBeVisible();
+
     const { data: app, error } = await service
       .from("kyc_applications")
       .select("*")

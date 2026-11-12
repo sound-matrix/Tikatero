@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
+  isInternationalUpload,
   isPrivateUpload,
   validateFile,
   type SignedUpload,
@@ -189,7 +190,11 @@ export function ImageUpload({
                 : "Upload file"}
         </Button>
         <span className="text-sm font-semibold text-teal">
-          {document ? "Private · only Tikatero staff can open it" : "Secure upload"}
+          {isInternationalUpload(kind)
+            ? "Private · only Tikatero admins can open it"
+            : document
+              ? "Private · only Tikatero staff can open it"
+              : "Secure upload"}
         </span>
       </div>
       {(busy || status === "done") && (

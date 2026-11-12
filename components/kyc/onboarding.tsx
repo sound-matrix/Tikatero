@@ -68,7 +68,7 @@ export function Onboarding({ initial }: { initial: FlowState }) {
       }
     });
   }
-  if (reviewing)
+  if (reviewing && country !== "INTL")
     return (
       <main className="mx-auto max-w-2xl px-5 py-10">
         <h1 className="text-3xl font-extrabold">Your details are with our team</h1>
