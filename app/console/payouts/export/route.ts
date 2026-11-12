@@ -6,6 +6,8 @@ import { allowRequest } from "@/lib/security/rate-limit";
 
 export async function GET() {
   const { client, account } = await requireAccount();
+  if (!account.organisers.length && !account.assignments?.some((item) => item.role === "manager"))
+    return new Response(null, { status: 403 });
   if (!(await allowRequest("export-user", account.profile.id, 10, 3600)))
     return new Response("Too many downloads. Please wait an hour and try again.", { status: 429 });
   const { events } = await hostEarnings(client, false);

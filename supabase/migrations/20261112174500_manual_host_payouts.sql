@@ -431,7 +431,7 @@ create function payout_private.manual_buckets(p_organiser uuid, p_test boolean)
 returns table(event_id uuid, available_paise bigint, remaining_paise bigint, next_at timestamptz, oldest_at timestamptz)
 language sql stable set search_path = '' as $$
   with entries as (
-    select e.event_id, e.amount_paise,
+    select e.event_id, e.order_id, e.amount_paise,
       case when e.kind in ('ticket_sale','refund') then
         greatest(e.available_at,payout_private.add_ist_working_days(
           coalesce(ev.ends_at,ev.starts_at + interval '1 day',e.available_at),
@@ -440,12 +440,11 @@ language sql stable set search_path = '' as $$
     from public.organiser_earnings_entries e left join public.events ev on ev.id = e.event_id
     where e.organiser_id = p_organiser and e.is_test = p_test and e.payout_mode = 'manual'
   ), reserved as (
-    select o.event_id, sum(r.organiser_reversal_paise)::bigint as amount
-    from public.refunds r join public.orders o on o.id = r.order_id
-    join public.events ev on ev.id = o.event_id
-    where ev.organiser_id = p_organiser and o.is_test = p_test and o.payout_mode = 'manual'
-      and r.status = 'approved' and ev.status <> 'cancelled'
-    group by o.event_id
+    select sale.event_id, sum(r.organiser_reversal_paise)::bigint as amount
+    from entries sale join public.refunds r on r.order_id = sale.order_id
+    where sale.kind = 'ticket_sale' and sale.ready_at <= now()
+      and r.status = 'approved' and sale.status <> 'cancelled'
+    group by sale.event_id
   )
   select e.event_id,
     coalesce(sum(e.amount_paise) filter (where ready_at <= now()),0)::bigint - coalesce(r.amount,0)
@@ -625,6 +624,11 @@ declare report jsonb;
 begin
   if auth.uid() is null or exists (select 1 from public.profiles where id = auth.uid() and blocked_at is not null)
     then raise exception 'You cannot view earnings.' using errcode = '42501'; end if;
+  if not public.is_staff()
+    and not exists (select 1 from public.organisers where owner_id = auth.uid())
+    and not exists (select 1 from public.organiser_members where user_id = auth.uid())
+    and not exists (select 1 from public.event_team where user_id = auth.uid() and role = 'manager')
+    then raise exception 'You cannot view earnings.' using errcode = '42501'; end if;
   with events as materialized (
     select ev.id, ev.organiser_id, ev.starts_at, payout_private.event_earnings(ev.id,p_test) as data
     from public.events ev where payout_private.can_view_sales(ev.id)
@@ -654,11 +658,23 @@ begin
 end;
 $$;
 
+-- PostgREST calls stable reporting RPCs in read-only transactions.
+-- Staff writes use the locking check in admin_private.require_staff().
+create function payout_private.require_staff_read() returns void
+language plpgsql stable set search_path = '' as $$
+begin
+  if not exists(select 1 from public.profiles
+    where id = auth.uid() and blocked_at is null and role in ('staff','admin')) then
+    raise exception 'Staff access required' using errcode = '42501';
+  end if;
+end;
+$$;
+
 create function payout_private.staff_payouts(p_test boolean, p_event uuid, p_host uuid)
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
 declare report jsonb;
 begin
-  perform admin_private.require_staff();
+  perform payout_private.require_staff_read();
   with hosts as (
     select o.id,o.display_name,o.kyc_status,o.payouts_on_hold,o.payout_mode_override,
       b.bank_holder_name,b.bank_acct_last4,b.bank_ifsc,
@@ -706,7 +722,7 @@ create function payout_private.staff_earnings_reconciliation(p_test boolean)
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
 declare report jsonb;
 begin
-  perform admin_private.require_staff();
+  perform payout_private.require_staff_read();
   with collected as (
     select coalesce(sum(organiser_share_paise),0) as sales
     from public.orders where is_test = p_test and paid_at is not null and status in ('paid','partially_refunded','refunded')

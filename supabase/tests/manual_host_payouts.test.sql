@@ -51,6 +51,9 @@ select is(public.apply_payout_settlement('manual-ignored','f2540000-0000-4000-80
 
 insert into public.refunds(id,order_id,amount_paise,organiser_reversal_paise,status)
 values ('f2550000-0000-4000-8000-000000000001','f2540000-0000-4000-8000-000000000001',3333,3000,'approved');
+select is((select available_paise from payout_private.manual_buckets('f2510000-0000-4000-8000-000000000001',false)
+  where event_id = 'f2520000-0000-4000-8000-000000000001'),0::bigint,
+  'A pending refund on a future event does not consume funds that are available for other events');
 select public.finish_refund('f2550000-0000-4000-8000-000000000001','manual-partial','processed');
 select public.finish_refund('f2550000-0000-4000-8000-000000000001','manual-partial','processed');
 select is((select amount_paise from public.organiser_earnings_entries where refund_id = 'f2550000-0000-4000-8000-000000000001'),-3000::bigint,'Partial refund records its exact host deduction once');
@@ -88,6 +91,8 @@ select is(public.admin_payout_bank_details(null,'f2520000-0000-4000-8000-0000000
   '8000','The bank export uses the balance of the selected event');
 select is(public.admin_payout_bank_details('f2510000-0000-4000-8000-000000000001',null,false,false)#>>'{0,encrypted_number}',
   'encrypted-bank-envelope-for-tests-only','Staff may request the encrypted account for a verified host');
+select is(public.admin_payouts_overview(false,null,'f2510000-0000-4000-8000-000000000001')#>>'{hosts,0,available_paise}',
+  '8000','Staff can open the host payout trail with the amount now payable');
 select throws_ok($$select pg_temp.pay(8001)$$,'P0001','Amount exceeds what can be paid now.','Staff cannot overpay without a reason');
 select throws_ok($$select pg_temp.pay(10,'MANUAL1234',current_date + 2)$$,'P0001','Enter a payment date on or before today in India.','Paid on cannot be in the future');
 select throws_ok($$select pg_temp.pay(10,'MANUAL1234',current_date - 1,'f2510000-0000-4000-8000-000000000002')$$,
@@ -124,7 +129,7 @@ select throws_ok($$select public.admin_payout_bank_details('f2510000-0000-4000-8
 
 select set_config('request.jwt.claim.sub','f2500000-0000-4000-8000-000000000004',true);
 select throws_ok($$select public.organiser_event_earnings('f2520000-0000-4000-8000-000000000001')$$,'42501',null,'Door staff cannot see earnings');
-select is(jsonb_array_length(public.organiser_earnings_summary()->'events'),0,'Door staff sees no money in the summary');
+select throws_ok($$select public.organiser_earnings_summary()$$,'42501',null,'Door staff cannot request the earnings summary');
 select set_config('request.jwt.claim.sub','f2500000-0000-4000-8000-000000000006',true);
 select is(jsonb_array_length(public.organiser_earnings_summary()->'events'),1,'Event managers see the assigned event only');
 reset role;

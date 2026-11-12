@@ -14,6 +14,8 @@ import { spreadsheetText } from "@/lib/payouts/spreadsheet";
 
 export async function GET() {
   const { client, account } = await requireAccount();
+  if (!account.organisers.length && !account.assignments?.some((item) => item.role === "manager"))
+    return new Response(null, { status: 403 });
   if (!(await allowRequest("export-user", account.profile.id, 10, 3600))) return downloadLimit();
   const { events, history } = await hostEarnings(client, false);
   const book = new ExcelJS.Workbook();
