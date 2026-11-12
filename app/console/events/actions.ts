@@ -95,7 +95,8 @@ export async function saveEvent(input: unknown): Promise<SaveResult> {
                   ? "People have already booked this ticket type, so it can't be removed."
                   : "Your event could not be saved. Check your details and try again.",
     };
-  updateTag("public-events");
+  const draft = await readDraft(client, data.eventId);
+  if (draft?.status === "published") updateTag("public-events");
   revalidatePath("/console/events", "layout");
-  return { draft: (await readDraft(client, data.eventId)) ?? undefined };
+  return { draft: draft ?? undefined };
 }

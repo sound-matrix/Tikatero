@@ -210,6 +210,8 @@ test.describe("Organiser event wizard", () => {
       .getByLabel("Description", { exact: true })
       .fill("A live music evening for local audiences.");
     await next(page, "When is your event?");
+    await expect(page).toHaveURL(/\/events\/[0-9a-f-]+\/edit\?step=2$/);
+    await page.reload();
     await dates(page);
     expect(loaderRequests).toBe(0);
     await next(page, "Where will people meet?");

@@ -76,7 +76,9 @@ test.describe("Attendee discovery", () => {
       const response = await request.get(`/e/${slug}`);
       expect(response.status()).toBe(404);
       expect((await page.goto(`/e/${slug}/book`))?.status()).toBe(404);
-      await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: "This event isn't available right now" }),
+      ).toBeVisible();
       expect((await request.get(`/e/${slug}/opengraph-image`)).status()).toBe(404);
     }
   });
