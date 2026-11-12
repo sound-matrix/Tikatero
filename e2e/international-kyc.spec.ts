@@ -108,12 +108,17 @@ test("international organiser uploads ID, corrects requested documents and gets 
     await owner.getByRole("button", { name: "Submit for verification" }).click();
     await expect(owner).toHaveURL(/\/console\/pending/);
     await expect(
-      owner.getByText("We check documents by hand, usually within 2 working days."),
+      owner.getByRole("heading", {
+        name: "We check documents by hand, usually within 2 working days.",
+        exact: true,
+      }),
     ).toBeVisible();
 
     await owner.goto("/console/onboarding");
     await expect(
-      owner.getByText("We check documents by hand, usually within 2 working days."),
+      owner.getByText("We check documents by hand, usually within 2 working days.", {
+        exact: true,
+      }),
     ).toBeVisible();
 
     const { data: app, error } = await service
@@ -166,8 +171,12 @@ test("international organiser uploads ID, corrects requested documents and gets 
     await upload(back, "new-back.png");
     await owner.getByRole("button", { name: "Save and continue" }).click();
     await owner.getByRole("button", { name: "Submit for verification" }).click();
+    await expect(owner).toHaveURL(/\/console\/pending/);
     await expect(
-      owner.getByText("We check documents by hand, usually within 2 working days."),
+      owner.getByRole("heading", {
+        name: "We check documents by hand, usually within 2 working days.",
+        exact: true,
+      }),
     ).toBeVisible();
 
     await reviewer.reload();
