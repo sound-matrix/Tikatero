@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { formatInr } from "@/lib/format";
 import { organiserFeeWording, previewPricing, type PricingVersion } from "@/lib/pricing";
+import { publicPayoutHoldDays } from "@/lib/payments/settings";
+import { earningsPaymentCopy } from "@/lib/payouts/earnings";
 import { activePricing } from "@/lib/pricing/data";
 
 export const metadata: Metadata = {
@@ -11,11 +13,6 @@ export const metadata: Metadata = {
 };
 
 const examplePrices = [50_000, 100_000, 250_000] as const;
-
-function payoutSentence(days: number) {
-  const unit = days === 1 ? "day" : "days";
-  return `Organisers are usually paid within ${days} ${unit} after the payment clears.`;
-}
 
 function StartSelling() {
   return (
@@ -98,8 +95,9 @@ function ExampleTable({ version }: { version: PricingVersion }) {
 
 async function PricingDetails() {
   let version: PricingVersion;
+  let days: number;
   try {
-    version = await activePricing();
+    [version, days] = await Promise.all([activePricing(), publicPayoutHoldDays()]);
   } catch {
     return (
       <>
@@ -126,7 +124,7 @@ async function PricingDetails() {
       </section>
       <section className="mt-8">
         <h2 className="text-2xl font-bold text-ink">When organisers get paid</h2>
-        <p className="mt-3 text-base leading-7 text-ink">{payoutSentence(version.payout_days)}</p>
+        <p className="mt-3 text-base leading-7 text-ink">{earningsPaymentCopy(days)}</p>
       </section>
       <StartSelling />
     </>

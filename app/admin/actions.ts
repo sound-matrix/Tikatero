@@ -11,7 +11,9 @@ import {
   settlementHoldPlan,
   vendorFollowUp,
 } from "@/lib/payouts/model";
+import { adminPayouts } from "@/lib/payouts/earnings";
 import { notifyPayoutHeld } from "@/lib/payouts/notify";
+import { platformPayments } from "@/lib/payments/settings";
 import { splitProvider } from "@/lib/payouts/provider";
 export type ActionState = { error?: string; success?: string; notificationId?: string };
 function text(form: FormData, key: string) {
@@ -141,7 +143,7 @@ export async function changeControl(_state: ActionState, form: FormData): Promis
     [
       client
         .from("organisers")
-        .select("id, owner_id, cashfree_vendor_id")
+        .select("id, owner_id, cashfree_vendor_id, payout_mode_override")
         .eq("id", id)
         .maybeSingle(),
       client.from("organiser_members").select("user_id").eq("organiser_id", id),
@@ -154,15 +156,18 @@ export async function changeControl(_state: ActionState, form: FormData): Promis
     (members ?? []).flatMap((member) => (member.user_id ? [member.user_id] : [])),
   );
   if (own) return { error: own };
+  const manual =
+    control !== "payouts_on_hold" ||
+    (org.payout_mode_override ?? (await platformPayments()).payout_mode) === "manual";
   let provider: "mock" | "cashfree" | "unconfigured" = "unconfigured";
   try {
-    provider = splitProvider().mode;
+    if (!manual) provider = splitProvider().mode;
   } catch {
     provider = "unconfigured";
   }
   const plan = settlementHoldPlan({
     control,
-    vendorId: org.cashfree_vendor_id,
+    vendorId: manual ? null : org.cashfree_vendor_id,
     productionLocked: productionPaymentLock(),
     provider,
   });
@@ -171,7 +176,7 @@ export async function changeControl(_state: ActionState, form: FormData): Promis
   const hold = enabled === "true";
   if (plan === "call" && org.cashfree_vendor_id) {
     try {
-      await splitProvider().setSettlementHold(org.cashfree_vendor_id, hold);
+      await splitProvider().setRecipientHold(org.cashfree_vendor_id, hold);
     } catch {
       return {
         error:
@@ -187,7 +192,7 @@ export async function changeControl(_state: ActionState, form: FormData): Promis
   if (error || !data) {
     if (plan === "call" && org.cashfree_vendor_id) {
       try {
-        await splitProvider().setSettlementHold(org.cashfree_vendor_id, !hold);
+        await splitProvider().setRecipientHold(org.cashfree_vendor_id, !hold);
       } catch {
         return { error: "The payout hold needs attention. Please try again." };
       }
@@ -200,7 +205,8 @@ export async function changeControl(_state: ActionState, form: FormData): Promis
   }
   if (control === "payouts_on_hold" && hold) {
     try {
-      await notifyPayoutHeld(id, data);
+      const { hosts } = await adminPayouts(client, false, null, id);
+      await notifyPayoutHeld(id, data, Math.max(0, hosts[0]?.remaining_paise ?? 0));
     } catch {
       refresh();
       return { success: "Organiser control saved. The on-hold email needs attention." };

@@ -1,11 +1,15 @@
 import "server-only";
-import type { PaymentProvider, ProviderOrder, ProviderRefund } from "./model";
-export class MockPayment implements PaymentProvider {
-  readonly mode = "mock" as const;
-  async create(order: ProviderOrder) {
+import type { PaymentGateway, ProviderOrder, ProviderRefund } from "./model";
+export class MockPayment implements PaymentGateway {
+  readonly name = "mock" as const;
+  readonly mode = this.name;
+  verifyWebhook() {
+    return false;
+  }
+  async createOrder(order: ProviderOrder) {
     return { sessionId: order.id };
   }
-  async get(order: ProviderOrder) {
+  async fetchOrderStatus(order: ProviderOrder) {
     return { state: "pending" as const, amount: order.total_paise, currency: "INR" };
   }
   async refund(input: ProviderRefund) {

@@ -11,6 +11,7 @@ import {
 } from "./model";
 import { Cashfree, CASHFREE_API_VERSION } from "./cashfree";
 import { paymentProvider } from ".";
+import { CashfreeSplit } from "@/lib/payouts/provider";
 import { computePricing } from "@/lib/pricing/compute";
 import { launchPricing } from "@/lib/pricing";
 const order: ProviderOrder = {
@@ -21,6 +22,7 @@ const order: ProviderOrder = {
   total_paise: 100000,
   organiser_share_paise: 95339,
   vendor_id: "vendor_test",
+  payout_mode: "gateway_split",
   hold_expires_at: "2026-11-01T10:10:00Z",
 };
 afterEach(() => {
@@ -74,7 +76,7 @@ it.each(["buyer", "organiser"] as const)(
       }),
     });
     vi.stubGlobal("fetch", fetch);
-    await new Cashfree().create(input, "https://tickets.example.test");
+    await new Cashfree(new CashfreeSplit()).createOrder(input, "https://tickets.example.test");
     const [url, request] = fetch.mock.calls[0];
     const body = JSON.parse(request.body);
     expect(url).toBe("https://sandbox.cashfree.com/pg/orders");
@@ -147,20 +149,21 @@ it("rejects a provider create response for a different amount", async () => {
       }),
     }),
   );
-  await expect(new Cashfree().create(order, "https://example.test")).rejects.toThrow(
-    "invalid order",
-  );
+  await expect(
+    new Cashfree(new CashfreeSplit()).createOrder(order, "https://example.test"),
+  ).rejects.toThrow("invalid order");
 });
 
 it("expires an absent remote order after its hold deadline", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 404 }));
   expect(
-    (await new Cashfree().get({ ...order, hold_expires_at: "2020-01-01T00:00:00Z" })).state,
+    (await new Cashfree().fetchOrderStatus({ ...order, hold_expires_at: "2020-01-01T00:00:00Z" }))
+      .state,
   ).toBe("expired");
 });
 it("retains a pending order on provider network errors", async () => {
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network unavailable")));
-  await expect(new Cashfree().get(order)).rejects.toThrow();
+  await expect(new Cashfree().fetchOrderStatus(order)).rejects.toThrow();
 });
 
 it("uses a stable Cashfree identity and preferred payment methods for signed-in checkout", () => {
@@ -181,4 +184,29 @@ it("uses a stable Cashfree identity and preferred payment methods for signed-in 
     });
     expect(payload.order_meta.payment_methods).toBe(methods);
   }
+});
+
+it("creates a standard Cashfree order with no recipient or split", () => {
+  const body = cashfreeBody(
+    { ...order, vendor_id: null, payout_mode: "manual" },
+    "https://tickets.example.test",
+  );
+  expect(body).not.toHaveProperty("order_splits");
+  expect(providerPaise(body.order_amount)).toBe(order.total_paise);
+  expect(() =>
+    cashfreeBody(
+      { ...order, vendor_id: null, payout_mode: "gateway_split" },
+      "https://tickets.example.test",
+    ),
+  ).toThrow(/not ready/);
+});
+
+it("selects the Instamojo skeleton without running network operations", async () => {
+  const gateway = paymentProvider("instamojo");
+  expect(gateway.name).toBe("instamojo");
+  await expect(gateway.createOrder(order, "https://tickets.example.test")).rejects.toThrow(
+    /not configured/,
+  );
+  expect(() => paymentProvider("razorpay")).toThrow(/not configured/);
+  expect(() => paymentProvider("payu")).toThrow(/not configured/);
 });

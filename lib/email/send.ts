@@ -12,6 +12,7 @@ export type SendOptions<K extends TemplateName> = {
   template: K;
   to: string;
   entityRef: string;
+  logOnly?: boolean;
   data: TemplateData[K];
 } & (K extends "order_confirmed" ? { attachments?: EmailAttachment[] } : { attachments?: never });
 export type SendResult = {
@@ -130,7 +131,7 @@ export async function send<K extends TemplateName>(options: SendOptions<K>): Pro
     return { status: "invalid_input" };
   }
 
-  const config = configuration();
+  const config = options.logOnly ? null : configuration();
   let client: Client;
   let claim: { id: string; idempotency_key: string | null; status: string };
   try {

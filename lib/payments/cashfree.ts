@@ -3,7 +3,11 @@ import {
   cashfreeBody,
   cashfreeRefundBody,
   providerPaise,
-  type PaymentProvider,
+  cashfreeOrderSplits,
+  cashfreeRefundSplits,
+  verifyWebhook,
+  type PaymentGateway,
+  type SplitCapability,
   type ProviderOrder,
   type ProviderRefund,
   type ProviderRefundResult,
@@ -15,8 +19,19 @@ class CashfreeError extends Error {
     super("Payment service is temporarily unavailable. Please try again.");
   }
 }
-export class Cashfree implements PaymentProvider {
-  readonly mode = "cashfree" as const;
+export class Cashfree implements PaymentGateway {
+  readonly name = "cashfree" as const;
+  readonly mode = this.name;
+  constructor(private readonly split?: SplitCapability) {}
+
+  verifyWebhook(raw: string, timestamp: string | null, signature: string | null) {
+    return verifyWebhook(
+      raw,
+      timestamp,
+      signature,
+      process.env.CASHFREE_WEBHOOK_SECRET || process.env.CASHFREE_SECRET_KEY || "",
+    );
+  }
   private async request(path: string, init?: RequestInit) {
     const base =
       process.env.CASHFREE_ENV === "production"
@@ -38,11 +53,15 @@ export class Cashfree implements PaymentProvider {
     if (!response.ok) throw new CashfreeError(response.status);
     return response.json();
   }
-  async create(order: ProviderOrder, origin: string) {
+  async createOrder(order: ProviderOrder, origin: string) {
+    if (order.payout_mode === "gateway_split" && !this.split)
+      throw new Error("The payment gateway is not configured for split payments.");
     const result = await this.request("/orders", {
       method: "POST",
       headers: { "x-idempotency-key": order.id },
-      body: JSON.stringify(cashfreeBody(order, origin)),
+      body: JSON.stringify(
+        cashfreeBody(order, origin, this.split?.splitForOrder ?? cashfreeOrderSplits),
+      ),
     });
     if (
       result.order_id !== order.id ||
@@ -53,7 +72,7 @@ export class Cashfree implements PaymentProvider {
       throw new Error("Payment service returned an invalid order.");
     return { sessionId: result.payment_session_id };
   }
-  async get(order: ProviderOrder): Promise<PaymentResult> {
+  async fetchOrderStatus(order: ProviderOrder): Promise<PaymentResult> {
     let result;
     try {
       result = await this.request(`/orders/${encodeURIComponent(order.id)}`);
@@ -79,10 +98,14 @@ export class Cashfree implements PaymentProvider {
     };
   }
   async refund(input: ProviderRefund): Promise<ProviderRefundResult> {
+    if (input.reversalPaise > 0 && input.vendorId && !this.split)
+      throw new Error("The payment gateway is not configured for split refunds.");
     const result = await this.request(`/orders/${encodeURIComponent(input.orderId)}/refunds`, {
       method: "POST",
       headers: { "x-idempotency-key": input.refundId },
-      body: JSON.stringify(cashfreeRefundBody(input)),
+      body: JSON.stringify(
+        cashfreeRefundBody(input, this.split?.reverseOnRefund ?? cashfreeRefundSplits),
+      ),
     });
     const id = result.cf_refund_id;
     if (

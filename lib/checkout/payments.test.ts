@@ -119,6 +119,15 @@ beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_SITE_URL", "http://localhost:3000");
   mock.from.mockImplementation((table: string) =>
     query(() => {
+      if (table === "platform_payment_settings")
+        return {
+          data: {
+            active_gateway: "cashfree",
+            payout_mode: "manual",
+            payout_hold_days_after_event: 2,
+          },
+          error: null,
+        };
       if (table === "events") return { data: fixture.event, error: null };
       if (table === "organisers") return { data: fixture.organiser, error: null };
       if (table === "kyc_applications")
@@ -141,7 +150,11 @@ beforeEach(() => {
           buyer_name: args.p_name,
           buyer_email: args.p_email,
           organiser_share_paise: amounts.organiser_share,
-          vendor_id: fixture.organiser.cashfree_vendor_id,
+          payout_mode: fixture.organiser.payout_mode_override ?? "manual",
+          vendor_id:
+            fixture.organiser.payout_mode_override === "gateway_split"
+              ? fixture.organiser.cashfree_vendor_id
+              : null,
           hold_expires_at: new Date(Date.now() + 600_000).toISOString(),
         },
         error: null,

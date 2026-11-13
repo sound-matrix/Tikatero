@@ -1,6 +1,6 @@
 /** Treat formula markers and control characters at the start of user-entered cells as text. */
 export function spreadsheetText(value: string) {
-  return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  return /^(?:[\t\r\n]|\s*[=+\-@＝＋－＠])/u.test(value) ? `'${value}` : value;
 }
 
 const IST_OFFSET = (5 * 60 + 30) * 60 * 1000;

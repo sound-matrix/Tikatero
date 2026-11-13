@@ -105,6 +105,7 @@ test("organiser sees sales and a test payout; staff cannot hold their own organi
         platform_share_paise: 2360,
         fee_payer: "organiser",
         status: "pending",
+        payout_mode: "gateway_split",
         is_test: false,
       })
     ).error,
@@ -122,6 +123,7 @@ test("organiser sees sales and a test payout; staff cannot hold their own organi
         platform_share_paise: 0,
         fee_payer: "organiser",
         status: "pending",
+        payout_mode: "gateway_split",
         is_test: true,
       })
     ).error,
@@ -186,6 +188,7 @@ test("organiser sees sales and a test payout; staff cannot hold their own organi
         platform_share_paise: 0,
         fee_payer: "organiser",
         status: "pending",
+        payout_mode: "gateway_split",
         is_test: false,
       })
     ).error,
@@ -228,15 +231,11 @@ test("organiser sees sales and a test payout; staff cannot hold their own organi
   expect(workbook.getWorksheet("Orders")?.getRow(1).values).not.toContain("Email");
   await page.screenshot({ path: testInfo.outputPath("pr24-live-sales.png"), fullPage: true });
   await page.goto("/console/payouts");
-  await expect(
-    page.getByText("Usually paid within 2 days after the payment clears."),
-  ).toBeVisible();
-  await expect(page.getByText("T+2")).toHaveCount(0);
-  await expect(
-    page.getByText("Payouts are in test mode. No money has been sent to a bank."),
-  ).toBeVisible();
-  await expect(page.getByText("11 Nov 2026, 6:00 PM IST").first()).toBeVisible();
-  await expect(page.getByText("sent to your bank")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Your earnings" })).toBeVisible();
+  await expect(page.getByText(/within 2 working days after your event ends/)).toBeVisible();
+  await expect(page.getByText("Paid to you", { exact: true }).first()).toBeVisible();
+  await page.getByRole("link", { name: "Show test records" }).click();
+  await expect(page.getByText("Test records. No money was sent to your bank.")).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("payouts.png"), fullPage: true });
 
   const doorContext = await browser.newContext();

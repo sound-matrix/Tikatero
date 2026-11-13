@@ -1,4 +1,5 @@
 import "server-only";
+import { paymentDate } from "./earnings";
 import { send } from "@/lib/email/send";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -15,7 +16,7 @@ async function ownerEmail(organiserId: string) {
   return { email: data.user.email, name: org.display_name };
 }
 
-export async function notifyPayoutHeld(organiserId: string, auditId: string) {
+export async function notifyPayoutHeld(organiserId: string, auditId: string, manualBalance = 0) {
   const service = createServiceClient();
   const { data: rows, error } = await service
     .from("payouts")
@@ -24,7 +25,7 @@ export async function notifyPayoutHeld(organiserId: string, auditId: string) {
     .eq("status", "on_hold")
     .eq("is_test", false);
   if (error) throw new Error("Payouts could not be loaded.");
-  const amountPaise = (rows ?? []).reduce((sum, row) => sum + row.amount_paise, 0);
+  const amountPaise = (rows ?? []).reduce((sum, row) => sum + row.amount_paise, manualBalance);
   if (amountPaise <= 0) return null;
   const owner = await ownerEmail(organiserId);
   return send({
@@ -39,18 +40,35 @@ export async function notifyPayoutSettled(payoutId: string) {
   const service = createServiceClient();
   const { data: payout, error } = await service
     .from("payouts")
-    .select("id, organiser_id, amount_paise, is_test, status, cf_split_ref")
+    .select(
+      "id, organiser_id, amount_paise, is_test, status, cf_split_ref, bank_reference, bank_last4, paid_on, method, voided_at",
+    )
     .eq("id", payoutId)
     .maybeSingle();
-  if (error || !payout || payout.is_test || payout.status !== "settled") return null;
+  if (
+    error ||
+    !payout ||
+    payout.status !== "settled" ||
+    payout.voided_at ||
+    (payout.is_test && !payout.method)
+  )
+    return null;
   const owner = await ownerEmail(payout.organiser_id);
   return send({
     template: "payout_settled",
     entityRef: `payout/${payout.id}/settled`,
     to: owner.email,
+    logOnly: payout.is_test,
     data: {
       organiserName: owner.name,
-      payoutRef: payout.cf_split_ref || payout.id,
+      payoutRef: payout.bank_reference || payout.cf_split_ref || payout.id,
+      ...(payout.paid_on && payout.bank_last4
+        ? {
+            bankLast4: payout.bank_last4,
+            paidOn: paymentDate({ ...payout, event_title: null, settled_at: null }),
+            isTest: payout.is_test,
+          }
+        : {}),
       amountPaise: payout.amount_paise,
       actionPath: "/console/payouts",
     },

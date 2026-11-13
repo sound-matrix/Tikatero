@@ -57,10 +57,10 @@ export async function ensureSplitVendor(organiserId: string) {
     throw new Error(LIVE_VENDOR_UNAVAILABLE);
   }
   if (provider.mode !== "mock") {
-    await provider.ensureVendor(organiserId);
+    await provider.ensureRecipient(organiserId);
     throw new Error(LIVE_VENDOR_UNAVAILABLE);
   }
-  const created = await provider.ensureVendor(organiserId);
+  const created = await provider.ensureRecipient(organiserId);
   if (!created.vendorId.startsWith("mock_vendor_")) throw new Error(LIVE_VENDOR_UNAVAILABLE);
   const { error: saveError } = await service
     .from("organisers")

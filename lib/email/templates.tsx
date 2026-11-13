@@ -288,18 +288,28 @@ const definitions: {
   payout_settled: {
     label: "Payout settled",
     build: (d) =>
-      notice(
-        "Your payout has been settled",
-        "Your payout has been sent to your registered bank account. Your bank controls when the funds appear.",
-        [
-          detail("Organiser", d.organiserName),
-          detail("Payout reference", d.payoutRef),
-          detail("Payout amount", formatINR(d.amountPaise)),
-        ],
-        "Open organiser console",
-        "/console",
-        { badge: "Payout settled" },
-      ),
+      d.bankLast4 && d.paidOn
+        ? notice(
+            "Your earnings were paid",
+            d.isTest
+              ? "This is a test payment."
+              : `${formatINR(d.amountPaise)} was sent to your bank account ending ${text(d.bankLast4)} on ${text(d.paidOn)}.`,
+            [detail("Bank reference", d.payoutRef)],
+            "View your earnings",
+            "/console/payouts",
+          )
+        : notice(
+            "Your payout has been settled",
+            "Your payout has been sent to your registered bank account. Your bank controls when the funds appear.",
+            [
+              detail("Organiser", d.organiserName),
+              detail("Payout reference", d.payoutRef),
+              detail("Payout amount", formatINR(d.amountPaise)),
+            ],
+            "Open organiser console",
+            "/console",
+            { badge: "Payout settled" },
+          ),
   },
   payout_on_hold: {
     label: "Payout on hold",
