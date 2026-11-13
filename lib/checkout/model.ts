@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { RECAPTCHA_MAX_TOKEN_LENGTH, RECAPTCHA_RETRY } from "@/lib/security/recaptcha-token";
 import type { CheckoutMethod } from "@/lib/db/account-schema";
 import type { Database } from "@/lib/db/types";
 export const checkoutSchema = z.object({
@@ -31,7 +32,10 @@ export const checkoutSchema = z.object({
     ),
   attendees: z.array(z.string().trim().max(120)).max(50).default([]),
   consent: z.literal(true, { error: "Please agree to the terms and privacy policy." }),
-  recaptcha: z.string().max(2048).default(""),
+  recaptcha: z
+    .string({ error: RECAPTCHA_RETRY })
+    .max(RECAPTCHA_MAX_TOKEN_LENGTH, RECAPTCHA_RETRY)
+    .default(""),
   ref: z.string().max(16).nullish(),
   preferredMethod: z
     .enum(["ask", "upi", "card", "netbanking"] satisfies CheckoutMethod[])

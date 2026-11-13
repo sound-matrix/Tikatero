@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { recaptchaSiteKey, verifyRecaptcha, RECAPTCHA_MIN_SCORE } from "./recaptcha";
+import { RECAPTCHA_MAX_TOKEN_LENGTH } from "./recaptcha-token";
 const valid = { success: true, action: "checkout", hostname: "tikatero.com", score: 0.5 };
 const fetcher = vi.fn();
 beforeEach(() => {
@@ -64,7 +65,7 @@ it.each(["NEXT_PUBLIC_RECAPTCHA_SITE_KEY", "RECAPTCHA_SECRET_KEY"])(
 );
 it("rejects absent/long tokens and network/provider failures", async () => {
   expect(await verifyRecaptcha("", "checkout")).toBe(false);
-  expect(await verifyRecaptcha("x".repeat(2049), "checkout")).toBe(false);
+  expect(await verifyRecaptcha("x".repeat(RECAPTCHA_MAX_TOKEN_LENGTH + 1), "checkout")).toBe(false);
   expect(fetcher).not.toHaveBeenCalled();
   fetcher.mockRejectedValue(new Error("timeout"));
   expect(await verifyRecaptcha("token", "checkout")).toBe(false);
