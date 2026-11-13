@@ -70,18 +70,28 @@ async function next(page: Page, heading: string) {
 const futureDay = () => new Date(Date.now() + 45 * 86400000).toISOString().slice(0, 10);
 async function dates(page: Page) {
   const day = futureDay();
-  await page.getByLabel("Starts (IST)", { exact: true }).fill(`${day}T19:00`);
-  await page.getByLabel("Ends (IST, optional)").fill(`${day}T21:00`);
-  await page.getByLabel("Gates open (IST, optional)").fill(`${day}T18:00`);
+  await page
+    .getByLabel("Starts (IST)", { exact: true })
+    .filter({ visible: true })
+    .fill(`${day}T19:00`);
+  await page.getByLabel("Ends (IST, optional)").filter({ visible: true }).fill(`${day}T21:00`);
+  await page
+    .getByLabel("Gates open (IST, optional)")
+    .filter({ visible: true })
+    .fill(`${day}T18:00`);
 }
 async function venue(page: Page) {
-  await page.getByLabel("Venue name", { exact: true }).fill("Riverfront Hall");
-  await page.getByLabel("Address", { exact: true }).fill("12 Music Street, near the main entrance");
-  await page.getByLabel("City", { exact: true }).fill("Hyderabad");
+  await page.getByRole("textbox", { name: "Venue name", exact: true }).fill("Riverfront Hall");
   await page
-    .getByLabel("Google Maps link (optional)")
+    .getByRole("textbox", { name: "Address", exact: true })
+    .fill("12 Music Street, near the main entrance");
+  await page.getByRole("textbox", { name: "City", exact: true }).fill("Hyderabad");
+  await page
+    .getByRole("textbox", { name: "Google Maps link (optional)", exact: true })
     .fill("https://www.google.com/maps?q=17.385,78.4867");
-  await expect(page.getByLabel("Latitude (optional)")).toHaveValue("17.385");
+  await expect(page.getByRole("textbox", { name: "Latitude (optional)", exact: true })).toHaveValue(
+    "17.385",
+  );
 }
 async function shot(page: Page, info: TestInfo, step: number) {
   await page.screenshot({
@@ -315,13 +325,15 @@ test.describe("Organiser event wizard", () => {
   });
   for (const category of ["Comedy", "Wedding / Private"] as const) {
     test(`publishes a ${category} event with category details`, async ({ page, browser }, info) => {
-      test.setTimeout(180_000);
+      test.setTimeout(100_000);
+      page.setDefaultTimeout(8_000);
       await setup(page, true);
       await page.setViewportSize({ width: 390, height: 844 });
       await page.goto("/console/events/new");
       const title = `${category === "Comedy" ? "Comedy evening" : "Private celebration"} ${crypto.randomUUID().slice(0, 8)}`;
       await page.getByLabel("Event name", { exact: true }).fill(title);
-      const select = page.getByLabel("Category", { exact: true });
+      const select = page.getByRole("combobox", { name: "Category", exact: true });
+      const chooseCategory = (name: string) => select.selectOption(name, { timeout: 10_000 });
       if (category === "Comedy") {
         const screenshot = async (name: string) => {
           await page.screenshot({
@@ -331,23 +343,23 @@ test.describe("Organiser event wizard", () => {
         };
         await page.getByLabel("Music style").fill("Acoustic");
         await screenshot("concert-details");
-        page.once("dialog", async (dialog) => {
-          expect(dialog.message()).toBe("Some answers for Concert will be removed.");
-          await dialog.accept();
-        });
-        await select.selectOption("Conference");
+        await chooseCategory("Conference");
+        await expect(
+          page.getByText("Some answers for Concert will be removed.", { exact: true }),
+        ).toBeVisible();
+        await page.getByRole("button", { name: "Change category", exact: true }).click();
         await expect(page.getByLabel("Event name", { exact: true })).toHaveValue(title);
         await expect(page.getByRole("group", { name: "Schedule" })).toBeVisible();
         await screenshot("conference-details");
-        await select.selectOption("Other");
+        await chooseCategory("Other");
         await expect(
-          page.getByLabel("Only people with the link can see this event"),
+          page.getByRole("checkbox", { name: "Only people with the link can see this event" }),
         ).not.toBeChecked();
         await screenshot("other-details");
-        await select.selectOption("Comedy");
+        await chooseCategory("Comedy");
         await page.getByRole("radio", { name: "18+", exact: true }).check();
       } else {
-        await select.selectOption(category);
+        await chooseCategory(category);
         await expect(page.getByLabel("Only people with the link can see this event")).toBeChecked();
         await page.getByLabel("Hosted by").fill("Maya and Dev");
       }
@@ -356,6 +368,8 @@ test.describe("Organiser event wizard", () => {
         .fill("Join us for an evening together at Riverfront Hall.");
       await page.getByLabel("Free entry", { exact: true }).check();
       await next(page, "When is your event?");
+      await expect(page).toHaveURL(/\/edit\?step=2$/);
+      await page.reload();
       await dates(page);
       await next(page, "Where will people meet?");
       await venue(page);

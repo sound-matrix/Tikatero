@@ -142,7 +142,8 @@ export function EventWizard({
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
     [dirty, setDirty] = useState(false),
-    [detailToFocus, setDetailToFocus] = useState("");
+    [detailToFocus, setDetailToFocus] = useState(""),
+    [pendingCategory, setPendingCategory] = useState<Values["category"] | null>(null);
   const hidden = Boolean(draft?.hiddenAt);
   const canPublish = approved && !paused && !hidden,
     complete = draft?.completed ?? [],
@@ -172,12 +173,20 @@ export function EventWizard({
   function update<K extends keyof Values>(key: K, value: Values[K]) {
     patchValues({ [key]: value });
   }
-  function changeCategory(category: Values["category"]) {
+  function changeCategory(category: Values["category"], confirmed = false) {
+    if (category === values.category) {
+      setPendingCategory(null);
+      return;
+    }
     const nextFields = categoryFields[category];
     const removed = Object.keys(readCategoryDetails(values.category, values.details)).some(
       (key) => !Object.hasOwn(nextFields, key),
     );
-    if (removed && !window.confirm(`Some answers for ${values.category} will be removed.`)) return;
+    if (removed && !confirmed) {
+      setPendingCategory(category);
+      return;
+    }
+    setPendingCategory(null);
     patchValues({
       category,
       details: Object.fromEntries(
@@ -203,7 +212,7 @@ export function EventWizard({
     return new URL(key, mediaBase).href;
   }
   async function save(next: number, publish = false, detailKey = "") {
-    if (busy) return;
+    if (busy || pendingCategory) return;
     setBusy(true);
     setError("");
     setMessage("");
@@ -225,12 +234,15 @@ export function EventWizard({
       setDraft(result.draft);
       setValues(result.draft.values);
       setStep(next);
+      setPendingCategory(null);
       setDetailToFocus(detailKey);
       setDirty(false);
       setMessage(
         publish ? "Your event is published." : alreadyPublished ? "Changes saved." : "Draft saved.",
       );
-      router.replace(`/console/events/${id}/edit?step=${next + 1}`, { scroll: false });
+      const editPath = `/console/events/${id}/edit?step=${next + 1}`;
+      if (draft) window.history.replaceState(null, "", editPath);
+      else router.replace(editPath, { scroll: false });
     } catch {
       setError("We could not save your event. Check your connection and try again.");
     } finally {
@@ -280,7 +292,10 @@ export function EventWizard({
             key={name}
             type="button"
             disabled={
-              !hydrated || busy || (index > step && !complete.includes(index) && index !== step + 1)
+              !hydrated ||
+              busy ||
+              pendingCategory !== null ||
+              (index > step && !complete.includes(index) && index !== step + 1)
             }
             aria-current={index === step ? "step" : undefined}
             onClick={() => {
@@ -365,7 +380,7 @@ export function EventWizard({
                   <Field label="Category">
                     <select
                       className={fieldClass}
-                      value={values.category}
+                      value={pendingCategory ?? values.category}
                       onChange={(e) =>
                         changeCategory(knownCategory(e.target.value) ?? values.category)
                       }
@@ -389,6 +404,23 @@ export function EventWizard({
                     </select>
                   </Field>
                 </div>
+                {pendingCategory && (
+                  <div className="space-y-2 rounded-xl border border-gold bg-gold-soft p-4">
+                    <p role="alert">Some answers for {values.category} will be removed.</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="primary"
+                        onClick={() => changeCategory(pendingCategory, true)}
+                      >
+                        Change category
+                      </Button>
+                      <Button type="button" onClick={() => setPendingCategory(null)}>
+                        Keep {values.category}
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 <CategoryDetailsFields
                   category={values.category}
                   details={values.details}
@@ -1106,17 +1138,25 @@ export function EventWizard({
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
           <Button
             type="button"
-            disabled={step === 0 || busy || !hydrated}
+            disabled={step === 0 || busy || !hydrated || pendingCategory !== null}
             onClick={() => void save(Math.max(0, step - 1))}
           >
             Back
           </Button>
           <div className="flex flex-wrap gap-3">
-            <Button type="button" disabled={busy || !hydrated} onClick={() => void save(step)}>
+            <Button
+              type="button"
+              disabled={busy || !hydrated || pendingCategory !== null}
+              onClick={() => void save(step)}
+            >
               {busy ? "Saving…" : alreadyPublished ? "Save changes" : "Save draft"}
             </Button>
             {step < 7 && (
-              <Button type="submit" variant="primary" disabled={busy || !hydrated}>
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={busy || !hydrated || pendingCategory !== null}
+              >
                 {busy ? "Saving…" : "Save and continue"}
               </Button>
             )}
