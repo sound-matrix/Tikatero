@@ -8,6 +8,7 @@ export type PublicEvent = Omit<
   Database["public"]["Views"]["discovery_events"]["Row"],
   "tiers" | "guests"
 > & { tiers: Tier[]; guests: Guest[] };
+type LinkedEvent = PublicEvent & { is_unlisted: boolean };
 export const PAGE_SIZE = 12;
 function configured() {
   return (
@@ -17,7 +18,7 @@ function configured() {
     )
   );
 }
-function event(row: Database["public"]["Views"]["discovery_events"]["Row"]): PublicEvent {
+function event<T extends Database["public"]["Views"]["discovery_events"]["Row"]>(row: T) {
   return {
     ...row,
     tiers: row.tiers as unknown as Tier[],
@@ -48,12 +49,10 @@ export async function discover(input: Filters, trending = false) {
   return { events: (data ?? []).map(event), total: count ?? 0, unavailable: !!error };
 }
 /** Detail is request-fresh: pausing/unpublishing never serves a cached event or book link. */
-export const publicEvent = cache(async (slug: string): Promise<PublicEvent | null> => {
+export const publicEvent = cache(async (slug: string): Promise<LinkedEvent | null> => {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 160 || !configured()) return null;
   const { data, error } = await createAnonClient()
-    .from("discovery_events")
-    .select("*")
-    .eq("slug", slug)
+    .rpc("public_event_by_slug", { p_slug: slug })
     .maybeSingle();
   if (error) throw new Error("This event could not be loaded. Please try again.");
   return data ? event(data) : null;
@@ -61,4 +60,25 @@ export const publicEvent = cache(async (slug: string): Promise<PublicEvent | nul
 
 export async function requestTime() {
   return Date.now();
+}
+
+/** The sitemap uses the same visibility rules as browse and search. */
+export async function sitemapEventSlugs() {
+  "use cache";
+  cacheLife({ stale: 30, revalidate: 60, expire: 300 });
+  cacheTag("public-events");
+  if (!configured()) return [];
+  const client = createAnonClient();
+  const slugs: string[] = [];
+  const pageSize = 1000;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await client
+      .from("discovery_events")
+      .select("slug")
+      .order("slug")
+      .range(offset, offset + pageSize - 1);
+    if (error) throw new Error("The event sitemap could not be loaded.");
+    slugs.push(...data.map(({ slug }) => slug));
+    if (data.length < pageSize) return slugs;
+  }
 }

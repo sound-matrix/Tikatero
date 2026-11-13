@@ -413,11 +413,13 @@ export type Database = {
           country: string;
           created_at: string;
           description: string | null;
+          details: Json;
           ends_at: string | null;
           fee_payer: Database["public"]["Enums"]["fee_payer"];
           gates_open_at: string | null;
           id: string;
           is_free: boolean;
+          is_unlisted: boolean;
           lat: number | null;
           lng: number | null;
           maps_url: string | null;
@@ -455,11 +457,13 @@ export type Database = {
           country?: string;
           created_at?: string;
           description?: string | null;
+          details?: Json;
           ends_at?: string | null;
           fee_payer?: Database["public"]["Enums"]["fee_payer"];
           gates_open_at?: string | null;
           id?: string;
           is_free?: boolean;
+          is_unlisted?: boolean;
           lat?: number | null;
           lng?: number | null;
           maps_url?: string | null;
@@ -496,11 +500,13 @@ export type Database = {
           country?: string;
           created_at?: string;
           description?: string | null;
+          details?: Json;
           ends_at?: string | null;
           fee_payer?: Database["public"]["Enums"]["fee_payer"];
           gates_open_at?: string | null;
           id?: string;
           is_free?: boolean;
+          is_unlisted?: boolean;
           lat?: number | null;
           lng?: number | null;
           maps_url?: string | null;
@@ -1643,6 +1649,7 @@ export type Database = {
           min_price_paise: number | null;
           tiers: Json;
           guests: Json;
+          details: Json;
         };
         Relationships: [];
       };
@@ -1831,6 +1838,16 @@ export type Database = {
           p_payload?: Json;
         };
         Returns: string;
+      };
+      public_event_by_slug: {
+        Args: { p_slug: string };
+        Returns: (Database["public"]["Views"]["discovery_events"]["Row"] & {
+          is_unlisted: boolean;
+        })[];
+      };
+      admin_set_event_unlisted: {
+        Args: { p_event_id: string; p_is_unlisted: boolean; p_reason: string; p_revision: number };
+        Returns: undefined;
       };
       save_event_wizard: {
         Args: {

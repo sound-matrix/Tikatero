@@ -70,18 +70,28 @@ async function next(page: Page, heading: string) {
 const futureDay = () => new Date(Date.now() + 45 * 86400000).toISOString().slice(0, 10);
 async function dates(page: Page) {
   const day = futureDay();
-  await page.getByLabel("Starts (IST)", { exact: true }).fill(`${day}T19:00`);
-  await page.getByLabel("Ends (IST, optional)").fill(`${day}T21:00`);
-  await page.getByLabel("Gates open (IST, optional)").fill(`${day}T18:00`);
+  await page
+    .getByLabel("Starts (IST)", { exact: true })
+    .filter({ visible: true })
+    .fill(`${day}T19:00`);
+  await page.getByLabel("Ends (IST, optional)").filter({ visible: true }).fill(`${day}T21:00`);
+  await page
+    .getByLabel("Gates open (IST, optional)")
+    .filter({ visible: true })
+    .fill(`${day}T18:00`);
 }
 async function venue(page: Page) {
-  await page.getByLabel("Venue name", { exact: true }).fill("Riverfront Hall");
-  await page.getByLabel("Address", { exact: true }).fill("12 Music Street, near the main entrance");
-  await page.getByLabel("City", { exact: true }).fill("Hyderabad");
+  await page.getByRole("textbox", { name: "Venue name", exact: true }).fill("Riverfront Hall");
   await page
-    .getByLabel("Google Maps link (optional)")
+    .getByRole("textbox", { name: "Address", exact: true })
+    .fill("12 Music Street, near the main entrance");
+  await page.getByRole("textbox", { name: "City", exact: true }).fill("Hyderabad");
+  await page
+    .getByRole("textbox", { name: "Google Maps link (optional)", exact: true })
     .fill("https://www.google.com/maps?q=17.385,78.4867");
-  await expect(page.getByLabel("Latitude (optional)")).toHaveValue("17.385");
+  await expect(page.getByRole("textbox", { name: "Latitude (optional)", exact: true })).toHaveValue(
+    "17.385",
+  );
 }
 async function shot(page: Page, info: TestInfo, step: number) {
   await page.screenshot({
@@ -110,6 +120,12 @@ test.describe("Organiser event wizard", () => {
     await page
       .getByLabel("Description", { exact: true })
       .fill("An evening of live acoustic music, special guests and good company.");
+    await expect(
+      page
+        .getByRole("navigation", { name: "Event creation steps" })
+        .getByRole("button", { name: "1 Details" }),
+    ).toHaveAttribute("aria-current", "step");
+    await expect(page.getByRole("heading", { name: "More about your concert" })).toBeVisible();
     await shot(page, info, 1);
     await next(page, "When is your event?");
     await expect(page).toHaveURL(/\/console\/events\/[0-9a-f-]+\/edit\?step=2$/);
@@ -307,6 +323,125 @@ test.describe("Organiser event wizard", () => {
     expect(mail).toEqual([{ template: "payout_settled" }]);
     await page.screenshot({ path: info.outputPath("manual-host-payment.png"), fullPage: true });
   });
+  for (const category of ["Comedy", "Wedding / Private"] as const) {
+    test(`publishes a ${category} event with category details`, async ({ page, browser }, info) => {
+      test.setTimeout(100_000);
+      page.setDefaultTimeout(8_000);
+      await setup(page, true);
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto("/console/events/new");
+      const title = `${category === "Comedy" ? "Comedy evening" : "Private celebration"} ${crypto.randomUUID().slice(0, 8)}`;
+      await page.getByLabel("Event name", { exact: true }).fill(title);
+      const select = page.getByRole("combobox", { name: "Category", exact: true });
+      const chooseCategory = (name: string) => select.selectOption(name, { timeout: 10_000 });
+      if (category === "Comedy") {
+        const screenshot = async (name: string) => {
+          await page.screenshot({
+            path: info.outputPath(`wizard-step-${name}.png`),
+            fullPage: true,
+          });
+        };
+        await page.getByLabel("Music style").fill("Acoustic");
+        await screenshot("concert-details");
+        await chooseCategory("Conference");
+        await expect(
+          page.getByText("Some answers for Concert will be removed.", { exact: true }),
+        ).toBeVisible();
+        await page.getByRole("button", { name: "Change category", exact: true }).click();
+        await expect(page.getByLabel("Event name", { exact: true })).toHaveValue(title);
+        await expect(page.getByRole("group", { name: "Schedule" })).toBeVisible();
+        await screenshot("conference-details");
+        await chooseCategory("Other");
+        await expect(
+          page.getByRole("checkbox", { name: "Only people with the link can see this event" }),
+        ).not.toBeChecked();
+        await screenshot("other-details");
+        await chooseCategory("Comedy");
+        await page.getByRole("radio", { name: "18+", exact: true }).check();
+      } else {
+        await chooseCategory(category);
+        await expect(page.getByLabel("Only people with the link can see this event")).toBeChecked();
+        await page.getByLabel("Hosted by").fill("Maya and Dev");
+      }
+      await page
+        .getByLabel("Description", { exact: true })
+        .fill("Join us for an evening together at Riverfront Hall.");
+      await page.getByLabel("Free entry", { exact: true }).check();
+      await next(page, "When is your event?");
+      await expect(page).toHaveURL(/\/edit\?step=2$/);
+      await page.reload();
+      await dates(page);
+      await next(page, "Where will people meet?");
+      await venue(page);
+      await next(page, "Give your event a poster");
+      await next(page, "VIPs & chief guests");
+      await next(page, "Free pass types");
+      await page.getByRole("button", { name: "Add another free pass type", exact: true }).click();
+      await next(page, "Fees & refunds");
+      await next(page, "Review & publish");
+      const publish = page.getByRole("button", { name: "Publish event", exact: true });
+      if (category === "Comedy") {
+        await expect(publish).toBeDisabled();
+        const missing = page.getByRole("link", {
+          name: "Add at least one comedian before publishing.",
+        });
+        await expect(missing).toBeVisible();
+        await page.screenshot({
+          path: info.outputPath("wizard-step-review-missing.png"),
+          fullPage: true,
+        });
+        await missing.click();
+        const comedians = page.getByRole("group", { name: "Comedians" });
+        await comedians.getByRole("button", { name: "Add another" }).click();
+        await comedians.getByLabel("Name", { exact: true }).fill("Jay Rao");
+        await page.getByRole("button", { name: /Review & publish/ }).click();
+      }
+      await expect(publish).toBeEnabled();
+      await publish.click();
+      await expect(
+        page.getByRole("status").filter({ hasText: "Your event is published." }),
+      ).toBeVisible();
+      const direct = await page.getByRole("link", { name: /\/e\// }).getAttribute("href");
+      if (!direct) throw new Error("Missing the published event link.");
+      const slug = new URL(direct).pathname;
+      const guest = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      try {
+        const publicPage = await guest.newPage();
+        await publicPage.goto(slug);
+        await expect(publicPage.getByRole("heading", { name: title })).toBeVisible();
+        const about = publicPage.locator("section").filter({
+          has: publicPage.getByRole("heading", { name: "About this event", exact: true }),
+        });
+        if (category === "Comedy") {
+          await expect(about).toContainText("Comedians");
+          await expect(about).toContainText("Jay Rao");
+          await expect(publicPage.getByText("Age limit · 18+")).toBeVisible();
+          await about.screenshot({ path: info.outputPath("wizard-step-public-about.png") });
+        } else {
+          await expect(about).toContainText("Maya and Dev");
+          await expect(publicPage.locator('meta[name="robots"]')).toHaveAttribute(
+            "content",
+            /noindex/,
+          );
+          await expect(
+            publicPage.getByText("This is a private event. Only people with the link can see it."),
+          ).toBeVisible();
+          await publicPage.getByRole("link", { name: "Get free pass", exact: true }).last().click();
+          await expect(publicPage).toHaveURL(new RegExp(`${slug}/checkout`));
+        }
+        await publicPage.goto(`/events?q=${encodeURIComponent(title)}`);
+        await expect(publicPage.getByRole("link", { name: new RegExp(title) })).toHaveCount(
+          category === "Comedy" ? 1 : 0,
+        );
+        const sitemap = await publicPage.request.get("/sitemap.xml");
+        expect(sitemap.ok()).toBe(true);
+        const xml = await sitemap.text();
+        expect(xml.includes(slug)).toBe(category === "Comedy");
+      } finally {
+        await guest.close();
+      }
+    });
+  }
   test("searches Google venues, saves a selection and fine-tunes its pin", async ({
     page,
   }, info) => {

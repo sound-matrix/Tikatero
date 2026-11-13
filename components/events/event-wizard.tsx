@@ -22,6 +22,13 @@ import {
   type Values,
   type Tier,
 } from "@/lib/events/model";
+import {
+  categoryFields,
+  knownCategory,
+  missingCategoryDetails,
+  readCategoryDetails,
+} from "@/lib/events/category-details";
+import { CategoryDetailsFields } from "./category-details-fields";
 import type { Draft } from "@/lib/events/store";
 import { INTERNATIONAL_PAID_TICKETS } from "@/lib/kyc/paid-tickets";
 import { previewPricing, organiserFeeWording, type PricingVersion } from "@/lib/pricing";
@@ -134,11 +141,14 @@ export function EventWizard({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
-    [dirty, setDirty] = useState(false);
+    [dirty, setDirty] = useState(false),
+    [detailToFocus, setDetailToFocus] = useState(""),
+    [pendingCategory, setPendingCategory] = useState<Values["category"] | null>(null);
   const hidden = Boolean(draft?.hiddenAt);
   const canPublish = approved && !paused && !hidden,
     complete = draft?.completed ?? [],
     alreadyPublished = draft?.status === "published";
+  const missingDetails = missingCategoryDetails(values.category, values.details);
   const totalTicketQuantity = values.tiers.reduce(
     (total, ticket) => total + (Number(ticket.quantity) || 0),
     0,
@@ -163,6 +173,34 @@ export function EventWizard({
   function update<K extends keyof Values>(key: K, value: Values[K]) {
     patchValues({ [key]: value });
   }
+  function changeCategory(category: Values["category"], confirmed = false) {
+    if (category === values.category) {
+      setPendingCategory(null);
+      return;
+    }
+    const nextFields = categoryFields[category];
+    const removed = Object.keys(readCategoryDetails(values.category, values.details)).some(
+      (key) => !Object.hasOwn(nextFields, key),
+    );
+    if (removed && !confirmed) {
+      setPendingCategory(category);
+      return;
+    }
+    setPendingCategory(null);
+    patchValues({
+      category,
+      details: Object.fromEntries(
+        Object.entries(values.details).filter(([key]) => Object.hasOwn(nextFields, key)),
+      ),
+      isUnlisted: category === "Wedding / Private",
+    });
+  }
+  useEffect(() => {
+    if (step !== 0 || !detailToFocus) return;
+    const field = document.getElementById(`event-detail-${detailToFocus}`);
+    field?.scrollIntoView({ block: "center" });
+    field?.focus({ preventScroll: true });
+  }, [step, detailToFocus]);
   function imageUrl(key: string) {
     if (
       !mediaBase ||
@@ -173,8 +211,8 @@ export function EventWizard({
       return null;
     return new URL(key, mediaBase).href;
   }
-  async function save(next: number, publish = false) {
-    if (busy) return;
+  async function save(next: number, publish = false, detailKey = "") {
+    if (busy || pendingCategory) return;
     setBusy(true);
     setError("");
     setMessage("");
@@ -196,11 +234,15 @@ export function EventWizard({
       setDraft(result.draft);
       setValues(result.draft.values);
       setStep(next);
+      setPendingCategory(null);
+      setDetailToFocus(detailKey);
       setDirty(false);
       setMessage(
         publish ? "Your event is published." : alreadyPublished ? "Changes saved." : "Draft saved.",
       );
-      router.replace(`/console/events/${id}/edit?step=${next + 1}`, { scroll: false });
+      const editPath = `/console/events/${id}/edit?step=${next + 1}`;
+      if (draft) window.history.replaceState(null, "", editPath);
+      else router.replace(editPath, { scroll: false });
     } catch {
       setError("We could not save your event. Check your connection and try again.");
     } finally {
@@ -250,7 +292,10 @@ export function EventWizard({
             key={name}
             type="button"
             disabled={
-              !hydrated || busy || (index > step && !complete.includes(index) && index !== step + 1)
+              !hydrated ||
+              busy ||
+              pendingCategory !== null ||
+              (index > step && !complete.includes(index) && index !== step + 1)
             }
             aria-current={index === step ? "step" : undefined}
             onClick={() => {
@@ -335,8 +380,10 @@ export function EventWizard({
                   <Field label="Category">
                     <select
                       className={fieldClass}
-                      value={values.category}
-                      onChange={(e) => update("category", e.target.value)}
+                      value={pendingCategory ?? values.category}
+                      onChange={(e) =>
+                        changeCategory(knownCategory(e.target.value) ?? values.category)
+                      }
                     >
                       {categories.map((c) => (
                         <option key={c}>{c}</option>
@@ -357,6 +404,30 @@ export function EventWizard({
                     </select>
                   </Field>
                 </div>
+                {pendingCategory && (
+                  <div className="space-y-2 rounded-xl border border-gold bg-gold-soft p-4">
+                    <p role="alert">Some answers for {values.category} will be removed.</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="primary"
+                        onClick={() => changeCategory(pendingCategory, true)}
+                      >
+                        Change category
+                      </Button>
+                      <Button type="button" onClick={() => setPendingCategory(null)}>
+                        Keep {values.category}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                <CategoryDetailsFields
+                  category={values.category}
+                  details={values.details}
+                  isUnlisted={values.isUnlisted}
+                  onDetails={(details) => update("details", details)}
+                  onUnlisted={(isUnlisted) => update("isUnlisted", isUnlisted)}
+                />
                 <Field label="Description">
                   <textarea
                     className={`${fieldClass} py-3`}
@@ -1009,12 +1080,34 @@ export function EventWizard({
                     </a>
                   </div>
                 )}
+                {!alreadyPublished && missingDetails.length > 0 && (
+                  <section className="rounded-xl border border-gold bg-gold-soft p-4">
+                    <h3 className="font-bold">Needed before you publish</h3>
+                    <ul className="mt-2 space-y-1">
+                      {missingDetails.map(({ key, message }) => (
+                        <li key={key}>
+                          <a
+                            href={`/console/events/${id}/edit?step=1#event-detail-${key}`}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              void save(0, false, key);
+                            }}
+                            className="inline-flex min-h-11 items-center font-semibold underline"
+                          >
+                            {message}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
                 <Button
                   variant="primary"
                   type="button"
                   onClick={() => void save(7, true)}
                   disabled={
                     !canPublish ||
+                    missingDetails.length > 0 ||
                     ![0, 1, 2, 3, 4, 5, 6].every((s) => complete.includes(s)) ||
                     alreadyPublished
                   }
@@ -1045,17 +1138,25 @@ export function EventWizard({
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
           <Button
             type="button"
-            disabled={step === 0 || busy || !hydrated}
+            disabled={step === 0 || busy || !hydrated || pendingCategory !== null}
             onClick={() => void save(Math.max(0, step - 1))}
           >
             Back
           </Button>
           <div className="flex flex-wrap gap-3">
-            <Button type="button" disabled={busy || !hydrated} onClick={() => void save(step)}>
+            <Button
+              type="button"
+              disabled={busy || !hydrated || pendingCategory !== null}
+              onClick={() => void save(step)}
+            >
               {busy ? "Saving…" : alreadyPublished ? "Save changes" : "Save draft"}
             </Button>
             {step < 7 && (
-              <Button type="submit" variant="primary" disabled={busy || !hydrated}>
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={busy || !hydrated || pendingCategory !== null}
+              >
                 {busy ? "Saving…" : "Save and continue"}
               </Button>
             )}

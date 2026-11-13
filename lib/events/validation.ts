@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { categories, fromIstInput, toPaise, isGoogleMapsUrl, slugBase, type Values } from "./model";
+import { allowsUnlisted, categoryDetailsSchemas, missingCategoryDetails } from "./category-details";
 import { rulesFromEditor } from "@/lib/refunds/rules";
 export const ruleSettingsSchema = z.object({
   refundPolicy: z.enum(["72h", "none", "full", "schedule", "custom"]),
@@ -37,6 +38,8 @@ export const valuesSchema = z
   .object({
     title: text.max(150),
     category: z.enum(categories),
+    details: z.unknown().default({}),
+    isUnlisted: z.boolean().optional(),
     description: text.max(10000),
     theme: z.enum(["none", "diwali", "christmas", "new_year"]),
     free: z.boolean(),
@@ -57,7 +60,26 @@ export const valuesSchema = z
     feePayer: z.enum(["organiser", "buyer"]),
     ...ruleSettingsSchema.shape,
   })
-  .strict();
+  .strict()
+  .transform((values, ctx): Values => {
+    const details = categoryDetailsSchemas[values.category].safeParse(values.details);
+    if (!details.success) {
+      ctx.addIssue({
+        code: "custom",
+        message: details.error.issues[0]?.message ?? "Check your event details.",
+      });
+      return z.NEVER;
+    }
+    const isUnlisted = values.isUnlisted ?? values.category === "Wedding / Private";
+    if (isUnlisted && !allowsUnlisted(values.category)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Only Wedding / Private and Other events can be unlisted.",
+      });
+      return z.NEVER;
+    }
+    return { ...values, details: details.data, isUnlisted };
+  });
 export const inputSchema = z
   .object({
     eventId: uuid,
@@ -173,6 +195,8 @@ export function validateStep(v: Values, step: number, eventId: string) {
 }
 export function validatePublish(v: Values, eventId: string) {
   for (let step = 0; step < 7; step++) validateStep(v, step, eventId);
+  const missing = missingCategoryDetails(v.category, v.details);
+  if (missing.length) throw new Error(missing[0].message);
   requireValue(
     Date.parse(fromIstInput(v.startsAt)!) > Date.now(),
     "Choose a start time in the future before publishing.",
@@ -184,6 +208,8 @@ export function stepPayload(v: Values, step: number) {
       return {
         title: v.title,
         category: v.category,
+        details: v.details,
+        is_unlisted: v.isUnlisted,
         description: v.description,
         theme: v.theme,
         slug: slugBase(v.title),

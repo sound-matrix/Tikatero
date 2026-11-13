@@ -1,6 +1,7 @@
+import type { CategoryDetails } from "./category-details";
 import type { RuleSettings } from "@/lib/refunds/rules";
 export const steps = [
-  "Basics",
+  "Details",
   "Date & time",
   "Venue",
   "Poster",
@@ -19,6 +20,7 @@ export const categories = [
   "Wedding / Private",
   "Other",
 ] as const;
+export type Category = (typeof categories)[number];
 export const themes = {
   none: { name: "Your own event", title: "", description: "", color: "#F25C54", accent: "#FF9F43" },
   diwali: {
@@ -56,7 +58,9 @@ export type Tier = {
 };
 export type Values = {
   title: string;
-  category: string;
+  category: Category;
+  details: CategoryDetails;
+  isUnlisted: boolean;
   description: string;
   theme: keyof typeof themes;
   free: boolean;
@@ -84,6 +88,8 @@ export function emptyValues(): Values {
   return {
     title: "",
     category: "Concert",
+    details: {},
+    isUnlisted: false,
     description: "",
     theme: "none",
     free: false,

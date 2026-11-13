@@ -4,6 +4,9 @@ import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/service";
 import { requireStaff } from "@/lib/admin/access";
 import { EventMedia } from "@/components/discovery/media";
+import { CategoryDetailsView } from "@/components/events/category-details-view";
+import { allowsUnlisted, privateEventLabel } from "@/lib/events/category-details";
+import { setEventUnlisted } from "@/lib/events/unlisted-action";
 import { EventModeration } from "@/components/events/event-moderation";
 import { LiveSalesFigures } from "@/components/console/live-sales";
 import { loadEventSales } from "@/lib/payouts/read";
@@ -30,9 +33,11 @@ type Props = {
     refund_error?: string;
     notice?: string;
     review_error?: string;
+    visibility?: string;
   }>;
 };
 const historyLabels: Record<string, string> = {
+  event_unlisted_changed: "Event visibility changed",
   event_hidden: "Event hidden",
   event_unhidden: "Event shown again",
   event_removal_requested: "Removal requested",
@@ -135,6 +140,48 @@ async function Review({ params, searchParams }: Props) {
           )}
         </Card>
       </div>
+      <section id="event-visibility">
+        <Card className="space-y-3">
+          <h2 className="text-xl font-extrabold">About this event</h2>
+          {event.category && <p className="font-semibold">{event.category}</p>}
+          <CategoryDetailsView category={event.category} details={event.details} showAge />
+          <p>
+            <strong>Unlisted:</strong> {event.is_unlisted ? "Yes" : "No"}
+          </p>
+          {query.visibility === "saved" && <p role="status">Event visibility saved.</p>}
+          {query.visibility === "stale" && (
+            <p role="alert">This event changed. Review its current visibility and try again.</p>
+          )}
+          {query.visibility === "error" && (
+            <p role="alert">Event visibility could not be saved. Check the reason and try again.</p>
+          )}
+          {admin && allowsUnlisted(event.category ?? "") && (
+            <form action={setEventUnlisted} className="space-y-4 border-t border-line pt-4">
+              <input type="hidden" name="event_id" value={id} />
+              <input type="hidden" name="revision" value={event.wizard_revision} />
+              <label className="flex min-h-12 items-center gap-3 font-semibold">
+                <input
+                  type="checkbox"
+                  name="is_unlisted"
+                  value="yes"
+                  defaultChecked={event.is_unlisted}
+                  className="size-5 shrink-0 accent-teal"
+                />
+                {privateEventLabel}
+              </label>
+              <Input
+                label="Reason for changing visibility"
+                name="reason"
+                required
+                maxLength={300}
+              />
+              <Button type="submit" variant="primary">
+                Save visibility
+              </Button>
+            </form>
+          )}
+        </Card>
+      </section>
       {sales && (
         <>
           <LiveSalesFigures initial={sales} staff />
