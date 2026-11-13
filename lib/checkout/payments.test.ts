@@ -369,3 +369,44 @@ it("binds a signed-in order and Cashfree checkout to the verified session and ke
   );
   expect(mock.rpc.mock.calls.some(([name]) => name === "checkout_user_by_email")).toBe(false);
 });
+
+it("verifies a long reCAPTCHA token before opening a production Cashfree order", async () => {
+  vi.stubEnv("VERCEL_ENV", "production");
+  vi.stubEnv("CASHFREE_ENV", "production");
+  vi.stubEnv("CASHFREE_APP_ID", "test-app");
+  vi.stubEnv("CASHFREE_SECRET_KEY", "test-secret");
+  vi.stubEnv("NEXT_PUBLIC_RECAPTCHA_SITE_KEY", "site");
+  vi.stubEnv("RECAPTCHA_SECRET_KEY", "test-secret");
+  useEvent("long-captcha", false);
+  const token = "x".repeat(4096);
+  const fetcher = vi.fn(async (url: string, request: RequestInit) => {
+    if (url === "https://www.google.com/recaptcha/api/siteverify") {
+      expect((request.body as URLSearchParams).get("response")).toBe(token);
+      expect(holdCall()).toBeUndefined();
+      return Response.json({
+        success: true,
+        hostname: "tikatero.com",
+        action: "checkout",
+        score: 0.9,
+      });
+    }
+    expect(url).toBe("https://api.cashfree.com/pg/orders");
+    const order = JSON.parse(String(request.body));
+    return Response.json({ ...order, payment_session_id: "test-session" });
+  });
+  vi.stubGlobal("fetch", fetcher);
+
+  const result = await submitCheckout({ ...booking("long-captcha", false), recaptcha: token });
+  expect(result.payment).toEqual({ sessionId: "test-session", mode: "production" });
+  expect(holdCall()?.[1]).toMatchObject({ p_provider: "cashfree", p_is_test: false });
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});
+
+it("shows a retry message for an oversized token before opening an order", async () => {
+  const result = await submitCheckout({
+    ...booking("long-captcha", false),
+    recaptcha: "x".repeat(16_385),
+  });
+  expect(result.error).toBe("We couldn't confirm you're not a robot. Please try again.");
+  expect(holdCall()).toBeUndefined();
+});

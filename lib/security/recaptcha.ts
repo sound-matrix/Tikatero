@@ -1,7 +1,8 @@
 import "server-only";
+import { RECAPTCHA_MAX_TOKEN_LENGTH } from "./recaptcha-token";
 
 export const RECAPTCHA_MIN_SCORE = 0.5;
-export const RECAPTCHA_RETRY = "We couldn't confirm you're not a robot. Please try again.";
+export { RECAPTCHA_RETRY } from "./recaptcha-token";
 export type RecaptchaAction = "checkout" | "contact";
 
 export function recaptchaSiteKey() {
@@ -27,7 +28,7 @@ function allowedHostname(hostname: unknown) {
 
 /** Verify fresh, single-use tokens; never log tokens, keys or provider responses. */
 export async function verifyRecaptcha(token: string, action: RecaptchaAction) {
-  if (!recaptchaSiteKey() || !token || token.length > 2048) return false;
+  if (!recaptchaSiteKey() || !token || token.length > RECAPTCHA_MAX_TOKEN_LENGTH) return false;
   try {
     const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {
       method: "POST",
