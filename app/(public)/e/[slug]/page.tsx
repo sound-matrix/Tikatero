@@ -8,6 +8,8 @@ import { publicEvent, requestTime } from "@/lib/discovery/data";
 import { publicPrice, tierState, jsonLdString } from "@/lib/discovery/model";
 import { readRefundPolicyText } from "@/lib/refunds/read";
 import { eventJsonLd, siteOrigin } from "@/lib/discovery/seo";
+import { ageLimitLabel, readCategoryDetails } from "@/lib/events/category-details";
+import { CategoryDetailsView } from "@/components/events/category-details-view";
 import { formatIst } from "@/lib/format";
 import { openMaps } from "@/lib/events/model";
 import { EventMedia, mediaUrl } from "@/components/discovery/media";
@@ -28,6 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: e.title,
     description,
     alternates: { canonical: url },
+    ...(e.is_unlisted && { robots: { index: false } }),
     openGraph: {
       type: "website",
       title: e.title,
@@ -58,6 +61,7 @@ async function Detail({ params, searchParams }: Props) {
     readRefundPolicyText(createAnonClient(), e.id, e.refund_policy),
   ]);
   const channel = shareChannel(ref);
+  const ageLimit = ageLimitLabel(readCategoryDetails(e.category, e.details).age_limit);
   const maps = openMaps({
     lat: e.lat === null ? "" : String(e.lat),
     lng: e.lng === null ? "" : String(e.lng),
@@ -97,6 +101,11 @@ async function Detail({ params, searchParams }: Props) {
             {e.category ?? "Event"} · {e.city ?? e.country}
           </p>
           <h1 className="mt-3 text-3xl font-extrabold leading-tight md:text-4xl">{e.title}</h1>
+          {e.is_unlisted && (
+            <p className="mt-3 rounded-xl bg-soft p-3 text-sm text-muted">
+              This is a private event. Only people with the link can see it.
+            </p>
+          )}
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <p className="text-muted">
               By{" "}
@@ -121,6 +130,11 @@ async function Detail({ params, searchParams }: Props) {
             <div>
               <h2 className="font-bold">When</h2>
               <p className="mt-2">{formatIst(e.starts_at)}</p>
+              {ageLimit && (
+                <p className="mt-2 inline-block rounded-full bg-soft px-3 py-1 text-sm font-semibold">
+                  Age limit · {ageLimit}
+                </p>
+              )}
               {e.ends_at && <p className="mt-1 text-sm text-muted">Ends {formatIst(e.ends_at)}</p>}
               {e.gates_open_at && (
                 <p className="mt-2 text-sm text-muted">Gates open {formatIst(e.gates_open_at)}</p>
@@ -148,6 +162,7 @@ async function Detail({ params, searchParams }: Props) {
               {e.description ||
                 "Come along and enjoy the experience. The organiser will share more details soon."}
             </p>
+            <CategoryDetailsView category={e.category} details={e.details} />
           </section>
           {e.guests.length > 0 && (
             <section className="mt-8">
@@ -290,10 +305,9 @@ async function Detail({ params, searchParams }: Props) {
         </p>
         {book}
       </div>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdString(eventJsonLd(e, origin, now)) }}
-      />
+      {!e.is_unlisted && (
+        <script type="application/ld+json">{jsonLdString(eventJsonLd(e, origin, now))}</script>
+      )}
     </main>
   );
 }

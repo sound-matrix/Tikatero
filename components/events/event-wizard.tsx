@@ -22,6 +22,13 @@ import {
   type Values,
   type Tier,
 } from "@/lib/events/model";
+import {
+  categoryFields,
+  knownCategory,
+  missingCategoryDetails,
+  readCategoryDetails,
+} from "@/lib/events/category-details";
+import { CategoryDetailsFields } from "./category-details-fields";
 import type { Draft } from "@/lib/events/store";
 import { INTERNATIONAL_PAID_TICKETS } from "@/lib/kyc/paid-tickets";
 import { previewPricing, organiserFeeWording, type PricingVersion } from "@/lib/pricing";
@@ -134,11 +141,13 @@ export function EventWizard({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
-    [dirty, setDirty] = useState(false);
+    [dirty, setDirty] = useState(false),
+    [detailToFocus, setDetailToFocus] = useState("");
   const hidden = Boolean(draft?.hiddenAt);
   const canPublish = approved && !paused && !hidden,
     complete = draft?.completed ?? [],
     alreadyPublished = draft?.status === "published";
+  const missingDetails = missingCategoryDetails(values.category, values.details);
   const totalTicketQuantity = values.tiers.reduce(
     (total, ticket) => total + (Number(ticket.quantity) || 0),
     0,
@@ -163,6 +172,26 @@ export function EventWizard({
   function update<K extends keyof Values>(key: K, value: Values[K]) {
     patchValues({ [key]: value });
   }
+  function changeCategory(category: Values["category"]) {
+    const nextFields = categoryFields[category];
+    const removed = Object.keys(readCategoryDetails(values.category, values.details)).some(
+      (key) => !Object.hasOwn(nextFields, key),
+    );
+    if (removed && !window.confirm(`Some answers for ${values.category} will be removed.`)) return;
+    patchValues({
+      category,
+      details: Object.fromEntries(
+        Object.entries(values.details).filter(([key]) => Object.hasOwn(nextFields, key)),
+      ),
+      isUnlisted: category === "Wedding / Private",
+    });
+  }
+  useEffect(() => {
+    if (step !== 0 || !detailToFocus) return;
+    const field = document.getElementById(`event-detail-${detailToFocus}`);
+    field?.scrollIntoView({ block: "center" });
+    field?.focus({ preventScroll: true });
+  }, [step, detailToFocus]);
   function imageUrl(key: string) {
     if (
       !mediaBase ||
@@ -173,7 +202,7 @@ export function EventWizard({
       return null;
     return new URL(key, mediaBase).href;
   }
-  async function save(next: number, publish = false) {
+  async function save(next: number, publish = false, detailKey = "") {
     if (busy) return;
     setBusy(true);
     setError("");
@@ -196,6 +225,7 @@ export function EventWizard({
       setDraft(result.draft);
       setValues(result.draft.values);
       setStep(next);
+      setDetailToFocus(detailKey);
       setDirty(false);
       setMessage(
         publish ? "Your event is published." : alreadyPublished ? "Changes saved." : "Draft saved.",
@@ -336,7 +366,9 @@ export function EventWizard({
                     <select
                       className={fieldClass}
                       value={values.category}
-                      onChange={(e) => update("category", e.target.value)}
+                      onChange={(e) =>
+                        changeCategory(knownCategory(e.target.value) ?? values.category)
+                      }
                     >
                       {categories.map((c) => (
                         <option key={c}>{c}</option>
@@ -357,6 +389,13 @@ export function EventWizard({
                     </select>
                   </Field>
                 </div>
+                <CategoryDetailsFields
+                  category={values.category}
+                  details={values.details}
+                  isUnlisted={values.isUnlisted}
+                  onDetails={(details) => update("details", details)}
+                  onUnlisted={(isUnlisted) => update("isUnlisted", isUnlisted)}
+                />
                 <Field label="Description">
                   <textarea
                     className={`${fieldClass} py-3`}
@@ -1009,12 +1048,34 @@ export function EventWizard({
                     </a>
                   </div>
                 )}
+                {!alreadyPublished && missingDetails.length > 0 && (
+                  <section className="rounded-xl border border-gold bg-gold-soft p-4">
+                    <h3 className="font-bold">Needed before you publish</h3>
+                    <ul className="mt-2 space-y-1">
+                      {missingDetails.map(({ key, message }) => (
+                        <li key={key}>
+                          <a
+                            href={`/console/events/${id}/edit?step=1#event-detail-${key}`}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              void save(0, false, key);
+                            }}
+                            className="inline-flex min-h-11 items-center font-semibold underline"
+                          >
+                            {message}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
                 <Button
                   variant="primary"
                   type="button"
                   onClick={() => void save(7, true)}
                   disabled={
                     !canPublish ||
+                    missingDetails.length > 0 ||
                     ![0, 1, 2, 3, 4, 5, 6].every((s) => complete.includes(s)) ||
                     alreadyPublished
                   }

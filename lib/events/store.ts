@@ -2,7 +2,8 @@ import "server-only";
 import { settingsFromRules, type Rule } from "@/lib/refunds/rules";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables } from "@/lib/db/types";
-import { categories, emptyValues, toIstInput, priceText, type Values } from "./model";
+import { knownCategory, readCategoryDetails } from "./category-details";
+import { emptyValues, toIstInput, priceText, type Values } from "./model";
 import { storagePublicBase } from "@/lib/uploads/public-base";
 export type Draft = {
   id: string;
@@ -20,6 +21,8 @@ export function rowValues(
     Tables<"events">,
     | "title"
     | "category"
+    | "details"
+    | "is_unlisted"
     | "description"
     | "theme"
     | "is_free"
@@ -47,9 +50,9 @@ export function rowValues(
   return {
     ...initial,
     title: row.title,
-    category: (categories as readonly string[]).includes(row.category ?? "")
-      ? row.category!
-      : "Other",
+    category: knownCategory(row.category) ?? "Other",
+    details: readCategoryDetails(row.category, row.details),
+    isUnlisted: row.is_unlisted,
     description: row.description ?? "",
     theme:
       (row.theme ?? "none") in { diwali: 1, christmas: 1, new_year: 1 }
@@ -102,7 +105,7 @@ export async function readDraft(
     client
       .from("events")
       .select(
-        "id, organiser_id, slug, title, status, category, description, theme, is_free, starts_at, ends_at, gates_open_at, venue_name, address, city, country, maps_url, lat, lng, poster_key, capacity, fee_payer, refund_policy, refund_auto_approve, wizard_revision, wizard_step, wizard_completed_steps, hidden_at",
+        "id, organiser_id, slug, title, status, category, details, is_unlisted, description, theme, is_free, starts_at, ends_at, gates_open_at, venue_name, address, city, country, maps_url, lat, lng, poster_key, capacity, fee_payer, refund_policy, refund_auto_approve, wizard_revision, wizard_step, wizard_completed_steps, hidden_at",
       )
       .eq("id", id)
       .maybeSingle(),

@@ -74,6 +74,8 @@ export async function saveEvent(input: unknown): Promise<SaveResult> {
   });
   if (error?.message === INTERNATIONAL_PAID_TICKETS) return { error: INTERNATIONAL_PAID_TICKETS };
   if (error?.message.startsWith("You've already sold ")) return { error: error.message };
+  if (error?.message === "Shorten the extra event details and try again.")
+    return { error: error.message };
   if (error?.message === "Use the event review actions.")
     return { error: "Unhide this event before publishing again." };
   if (error?.message === "A tier with sold tickets cannot be removed")

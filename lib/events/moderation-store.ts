@@ -24,7 +24,7 @@ export async function loadModerationEvent(client: Client, eventId: string) {
   const { data, error } = await client
     .from("events")
     .select(
-      "id,title,slug,organiser_id,status,starts_at,ends_at,gates_open_at,venue_name,address,city,country,poster_key,theme,capacity,hidden_at,hidden_reason,hidden_by_staff",
+      "id,title,slug,organiser_id,status,starts_at,ends_at,gates_open_at,venue_name,address,city,country,poster_key,theme,capacity,hidden_at,hidden_reason,hidden_by_staff,category,details,is_unlisted,wizard_revision",
     )
     .eq("id", eventId)
     .maybeSingle();
