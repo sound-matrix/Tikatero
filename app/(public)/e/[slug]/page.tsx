@@ -88,6 +88,7 @@ async function Detail({ params, searchParams }: Props) {
   return (
     <main data-sticky-booking className="mx-auto max-w-6xl px-4 pb-12 pt-6 md:px-6">
       {channel && <TrackEventReferral slug={e.slug} channel={channel} />}
+      <p className="mb-3 text-right text-xs text-muted">Event ticketing powered by <Link href="/" className="font-bold text-teal underline">Tikatero</Link></p>
       <Link
         href="/events"
         className="mb-5 inline-block text-sm font-semibold underline underline-offset-4"

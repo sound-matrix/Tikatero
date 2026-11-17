@@ -5,10 +5,11 @@ import { notFound, redirect } from "next/navigation";
 import { requireAccount } from "@/lib/auth/account";
 import { Card } from "@/components/ui/card";
 
-type Tool = "edit" | "sales" | "instagram" | "team" | "scan";
+type Tool = "edit" | "sales" | "instagram" | "marketing" | "team" | "scan";
 const tools: Record<Tool, { title: string; description: string; action: string }> = {
   edit: { title: "Edit events", description: "Update the details, posters, dates, tickets and publishing information for your events.", action: "Edit event" },
   sales: { title: "Ticket sales", description: "See your bookings, track ticket revenue and manage refund requests.", action: "View sales" },
+  marketing: { title: "Marketing", description: "Generate branded QR posters and Instagram graphics, share event links and track referrals.", action: "Open marketing kit" },
   instagram: { title: "Instagram Ticket Sales", description: "Turn your Instagram audience into ticket buyers with Story, bio and sponsored ad links, promotional artwork and performance tracking.", action: "Promote on Instagram" },
   team: { title: "Event team", description: "Invite team managers and entrance staff, and control who can manage each event.", action: "Manage team" },
   scan: { title: "QR ticket scanner", description: "Scan Tikatero QR tickets at the venue entrance to check in your guests.", action: "Open scanner" },
@@ -21,6 +22,7 @@ export async function generateMetadata({ params }: { params: Promise<{ tool: str
 }
 
 function destination(id: string, tool: Tool) {
+  if (tool === "marketing") return `/console/events/${id}/marketing`;
   if (tool === "instagram") return `/console/events/${id}/instagram`;
   if (tool === "sales") return `/console/events/${id}`;
   return `/console/events/${id}/${tool}`;
@@ -37,7 +39,7 @@ async function EventTools({ params, searchParams }: {
   const { account, client } = await requireAccount();
   const organiserIds = account.organisers.map((o) => o.id);
   const assignments = account.assignments ?? [];
-  const visibleIds = tool === "instagram" || tool === "edit"
+  const visibleIds = tool === "instagram" || tool === "marketing" || tool === "edit"
     ? []
     : assignments.filter((a) => tool === "scan" || a.role === "manager").map((a) => a.eventId);
   const [owned, assigned] = await Promise.all([
@@ -52,7 +54,7 @@ async function EventTools({ params, searchParams }: {
   const all = [...(owned.data ?? []), ...(assigned.data ?? [])];
   const rows = all.filter((event, i) => {
     if (all.findIndex((row) => row.id === event.id) !== i) return false;
-    if (tool === "instagram")
+    if (tool === "instagram" || tool === "marketing")
       return organiserIds.includes(event.organiser_id) && event.status === "published";
     return true;
   });
