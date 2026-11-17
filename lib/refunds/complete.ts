@@ -2,6 +2,7 @@ import "server-only";
 
 import { paymentProvider } from "@/lib/payments";
 import { MockPayment } from "@/lib/payments/mock";
+import { PayU } from "@/lib/payments/payu";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PAYMENTS_REFUND_UNAVAILABLE, refundRoute, type RefundRoute } from "./model";
 import { notifyRefundProcessed } from "./notify";
@@ -46,7 +47,7 @@ async function finish(
 }
 
 export function refundPaymentsReady(isTest: boolean) {
-  return currentRoute(isTest) !== "refuse";
+  return currentRoute(isTest) !== "refuse" || Boolean(process.env.PAYU_MERCHANT_KEY && process.env.PAYU_MERCHANT_SALT);
 }
 
 export async function settleOpenedRefund(opened: OpenedRefund, preserveOnError = false) {
@@ -54,7 +55,7 @@ export async function settleOpenedRefund(opened: OpenedRefund, preserveOnError =
   const service = createServiceClient();
   const { data: order, error } = await service
     .from("orders")
-    .select("id, cf_order_id, vendor_id, is_test, payout_mode, payment_provider")
+    .select("id, cf_order_id, cf_payment_id, vendor_id, is_test, payout_mode, payment_provider")
     .eq("id", opened.order_id)
     .single();
   if (error || !order) {
@@ -62,7 +63,12 @@ export async function settleOpenedRefund(opened: OpenedRefund, preserveOnError =
     throw new Error("The refund could not be saved.");
   }
   const ready = currentRoute(order.is_test);
+  const payuReady = order.payout_mode === "manual" &&
+    Boolean(order.cf_payment_id) &&
+    Boolean(process.env.PAYU_MERCHANT_KEY && process.env.PAYU_MERCHANT_SALT) &&
+    (order.is_test ? process.env.PAYU_ENV === "test" : process.env.PAYU_ENV === "production");
   const route =
+    order.payment_provider === "payu" ? (payuReady ? "payu" : "refuse") :
     order.payout_mode === "manual" && order.payment_provider === "cashfree"
       ? ready !== "refuse" &&
         Boolean(process.env.CASHFREE_APP_ID && process.env.CASHFREE_SECRET_KEY) &&
@@ -88,11 +94,11 @@ export async function settleOpenedRefund(opened: OpenedRefund, preserveOnError =
   if (claimError) throw new Error("The refund could not be saved.");
   if (dispatch !== "claimed") return { ...opened, paused: dispatch === "paused" };
   const provider =
-    route === "mock" ? new MockPayment() : paymentProvider("cashfree", order.payout_mode);
+    route === "mock" ? new MockPayment() : paymentProvider(route === "payu" ? "payu" : "cashfree", order.payout_mode);
   try {
     const result = await provider.refund({
       refundId: opened.refund_id,
-      orderId: order.cf_order_id || order.id,
+      orderId: route === "payu" ? order.cf_payment_id! : (order.cf_order_id || order.id),
       amountPaise: opened.amount_paise ?? 0,
       reversalPaise: reversal,
       vendorId: order.payout_mode === "manual" ? null : order.vendor_id,
@@ -160,4 +166,32 @@ export async function applyRefundWebhook(command: {
       // Saved. Email can be claimed again.
     }
   }
+}
+
+/** Poll PayU's authoritative refund status; accepted/queued requests are not completed refunds. */
+export async function sweepPayURefunds() {
+  const service = createServiceClient();
+  const { data, error } = await service.from("refunds")
+    .select("id,amount_paise,cf_refund_id,orders!inner(id,cf_payment_id,is_test,payment_provider)")
+    .eq("status","approved").not("cf_refund_id","is",null)
+    .eq("orders.payment_provider","payu").limit(30);
+  if (error) throw new Error("PayU refund queue unavailable.");
+  let failures = 0;
+  for (const refund of data ?? []) {
+    try {
+      if (!refund.cf_refund_id || !refund.orders.cf_payment_id ||
+          (refund.orders.is_test ? process.env.PAYU_ENV !== "test" : process.env.PAYU_ENV !== "production")) {
+        failures++; continue;
+      }
+      const status = await new PayU().refundStatus(refund.cf_refund_id, {
+        paymentId: refund.orders.cf_payment_id,
+        amountPaise: refund.amount_paise,
+        token: refund.id.replace(/-/g, "").slice(0,23),
+      });
+      if (status === "pending") continue;
+      await finish(refund.id, refund.cf_refund_id, status);
+      if (status === "processed") await notifyRefundProcessed(refund.id, refund.orders.is_test).catch(() => null);
+    } catch { failures++; }
+  }
+  return failures;
 }

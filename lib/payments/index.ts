@@ -1,5 +1,6 @@
 import "server-only";
 import { Cashfree } from "./cashfree";
+import { PayU } from "./payu";
 import type { GatewayName, PayoutMode } from "./settings";
 import { CashfreeSplit } from "@/lib/payouts/provider";
 import { Instamojo } from "./instamojo";
@@ -19,6 +20,12 @@ export function paymentProvider(
   payoutMode: PayoutMode = "manual",
 ) {
   if (activeGateway === "instamojo") return new Instamojo();
+  if (activeGateway === "payu") {
+    if (payoutMode !== "manual") throw new PaymentsNotConfiguredError();
+    if (productionPaymentLock() && process.env.PAYU_ENV !== "production") throw new PaymentsNotConfiguredError();
+    if (!process.env.PAYU_MERCHANT_KEY || !process.env.PAYU_MERCHANT_SALT || !["test","production"].includes(process.env.PAYU_ENV ?? "")) throw new PaymentsNotConfiguredError();
+    return new PayU();
+  }
   if (activeGateway !== "cashfree") throw new PaymentsNotConfiguredError();
   const env = process.env.CASHFREE_ENV;
   if (env && !["mock", "sandbox", "production"].includes(env))

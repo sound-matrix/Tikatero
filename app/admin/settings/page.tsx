@@ -72,9 +72,7 @@ async function Settings({ searchParams }: Props) {
               <option value="razorpay" disabled>
                 Razorpay (not configured)
               </option>
-              <option value="payu" disabled>
-                PayU (not configured)
-              </option>
+              <option value="payu">PayU</option>
             </select>
           </label>
           <label className="grid gap-1">

@@ -6,6 +6,8 @@ import { ownOrder } from "@/lib/checkout/security";
 import { publicPrice } from "@/lib/discovery/model";
 import { formatIst } from "@/lib/format";
 import { CashfreeCheckout } from "@/components/checkout/cashfree-checkout";
+import { payuPaymentForm } from "@/lib/payments/payu";
+import { providerOrder } from "@/lib/checkout/store";
 import { mockPayment } from "./actions";
 import { mockConfirmationAllowed } from "@/lib/payments/model";
 export const metadata = { title: "Payment", robots: { index: false, follow: false } };
@@ -47,6 +49,8 @@ async function Payment({ params }: { params: Promise<{ id: string }> }) {
             </button>
           </form>
         </>
+      ) : order.payment_provider === "payu" && order.payment_session_id ? (
+        <PayUForm order={providerOrder(order)} />
       ) : order.payment_session_id ? (
         <CashfreeCheckout
           sessionId={order.payment_session_id}
@@ -62,6 +66,19 @@ async function Payment({ params }: { params: Promise<{ id: string }> }) {
         Check order status
       </Link>
     </main>
+  );
+}
+function PayUForm({ order }: { order: ReturnType<typeof providerOrder> }) {
+  const siteOrigin = process.env.VERCEL_ENV === "preview" && process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.tikatero.com").origin;
+  const { action, fields } = payuPaymentForm(order, siteOrigin);
+  return (
+    <form action={action} method="POST" className="mt-6">
+      {Object.entries(fields).map(([name,value]) => <input key={name} type="hidden" name={name} value={value} />)}
+      <button type="submit" className="min-h-12 w-full rounded-xl bg-linear-to-r from-coral to-orange px-5 py-3 font-bold">Continue securely to PayU</button>
+      <p className="mt-4 text-sm font-semibold text-teal">🔒 Secure payment by PayU</p>
+    </form>
   );
 }
 export default function Page(props: { params: Promise<{ id: string }> }) {
