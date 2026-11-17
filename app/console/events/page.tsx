@@ -94,42 +94,12 @@ async function Events({ searchParams }: { searchParams: Promise<{ page?: string 
                       {label}
                     </span>
                   </td>
-                  <td className="space-x-3 p-4">
-                    {!teamOnly && (
-                      <Link
-                        className="font-semibold text-teal underline"
-                        href={`/console/events/${row.id}/edit`}
-                      >
-                        {row.status === "draft" ? "Continue" : "Edit"}
-                      </Link>
-                    )}
-                    {(!teamOnly ||
-                      assigned.some(
-                        (item) => item.eventId === row.id && item.role === "manager",
-                      )) && (
-                      <Link
-                        className="font-semibold text-teal underline"
-                        href={`/console/events/${row.id}`}
-                      >
-                        Sales
-                      </Link>
-                    )}
-                    {(!teamOnly ||
-                      assigned.some(
-                        (item) => item.eventId === row.id && item.role === "manager",
-                      )) && (
-                      <Link
-                        className="font-semibold text-teal underline"
-                        href={`/console/events/${row.id}/team`}
-                      >
-                        Team
-                      </Link>
-                    )}
+                  <td className="p-4">
                     <Link
-                      className="font-semibold text-teal underline"
-                      href={`/console/events/${row.id}/scan`}
+                      className="inline-flex min-h-10 items-center rounded-xl border border-teal/30 px-4 font-bold text-teal hover:bg-teal-soft"
+                      href={`/console/tools/${teamOnly ? "scan" : "edit"}?event=${row.id}`}
                     >
-                      Scan
+                      {teamOnly ? "Open check-in" : "Manage event"}
                     </Link>
                   </td>
                 </tr>
