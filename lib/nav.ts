@@ -2,7 +2,7 @@ import type { Account } from "@/lib/auth/routing";
 
 export const consoleNav = [
   { href: "/console", label: "Overview", description: "Your organiser dashboard" },
-  { href: "/console/events", label: "My events", description: "View and create events" },
+  { href: "/console/events", label: "Your events", description: "View and create events" },
   { href: "/console/tools/edit", label: "Edit events", description: "Posters, dates and tickets" },
   { href: "/console/tools/sales", label: "Ticket sales", description: "Bookings and refunds" },
   { href: "/console/tools/instagram", label: "Instagram Ticket Sales", description: "Turn followers into buyers" },
