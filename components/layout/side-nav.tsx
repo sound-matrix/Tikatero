@@ -33,7 +33,12 @@ export function SideNav({
         <nav aria-label={title} className="flex gap-1 overflow-x-auto md:flex-col">
           {items.map((item) => {
             const href = String(item.href);
-            const active = href === activePath;
+            const active = href === activePath ||
+              (href === "/console/tools/instagram" && /^\/console\/events\/[0-9a-f-]{36}\/instagram$/i.test(activePath)) ||
+              (href === "/console/tools/edit" && /^\/console\/events\/[0-9a-f-]{36}\/edit$/i.test(activePath)) ||
+              (href === "/console/tools/team" && /^\/console\/events\/[0-9a-f-]{36}\/team$/i.test(activePath)) ||
+              (href === "/console/tools/scan" && /^\/console\/events\/[0-9a-f-]{36}\/scan$/i.test(activePath)) ||
+              (href === "/console/tools/sales" && /^\/console\/events\/[0-9a-f-]{36}$/i.test(activePath));
             return (
               <Link
                 key={href}
