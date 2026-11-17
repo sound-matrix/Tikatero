@@ -5,7 +5,9 @@ import { themes } from "@/lib/events/model";
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const e = await publicEvent((await params).slug);
   if (!e) return new Response("Event not found", { status: 404 });
-  const story = new URL(request.url).searchParams.get("format") === "story";
+  const format = new URL(request.url).searchParams.get("format");
+  const story = format === "story";
+  const post = format === "post";
   const colors = themes[(e.theme ?? "none") as keyof typeof themes] ?? themes.none;
   return new ImageResponse(
     <div
@@ -14,7 +16,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
         width: "100%",
         height: "100%",
         background: "white",
-        padding: story ? "220px 96px" : 64,
+        padding: story ? "220px 96px" : post ? "100px 80px" : 64,
         color: "#2D3142",
         flexDirection: "column",
         borderTop: `24px solid ${colors.color}`,
@@ -26,9 +28,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
       <div
         style={{
           display: "flex",
-          fontSize: story ? 100 : 70,
+          fontSize: story ? 100 : post ? 94 : 70,
           fontWeight: 700,
-          marginTop: story ? 150 : 40,
+          marginTop: story ? 150 : post ? 115 : 40,
           lineHeight: 1.1,
         }}
       >
@@ -43,11 +45,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
       </div>
     </div>,
     {
-      width: story ? 1080 : 1200,
-      height: story ? 1920 : 630,
+      width: story || post ? 1080 : 1200,
+      height: story ? 1920 : post ? 1080 : 630,
       headers: {
         "Cache-Control": "no-store",
-        ...(story ? { "Content-Disposition": `attachment; filename="${e.slug}-story.png"` } : {}),
+        ...(story || post ? { "Content-Disposition": `attachment; filename="${e.slug}-${story ? "story" : "post"}.png"` } : {}),
       },
     },
   );
