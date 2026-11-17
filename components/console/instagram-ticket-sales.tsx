@@ -31,7 +31,7 @@ export async function InstagramTicketSales({
       </div>
       <p className="mt-2 mb-5 text-xs text-muted">
         Instagram figures combine Story, bio and ad traffic; paid bookings are attributed by
-        referral channel, not Instagram's native advertising reports.
+        referral channel, not Instagram&apos;s native advertising reports.
       </p>
       <InstagramTicketSalesClient origin={origin} slug={event.slug} title={event.title} city={event.city} />
     </Card>
