@@ -1,7 +1,7 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/service";
 import { providerPaise } from "@/lib/payments/model";
-import { PayU, payuVerifiedResponse } from "@/lib/payments/payu";
+import { payuVerifiedResponse } from "@/lib/payments/payu";
 import { reconcile } from "@/lib/checkout/store";
 
 // The browser callback and server webhook both use this verified path.
