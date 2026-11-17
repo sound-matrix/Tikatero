@@ -99,7 +99,7 @@ async function Events({ searchParams }: { searchParams: Promise<{ page?: string 
                       className="inline-flex min-h-10 items-center rounded-xl border border-teal/30 px-4 font-bold text-teal hover:bg-teal-soft"
                       href={`/console/tools/${teamOnly ? "scan" : "edit"}?event=${row.id}`}
                     >
-                      {teamOnly ? "Open check-in" : "Manage event"}
+                      {teamOnly ? "Open check-in" : row.status === "draft" ? "Continue" : "Manage event"}
                     </Link>
                   </td>
                 </tr>
