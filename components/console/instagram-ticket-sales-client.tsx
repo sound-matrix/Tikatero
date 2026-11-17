@@ -12,7 +12,7 @@ type Props = {
 
 const types: { key: InstagramPlacement; title: string; help: string }[] = [
   { key: "story", title: "Instagram Story", help: "Add this link as a Story link sticker; label it Book Tickets." },
-  { key: "bio", title: "Instagram Bio", help: "Paste this link into your Instagram profile's Links section." },
+  { key: "bio", title: "Instagram Bio", help: "Paste this link into your Instagram profile&apos;s Links section." },
   { key: "ad", title: "Sponsored Post or Reel", help: "In Meta Ads Manager, select an available booking CTA and use this website URL." },
 ];
 
@@ -32,7 +32,7 @@ export function InstagramTicketSalesClient({ origin, slug, title, city }: Props)
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted">
-        Turn Instagram views into ticket buyers. These links open Tikatero's mobile-friendly
+        Turn Instagram views into ticket buyers. These links open Tikatero&apos;s mobile-friendly
         checkout directly—no Instagram login or Meta approval required.
       </p>
       <div className="grid gap-4 md:grid-cols-3">
