@@ -10,6 +10,7 @@ type Item = {
   href: ComponentProps<typeof Link>["href"];
   label: string;
   count?: number;
+  description?: string;
 };
 
 export function SideNav({
@@ -25,7 +26,7 @@ export function SideNav({
   const activePath = current ?? pathname;
 
   return (
-    <aside className="border-b border-line bg-white md:w-60 md:shrink-0 md:border-r md:border-b-0">
+    <aside className="border-b border-line bg-white md:w-64 md:shrink-0 md:border-r md:border-b-0">
       <div className="flex flex-col gap-4 px-4 py-4">
         <Logo className="h-10 md:h-11" />
         <p className="text-sm font-semibold text-muted">{title}</p>
@@ -43,7 +44,8 @@ export function SideNav({
                   active ? "bg-soft text-ink" : "text-ink hover:bg-soft",
                 )}
               >
-                {item.label}
+                <span>{item.label}</span>
+                {item.description && <span className="hidden text-xs font-normal opacity-70 md:block">{item.description}</span>}
                 {!!item.count && (
                   <span
                     aria-label={`${item.count} pending removal requests`}
