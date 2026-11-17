@@ -80,6 +80,7 @@ async function Ticket({
           </>
         )}
       </article>
+      <p className="mt-5 text-center text-xs text-muted">Powered by <a href="/" className="font-bold text-teal underline">Tikatero</a></p>
       {ticket.admitted && (
         <div className="mt-5 grid gap-3">
           <Button href={`/t/${facts.code}/pdf${suffix}`} variant="primary">
