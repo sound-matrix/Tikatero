@@ -1,0 +1,72 @@
+name: Tikatero Android APK
+
+on:
+  push:
+    branches:
+      - feat/android-app-foundation
+    paths:
+      - ".github/workflows/tikatero-android-apk.yml"
+      - "apps/android/**"
+  workflow_dispatch:
+    inputs:
+      site_url:
+        description: 'Tikatero production HTTPS origin (e.g. https://your-domain.example)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tikatero-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    defaults:
+      run:
+        working-directory: apps/android
+    env:
+      CI: "1"
+      EXPO_PUBLIC_TIKATERO_URL: ${{ inputs.site_url || vars.TIKATERO_SITE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Check production URL
+        run: |
+          node -e 'const s=process.env.EXPO_PUBLIC_TIKATERO_URL||"";if(!/^https:\/\/[^/]+\/?$/.test(s)){console.error("Set GitHub Actions repository variable TIKATERO_SITE_URL to the live HTTPS domain, or provide site_url when manually dispatching");process.exit(1)}'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Check Expo dependency versions
+        run: npx expo install --check
+      - name: TypeScript
+        run: npx tsc --noEmit
+      - name: Generate Android project
+        run: npx expo prebuild --platform android --non-interactive --no-install
+      - name: Build signed testing APK
+        run: |
+          chmod +x android/gradlew
+          cd android
+          ./gradlew assembleRelease --no-daemon
+      - name: Confirm APK exists
+        run: |
+          test -n "$(find android/app/build/outputs/apk/release -name '*.apk' -print -quit)"
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tikatero-Android-Test-APK
+          path: apps/android/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 14
