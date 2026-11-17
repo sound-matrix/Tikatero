@@ -58,7 +58,7 @@ export const checkoutData = cache(async (slug: string) => {
   try {
     if (!event.is_free) {
       mode = paymentProvider(activeGateway, payoutMode).mode;
-      if (mode !== "cashfree" && mode !== "mock") throw new PaymentsNotConfiguredError();
+      if (!["cashfree", "mock", "payu"].includes(mode)) throw new PaymentsNotConfiguredError();
     }
   } catch (error) {
     if (!(error instanceof PaymentsNotConfiguredError)) throw error;
@@ -74,6 +74,7 @@ export const checkoutData = cache(async (slug: string) => {
   else if (
     !event.is_free &&
     payoutMode === "gateway_split" &&
+    mode === "cashfree" &&
     !organiser.cashfree_vendor_id?.trim()
   )
     disabled = "This organiser is not ready to accept payments. Please come back soon.";
@@ -104,7 +105,7 @@ export async function transition(
     p_amount: result.amount,
     p_currency: result.currency,
     ...(result.paymentId ? { p_payment_id: result.paymentId } : {}),
-    ...(event ? { p_source: "cashfree", p_event_id: event.id, p_payload: event.payload } : {}),
+    ...(event ? { p_source: order.payment_provider, p_event_id: event.id, p_payload: event.payload } : {}),
   });
   if (error) throw new Error("Payment status could not be saved.");
   if (data === "paid") {
@@ -119,10 +120,10 @@ export async function transition(
 export async function reconcile(order: CheckoutOrder) {
   if (!["created", "pending"].includes(order.status)) return order.status;
   const stale = Date.parse(order.hold_expires_at ?? "") <= Date.now();
-  if (order.payment_provider === "cashfree") {
+  if (order.payment_provider === "cashfree" || order.payment_provider === "payu") {
     // A provider timeout keeps the order pending for the next reconciliation.
     const provider = paymentProvider(order.payment_provider, order.payout_mode);
-    if (provider.mode !== "cashfree")
+    if (provider.mode !== order.payment_provider)
       throw new Error("The order's payment provider is not available.");
     const result = await provider.fetchOrderStatus(providerOrder(order));
     // Get Order ACTIVE is not final, even after local expiry: a payment may still

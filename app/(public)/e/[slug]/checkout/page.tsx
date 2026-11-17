@@ -67,7 +67,7 @@ async function Checkout({ params, searchParams }: Props) {
           isFree={event.is_free}
           siteKey={siteKey}
           useCashfree={mode === "cashfree"}
-          testMode={mode === "mock" || process.env.CASHFREE_ENV !== "production"}
+          testMode={mode === "mock" || (mode === "payu" ? process.env.PAYU_ENV !== "production" : process.env.CASHFREE_ENV !== "production")}
           now={now}
         />
       )}

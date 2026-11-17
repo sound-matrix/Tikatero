@@ -93,9 +93,19 @@ export class PayU implements PaymentGateway {
       paymentId: item.mihpayid ? String(item.mihpayid) : undefined,
     };
   }
-  async refund(_input: ProviderRefund): Promise<ProviderRefundResult> {
-    // Do not silently mark a refund paid or send a Cashfree refund for a PayU order.
-    // PayU refund integration requires production entitlement and separate verification.
-    throw new Error("PayU refunds are not configured.");
+  async refund(input: ProviderRefund): Promise<ProviderRefundResult> {
+    if (!input.orderId || !/^[0-9]+$/.test(input.orderId)) throw new Error("PayU payment ID unavailable for refund.");
+    if (input.vendorId || input.reversalPaise !== 0) throw new Error("PayU split refunds are not enabled.");
+    const token = input.refundId.replace(/-/g, "").slice(0, 23);
+    const result = await postservice("cancel_refund_transaction", input.orderId, {
+      var2: token, var3: (input.amountPaise / 100).toFixed(2),
+    }) as Record<string, unknown>;
+    const accepted = String(result.status) === "1" || String(result.error_code) === "102";
+    if (!accepted) throw new Error("PayU refund request was rejected.");
+    const requestId = result.request_id;
+    return {
+      cfRefundId: requestId == null ? token : String(requestId),
+      status: "pending",
+    };
   }
 }

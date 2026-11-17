@@ -168,5 +168,6 @@ export function orderIsTest(
 ) {
   if (mode === "free") return false;
   if (mode === "mock") return true;
+  if (mode === "payu") return process.env.PAYU_ENV !== "production";
   return env.CASHFREE_ENV !== "production";
 }

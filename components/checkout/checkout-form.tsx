@@ -340,7 +340,7 @@ export function CheckoutForm({
         <RecaptchaNotice />
         {!isFree && (
           <p className="mt-4 text-center text-sm font-semibold text-teal">
-            🔒 Secure payment by Cashfree
+            🔒 Secure payment by {useCashfree ? "Cashfree" : "PayU"}
           </p>
         )}
         <p className="mt-3 text-center text-xs text-muted">
