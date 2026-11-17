@@ -22,6 +22,7 @@ export function paymentProvider(
   if (activeGateway === "instamojo") return new Instamojo();
   if (activeGateway === "payu") {
     if (payoutMode !== "manual") throw new PaymentsNotConfiguredError();
+    if (productionPaymentLock() && process.env.PAYU_ENV !== "production") throw new PaymentsNotConfiguredError();
     if (!process.env.PAYU_MERCHANT_KEY || !process.env.PAYU_MERCHANT_SALT || !["test","production"].includes(process.env.PAYU_ENV ?? "")) throw new PaymentsNotConfiguredError();
     return new PayU();
   }
