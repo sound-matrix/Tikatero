@@ -105,7 +105,7 @@ export async function transition(
     p_amount: result.amount,
     p_currency: result.currency,
     ...(result.paymentId ? { p_payment_id: result.paymentId } : {}),
-    ...(event ? { p_source: order.payment_provider, p_event_id: event.id, p_payload: event.payload } : {}),
+    ...(event ? { p_source: order.payment_provider ?? undefined, p_event_id: event.id, p_payload: event.payload } : {}),
   });
   if (error) throw new Error("Payment status could not be saved.");
   if (data === "paid") {
