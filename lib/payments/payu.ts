@@ -1,0 +1,101 @@
+import "server-only";
+import { createHash, timingSafeEqual } from "node:crypto";
+import type { PaymentGateway, PaymentResult, ProviderOrder, ProviderRefund, ProviderRefundResult } from "./model";
+import { providerPaise } from "./model";
+
+const digest = (value: string) => createHash("sha512").update(value).digest("hex");
+function credentials() {
+  const key = process.env.PAYU_MERCHANT_KEY;
+  const salt = process.env.PAYU_MERCHANT_SALT;
+  if (!key || !salt) throw new Error("PayU credentials are not configured.");
+  return { key, salt };
+}
+export function payuTransactionId(orderId: string) {
+  if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/.test(orderId)) throw new Error("Invalid order ID.");
+  return "tk" + orderId.replace(/-/g, "").slice(0, 23);
+}
+export function payuRequestHash(fields: {
+  key: string; txnid: string; amount: string; productinfo: string; firstname: string; email: string;
+}, salt: string) {
+  return digest([fields.key, fields.txnid, fields.amount, fields.productinfo, fields.firstname, fields.email,
+    "", "", "", "", "", "", "", "", "", "", salt].join("|"));
+}
+export function payuResponseHash(fields: Record<string, string>, salt: string) {
+  const prefix = fields.additionalCharges ?? fields.additional_charges;
+  const parts = [salt, fields.status, "", "", "", "", "", fields.udf5 ?? "", fields.udf4 ?? "",
+    fields.udf3 ?? "", fields.udf2 ?? "", fields.udf1 ?? "", fields.email ?? "",
+    fields.firstname ?? "", fields.productinfo ?? "", fields.amount ?? "", fields.txnid ?? "", fields.key ?? ""];
+  if (prefix) parts.unshift(prefix);
+  return digest(parts.join("|"));
+}
+export function payuVerifiedResponse(fields: Record<string, string>, key: string, salt: string) {
+  const hash = fields.hash;
+  if (!hash || !/^[a-f0-9]{128}$/i.test(hash) || fields.key !== key) return false;
+  const expected = Buffer.from(payuResponseHash(fields, salt), "hex");
+  const received = Buffer.from(hash, "hex");
+  return received.length === expected.length && timingSafeEqual(expected, received);
+}
+export function payuPaymentForm(order: ProviderOrder, origin: string) {
+  const { key, salt } = credentials();
+  const txnid = payuTransactionId(order.id);
+  const amount = (order.total_paise / 100).toFixed(2);
+  const fields = {
+    key, txnid, amount, productinfo: "Tikatero event tickets",
+    firstname: order.buyer_name, email: order.buyer_email, phone: order.buyer_phone,
+    surl: origin + "/api/payu/callback", furl: origin + "/api/payu/callback",
+  };
+  return {
+    action: process.env.PAYU_ENV === "production" ? "https://secure.payu.in/_payment" : "https://test.payu.in/_payment",
+    fields: { ...fields, hash: payuRequestHash(fields, salt) },
+  };
+}
+function transactionDetails(json: unknown, txnid: string): Record<string, unknown> | null {
+  if (!json || typeof json !== "object") return null;
+  const data = json as Record<string, unknown>;
+  const entries = data.transaction_details;
+  if (!entries || typeof entries !== "object") return null;
+  const item = (entries as Record<string, unknown>)[txnid];
+  return item && typeof item === "object" ? item as Record<string, unknown> : null;
+}
+async function postservice(command: string, var1: string, more?: Record<string, string>) {
+  const { key, salt } = credentials();
+  const body = new URLSearchParams({
+    key, command, var1, hash: digest([key, command, var1, salt].join("|")), ...more,
+  });
+  const url = process.env.PAYU_ENV === "production"
+    ? "https://info.payu.in/merchant/postservice.php?form=2"
+    : "https://test.payu.in/merchant/postservice.php?form=2";
+  const response = await fetch(url, { method: "POST", body,
+    cache: "no-store", signal: AbortSignal.timeout(15000) });
+  if (!response.ok) throw new Error("Payment verification unavailable.");
+  return response.json() as Promise<unknown>;
+}
+export class PayU implements PaymentGateway {
+  readonly name = "payu" as const;
+  readonly mode = this.name;
+  verifyWebhook(raw: string) {
+    try {
+      return payuVerifiedResponse(Object.fromEntries(new URLSearchParams(raw)), credentials().key, credentials().salt);
+    } catch { return false; }
+  }
+  async createOrder(order: ProviderOrder) {
+    return { sessionId: payuTransactionId(order.id) };
+  }
+  async fetchOrderStatus(order: ProviderOrder): Promise<PaymentResult> {
+    const result = await postservice("verify_payment", payuTransactionId(order.id));
+    const item = transactionDetails(result, payuTransactionId(order.id));
+    if (!item) return { state: "pending", amount: order.total_paise, currency: "INR" };
+    const amount = providerPaise(item.amt ?? item.amount);
+    const state = String(item.status ?? "").toLowerCase();
+    return {
+      state: state === "success" ? "paid" : state === "failure" || state === "failed" ? "failed" : "pending",
+      amount, currency: "INR",
+      paymentId: item.mihpayid ? String(item.mihpayid) : undefined,
+    };
+  }
+  async refund(_input: ProviderRefund): Promise<ProviderRefundResult> {
+    // Do not silently mark a refund paid or send a Cashfree refund for a PayU order.
+    // PayU refund integration requires production entitlement and separate verification.
+    throw new Error("PayU refunds are not configured.");
+  }
+}
