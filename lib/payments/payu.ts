@@ -90,6 +90,8 @@ export class PayU implements PaymentGateway {
       return { state: "pending", amount: order.total_paise, currency: "INR" };
     const amount = providerPaise(item.amt ?? item.amount);
     const state = String(item.status ?? "").toLowerCase();
+    if (state === "success" && !/^[0-9]+$/.test(String(item.mihpayid ?? "")))
+      throw new Error("PayU payment identity is missing.");
     return {
       state: state === "success" ? "paid" : state === "failure" || state === "failed" ? "failed" : "pending",
       amount, currency: "INR",
