@@ -86,6 +86,8 @@ export class PayU implements PaymentGateway {
     const item = transactionDetails(result, payuTransactionId(order.id));
     if (!item) return { state: "pending", amount: order.total_paise, currency: "INR" };
     if (String(item.txnid ?? "") !== payuTransactionId(order.id)) throw new Error("PayU order identity mismatch.");
+    if (String(item.status).toLowerCase() === "not found")
+      return { state: "pending", amount: order.total_paise, currency: "INR" };
     const amount = providerPaise(item.amt ?? item.amount);
     const state = String(item.status ?? "").toLowerCase();
     return {
