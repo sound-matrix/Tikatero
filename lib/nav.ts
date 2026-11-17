@@ -5,6 +5,7 @@ export const consoleNav = [
   { href: "/console/events", label: "Your events", description: "View and create events" },
   { href: "/console/tools/edit", label: "Edit events", description: "Posters, dates and tickets" },
   { href: "/console/tools/sales", label: "Ticket sales", description: "Bookings and refunds" },
+  { href: "/console/tools/marketing", label: "Marketing", description: "Promote your events" },
   { href: "/console/tools/instagram", label: "Instagram Ticket Sales", description: "Turn followers into buyers" },
   { href: "/console/tools/team", label: "Event team", description: "Manage staff access" },
   { href: "/console/tools/scan", label: "QR ticket scanner", description: "Check in your guests" },
