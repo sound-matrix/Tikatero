@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { discover } from "@/lib/discovery/data";
 import { locationFilters } from "@/lib/discovery/location";
 import { listingUrl, type Search } from "@/lib/discovery/model";
@@ -13,17 +14,43 @@ async function HomeContent({ searchParams }: { searchParams: Promise<Search> }) 
   return (
     <>
       <section className="rounded-3xl border border-line bg-[linear-gradient(130deg,#fff2eb,#ffffff_70%)] p-5 sm:p-9">
-        <p className="text-xs font-bold uppercase tracking-[.2em] text-muted">
-          Your next great memory
-        </p>
-        <h1 className="mt-4 max-w-3xl text-4xl font-extrabold leading-tight tracking-tight md:text-5xl">
-          Find events near you — or anywhere in the world
-        </h1>
-        <p className="mb-7 mt-4 max-w-xl text-lg text-muted">
-          Big nights. New faces. Something just for you. Find your next experience with Tikatero.
-        </p>
+        <div className="grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:gap-7">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[.2em] text-muted">
+              Your next great memory
+            </p>
+            <h1 className="mt-4 max-w-3xl text-4xl font-extrabold leading-tight tracking-tight md:text-5xl">
+              Find events near you — or anywhere in the world
+            </h1>
+            <p className="mt-4 max-w-xl text-lg text-muted">
+              Big nights. New faces. Something just for you. Find your next experience with Tikatero.
+            </p>
+          </div>
+          <div className="mx-auto w-full max-w-[260px] sm:max-w-[320px] lg:max-w-[360px]">
+            <div className="overflow-hidden rounded-2xl border border-[#f3c9ad]/70 bg-[#fff3e9] shadow-sm">
+              <Image
+                src="/animations/tikatero-welcome-entry.gif"
+                alt="A hand-drawn guest scans a ticket QR code, the venue gate slides open, and she walks inside beneath the Welcome Tikatero sign."
+                width={357}
+                height={358}
+                unoptimized
+                priority
+                className="h-auto w-full motion-reduce:hidden"
+              />
+              <Image
+                src="/animations/tikatero-welcome-poster.png"
+                alt="A guest approaches the Welcome Tikatero venue entrance with a QR ticket."
+                width={357}
+                height={358}
+                className="hidden h-auto w-full motion-reduce:block"
+              />
+            </div>
+          </div>
+        </div>
+        <div className="mt-6">
         <DiscoveryFilters value={value} compact />
         <LocationMemory city={value.city} country={value.country} />
+        </div>
       </section>
       <section className="mt-10">
         <div className="mb-5 flex items-center justify-between gap-3">
