@@ -90,10 +90,11 @@ export class PayU implements PaymentGateway {
     if (String(item.txnid ?? "") !== payuTransactionId(order.id)) throw new Error("PayU order identity mismatch.");
     const amount = providerPaise(item.amt ?? item.amount);
     const state = String(item.status ?? "").toLowerCase();
-    if (state === "success" && !/^[0-9]+$/.test(String(item.mihpayid ?? "")))
+    const captured = String(item.unmappedstatus ?? "").toLowerCase() === "captured";
+    if (state === "success" && captured && !/^[0-9]+$/.test(String(item.mihpayid ?? "")))
       throw new Error("PayU payment identity is missing.");
     return {
-      state: state === "success" ? "paid" : state === "failure" || state === "failed" ? "failed" : "pending",
+      state: state === "success" && captured ? "paid" : state === "failure" || state === "failed" ? "failed" : "pending",
       amount, currency: "INR",
       paymentId: item.mihpayid ? String(item.mihpayid) : undefined,
     };
