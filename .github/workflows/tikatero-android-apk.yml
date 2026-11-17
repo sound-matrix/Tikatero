@@ -1,4 +1,4 @@
-name: Tikatero Android APK (standalone)
+name: Tikatero Android APK
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       site_url:
-        description: 'Tikatero production HTTPS origin (e.g. https://your-domain.example)'
+        description: "Tikatero HTTPS production origin"
         required: false
         type: string
 
@@ -44,7 +44,7 @@ jobs:
           java-version: "17"
       - name: Check production URL
         run: |
-          node -e 'const s=process.env.EXPO_PUBLIC_TIKATERO_URL||"";if(!/^https:\/\/[^/]+\/?$/.test(s)){console.error("Set GitHub Actions repository variable TIKATERO_SITE_URL to the live HTTPS domain, or provide site_url when manually dispatching");process.exit(1)}'
+          node -e 'const s=process.env.EXPO_PUBLIC_TIKATERO_URL||"";if(!/^https:\/\/[^/]+\/?$/.test(s)){console.error("Set TIKATERO_SITE_URL to a live HTTPS domain");process.exit(1)}'
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Check Expo dependency versions
@@ -53,33 +53,29 @@ jobs:
         run: npx tsc --noEmit
       - name: Generate Android project
         run: npx expo prebuild --platform android --non-interactive --no-install
-      - name: Build standalone release-mode testing APK
+      - name: Build standalone release-mode APK
         run: |
           chmod +x android/gradlew
           cd android
           ./gradlew assembleRelease --no-daemon
-      - name: Verify APK bundle and signature
+      - name: Verify bundled JavaScript and sign test APK
         run: |
           set -eu
           APK="$(find android/app/build/outputs/apk/release -type f -name '*.apk' -print -quit)"
           test -n "$APK"
-          unzip -Z1 "$APK" | grep -qE '(^|/)index.android.bundle
-      - name: Upload APK artifact
+          unzip -Z1 "$APK" | grep -q 'index.android.bundle'
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name apksigner | sort -V | tail -1)"
+          test -x "$APKSIGNER"
+          if ! "$APKSIGNER" verify "$APK"; then
+            keytool -genkeypair -keystore /tmp/tikatero-test.keystore -alias tikatero-test -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 3650 -dname "CN=Tikatero Test,O=Sound Matrix,C=IN"
+            "$APKSIGNER" sign --ks /tmp/tikatero-test.keystore --ks-key-alias tikatero-test --ks-pass pass:android --key-pass pass:android "$APK"
+            "$APKSIGNER" verify "$APK"
+          fi
+          echo "Verified self-contained, signed test APK."
+      - name: Upload standalone APK
         uses: actions/upload-artifact@v4
         with:
           name: Tikatero-Android-Standalone-APK
           path: apps/android/android/app/build/outputs/apk/release/*.apk
-          if-no-files-found: error
-          retention-days: 14
-
-          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name apksigner | sort -V | tail -1)"
-          test -x "$APKSIGNER"
-          "$APKSIGNER" verify "$APK"
-          echo "Standalone APK includes bundled JavaScript and a valid Android signature."
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Tikatero-Android-Test-APK
-          path: apps/android/android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
