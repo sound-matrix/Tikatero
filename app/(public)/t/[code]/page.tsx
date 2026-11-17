@@ -1,4 +1,5 @@
 import { cache, Suspense } from "react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import type { Metadata } from "next";
@@ -80,7 +81,7 @@ async function Ticket({
           </>
         )}
       </article>
-      <p className="mt-5 text-center text-xs text-muted">Powered by <a href="/" className="font-bold text-teal underline">Tikatero</a></p>
+      <p className="mt-5 text-center text-xs text-muted">Powered by <Link href="/" className="font-bold text-teal underline">Tikatero</Link></p>
       {ticket.admitted && (
         <div className="mt-5 grid gap-3">
           <Button href={`/t/${facts.code}/pdf${suffix}`} variant="primary">
