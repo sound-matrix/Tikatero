@@ -69,7 +69,10 @@ async function Payment({ params }: { params: Promise<{ id: string }> }) {
   );
 }
 function PayUForm({ order }: { order: ReturnType<typeof providerOrder> }) {
-  const { action, fields } = payuPaymentForm(order, new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.tikatero.com").origin);
+  const siteOrigin = process.env.VERCEL_ENV === "preview" && process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.tikatero.com").origin;
+  const { action, fields } = payuPaymentForm(order, siteOrigin);
   return (
     <form action={action} method="POST" className="mt-6">
       {Object.entries(fields).map(([name,value]) => <input key={name} type="hidden" name={name} value={value} />)}
