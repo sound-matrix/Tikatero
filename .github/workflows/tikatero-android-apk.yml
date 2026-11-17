@@ -42,8 +42,6 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
       - name: Check production URL
         run: |
           node -e 'const s=process.env.EXPO_PUBLIC_TIKATERO_URL||"";if(!/^https:\/\/[^/]+\/?$/.test(s)){console.error("Set GitHub Actions repository variable TIKATERO_SITE_URL to the live HTTPS domain, or provide site_url when manually dispatching");process.exit(1)}'
@@ -55,18 +53,18 @@ jobs:
         run: npx tsc --noEmit
       - name: Generate Android project
         run: npx expo prebuild --platform android --non-interactive --no-install
-      - name: Build signed testing APK
+      - name: Build debug-signed testing APK
         run: |
           chmod +x android/gradlew
           cd android
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleDebug --no-daemon
       - name: Confirm APK exists
         run: |
-          test -n "$(find android/app/build/outputs/apk/release -name '*.apk' -print -quit)"
+          test -n "$(find android/app/build/outputs/apk/debug -name '*.apk' -print -quit)"
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Tikatero-Android-Test-APK
-          path: apps/android/android/app/build/outputs/apk/release/*.apk
+          path: apps/android/android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
