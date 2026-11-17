@@ -1,4 +1,4 @@
-name: Tikatero Android APK
+name: Tikatero Android APK (standalone)
 
 on:
   push:
@@ -53,14 +53,29 @@ jobs:
         run: npx tsc --noEmit
       - name: Generate Android project
         run: npx expo prebuild --platform android --non-interactive --no-install
-      - name: Build debug-signed testing APK
+      - name: Build standalone release-mode testing APK
         run: |
           chmod +x android/gradlew
           cd android
-          ./gradlew assembleDebug --no-daemon
-      - name: Confirm APK exists
+          ./gradlew assembleRelease --no-daemon
+      - name: Verify APK bundle and signature
         run: |
-          test -n "$(find android/app/build/outputs/apk/debug -name '*.apk' -print -quit)"
+          set -eu
+          APK="$(find android/app/build/outputs/apk/release -type f -name '*.apk' -print -quit)"
+          test -n "$APK"
+          unzip -Z1 "$APK" | grep -qE '(^|/)index.android.bundle
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tikatero-Android-Standalone-APK
+          path: apps/android/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name apksigner | sort -V | tail -1)"
+          test -x "$APKSIGNER"
+          "$APKSIGNER" verify "$APK"
+          echo "Standalone APK includes bundled JavaScript and a valid Android signature."
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
