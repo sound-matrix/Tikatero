@@ -1,21 +1,32 @@
 import type { Account } from "@/lib/auth/routing";
 
 export const consoleNav = [
-  { href: "/console/onboarding", label: "Verification" },
-  { href: "/console", label: "Overview" },
-  { href: "/console/events", label: "Events" },
-  { href: "/console/payouts", label: "Your earnings" },
-  { href: "/console/settings", label: "Settings" },
+  { href: "/console", label: "Overview", description: "Your organiser dashboard" },
+  { href: "/console/events", label: "My events", description: "View and create events" },
+  { href: "/console/tools/edit", label: "Edit events", description: "Posters, dates and tickets" },
+  { href: "/console/tools/sales", label: "Ticket sales", description: "Bookings and refunds" },
+  { href: "/console/tools/instagram", label: "Instagram Ticket Sales", description: "Turn followers into buyers" },
+  { href: "/console/tools/team", label: "Event team", description: "Manage staff access" },
+  { href: "/console/tools/scan", label: "QR ticket scanner", description: "Check in your guests" },
+  { href: "/console/payouts", label: "Your earnings", description: "Payments and payouts" },
+  { href: "/console/onboarding", label: "Verification", description: "Organiser verification" },
+  { href: "/console/settings", label: "Settings", description: "Your organisation" },
 ] as const;
 
 export function consoleNavFor(account: Pick<Account, "organisers" | "assignments">) {
   if (!account.organisers.length && (account.assignments ?? []).length)
     return (account.assignments ?? []).some((item) => item.role === "manager")
       ? ([
-          { href: "/console/events", label: "Events" },
+          { href: "/console/events", label: "My assigned events" },
+          { href: "/console/tools/sales", label: "Ticket sales" },
+          { href: "/console/tools/team", label: "Event team" },
+          { href: "/console/tools/scan", label: "QR ticket scanner" },
           { href: "/console/payouts", label: "Your earnings" },
         ] as const)
-      : ([{ href: "/console/events", label: "Check-in" }] as const);
+      : ([
+          { href: "/console/events", label: "My assigned events" },
+          { href: "/console/tools/scan", label: "QR ticket scanner" },
+        ] as const);
   return consoleNav;
 }
 
