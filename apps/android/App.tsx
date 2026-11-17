@@ -7,7 +7,7 @@ const valid = /^https:\/\/[^/]+$/.test(SITE);
 const tabs = [{label:"Explore",path:"/"},{label:"My tickets",path:"/me"},{label:"Host",path:"/console"}];
 
 export default function App() {
-  const ref = useRef<WebView>(null);
+  const ref = useRef<WebView<{}>>(null);
   const [back,setBack] = useState(false);
   const [path,setPath] = useState("/");
   const [error,setError] = useState(false);
@@ -20,11 +20,11 @@ export default function App() {
   if(!valid) return <SafeAreaView style={styles.center}><Text style={styles.brand}>Tikatero setup</Text><Text>Configure EXPO_PUBLIC_TIKATERO_URL as your HTTPS production site before building.</Text></SafeAreaView>;
   const go=(next:string)=>{setError(false); ref.current?.injectJavaScript(`window.location.assign(${JSON.stringify(SITE)} + ${JSON.stringify(next)});true;`);};
   return <SafeAreaView style={styles.root}>
-    <StatusBar barStyle="dark-content" backgroundColor="#ffffff"/>
+    <StatusBar barStyle="dark-content"/>
     <View style={styles.header}><Text style={styles.brand}>TIKATERO</Text><TouchableOpacity onPress={()=>ref.current?.reload()} accessibilityLabel="Refresh"><Text style={styles.action}>Refresh</Text></TouchableOpacity></View>
     <View style={styles.body}>
       {error && <TouchableOpacity style={styles.error} onPress={()=>{setError(false);ref.current?.reload();}}><Text>Connection failed. Tap to retry.</Text></TouchableOpacity>}
-      <WebView ref={ref} source={{uri:SITE}} javaScriptEnabled domStorageEnabled sharedCookiesEnabled thirdPartyCookiesEnabled
+      <WebView<{}> ref={ref} source={{uri:SITE}} javaScriptEnabled domStorageEnabled sharedCookiesEnabled thirdPartyCookiesEnabled
         originWhitelist={["https://*"]} setSupportMultipleWindows={false}
         startInLoadingState renderLoading={()=><View style={styles.center}><ActivityIndicator color="#F25C54"/></View>}
         onError={()=>setError(true)}
