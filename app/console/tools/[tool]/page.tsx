@@ -37,7 +37,6 @@ async function EventTools({ params, searchParams }: {
   const { account, client } = await requireAccount();
   const organiserIds = account.organisers.map((o) => o.id);
   const assignments = account.assignments ?? [];
-  const assignedIds = assignments.map((a) => a.eventId);
   const visibleIds = tool === "instagram" || tool === "edit"
     ? []
     : assignments.filter((a) => tool === "scan" || a.role === "manager").map((a) => a.eventId);
