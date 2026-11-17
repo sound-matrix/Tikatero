@@ -31,10 +31,10 @@ test.describe("Supabase role routing", () => {
   });
 
   for (const role of ["attendee", "pending", "approved", "staff", "admin", "blocked"] as const) {
-    test(`${role} signs in by OTP and can only enter allowed surfaces`, async ({ page }) => {
+    test(`${role} signs in by password and can only enter allowed surfaces`, async ({ page }) => {
       const client = admin();
       const email = `auth-${crypto.randomUUID()}@example.test`;
-      const { data, error } = await client.auth.admin.createUser({ email, email_confirm: true });
+      const { data, error } = await client.auth.admin.createUser({ email, email_confirm: true, password: "LocalFixturePassword#2026" });
       if (error || !data.user) throw new Error("Could not create local auth fixture.");
       const id = data.user.id;
       users.push(id);
@@ -61,20 +61,9 @@ test.describe("Supabase role routing", () => {
         expect(orgError).toBeNull();
       }
       await page.goto("/login");
-      await page
-        .getByRole("button", { name: "Already have an account? Just enter your email" })
-        .click();
       await page.getByLabel("Email", { exact: true }).fill(email);
-      await page.getByRole("button", { name: "Email me a code or sign-in link" }).click();
-      await expect(page.getByLabel("6-digit code")).toBeVisible();
-      // Generate a fresh local token for UI verification; no email templates are changed.
-      const { data: link, error: linkError } = await client.auth.admin.generateLink({
-        type: "magiclink",
-        email,
-      });
-      if (linkError || !link.properties.email_otp) throw new Error("Could not create local OTP.");
-      await page.getByLabel("6-digit code").fill(link.properties.email_otp);
-      await page.getByRole("button", { name: "Sign in", exact: true }).click();
+      await page.getByLabel("Password", { exact: true }).fill("LocalFixturePassword#2026");
+      await page.getByRole("button", { name: "Log in", exact: true }).last().click();
       const destination = {
         attendee: "/me",
         pending: "/console/pending",
@@ -175,14 +164,16 @@ test.describe("first verified signup", () => {
       const email = `welcome-${crypto.randomUUID()}@example.test`;
       await page.goto(intent === "organiser" ? "/login?as=host" : "/login");
       if (intent === "attendee")
-        await page.getByRole("button", { name: "I want to buy tickets" }).click();
+        await page.getByRole("button", { name: "Sign up", exact: true }).click();
       else
         await expect(page.getByRole("button", { name: "I want to host events" })).toHaveAttribute(
           "aria-pressed",
           "true",
         );
       await page.getByLabel("Email", { exact: true }).fill(email);
-      await page.getByRole("button", { name: "Email me a code or sign-in link" }).click();
+      await page.getByLabel("Password", { exact: true }).fill("LocalFixturePassword#2026");
+      await page.getByLabel("Confirm password").fill("LocalFixturePassword#2026");
+      await page.getByRole("button", { name: "Sign up and verify email" }).click();
       await expect(page.getByLabel("6-digit code")).toBeVisible();
       const { data: link, error: linkError } = await client.auth.admin.generateLink({
         type: "magiclink",
@@ -193,7 +184,7 @@ test.describe("first verified signup", () => {
       const user = link.user;
       users.push(user.id);
       await page.getByLabel("6-digit code").fill(link.properties.email_otp);
-      await page.getByRole("button", { name: "Sign in", exact: true }).click();
+      await page.getByRole("button", { name: "Verify and continue" }).click();
       const destination = intent === "organiser" ? "/console/pending" : "/me";
       await expect(page).toHaveURL(new RegExp(`${destination}$`));
       const { data: profile } = await client
