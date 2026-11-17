@@ -10,7 +10,6 @@ type Item = {
   href: ComponentProps<typeof Link>["href"];
   label: string;
   count?: number;
-  description?: string;
 };
 
 export function SideNav({
@@ -27,10 +26,10 @@ export function SideNav({
 
   return (
     <aside className="border-b border-line bg-white md:w-64 md:shrink-0 md:border-r md:border-b-0">
-      <div className="flex flex-col gap-4 px-4 py-4">
+      <div className="flex flex-col gap-3 px-4 py-4">
         <Logo className="h-10 md:h-11" />
         <p className="text-sm font-semibold text-muted">{title}</p>
-        <nav aria-label={title} className="flex gap-1 overflow-x-auto md:flex-col">
+        <nav aria-label={title} className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
           {items.map((item) => {
             const href = String(item.href);
             const active = href === activePath ||
@@ -45,12 +44,11 @@ export function SideNav({
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "inline-flex min-h-12 shrink-0 items-center rounded-xl px-3 font-semibold",
+                  "inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold leading-5 transition-colors md:w-full",
                   active ? "bg-soft text-ink" : "text-ink hover:bg-soft",
                 )}
               >
                 <span>{item.label}</span>
-                {item.description && <span className="hidden text-xs font-normal opacity-70 md:block">{item.description}</span>}
                 {!!item.count && (
                   <span
                     aria-label={`${item.count} pending removal requests`}
