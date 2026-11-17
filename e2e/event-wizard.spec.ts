@@ -64,8 +64,13 @@ async function signInStaff(page: Page) {
   );
 }
 async function next(page: Page, heading: string) {
+  // Draft saving is a server action followed by client navigation. Under a busy
+  // local Supabase/Next.js CI run, the old 5-second assertion raced the navigation.
   await page.getByRole("button", { name: "Save and continue", exact: true }).click();
-  await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page.getByRole("alert")).toHaveCount(0);
 }
 const futureDay = () => new Date(Date.now() + 45 * 86400000).toISOString().slice(0, 10);
 async function dates(page: Page) {
@@ -147,7 +152,7 @@ test.describe("Organiser event wizard", () => {
     await expect(page.getByLabel("Choose a photo")).toBeVisible();
     await shot(page, info, 4);
     await next(page, "VIPs & chief guests");
-    await page.getByRole("link", { name: "Your events", exact: true }).click();
+    await page.getByRole("main").getByRole("link", { name: "Your events", exact: true }).click();
     const row = page.getByRole("row").filter({ hasText: "Sample Music Night" });
     await expect(row).toContainText("Draft");
     await row.getByRole("link", { name: "Continue", exact: true }).click();
@@ -215,7 +220,7 @@ test.describe("Organiser event wizard", () => {
       .select("price_paise,qty_total,is_vip")
       .eq("event_id", eventId);
     expect(tiers).toEqual([{ price_paise: 100000, qty_total: 100, is_vip: true }]);
-    await page.getByRole("link", { name: "Your events", exact: true }).click();
+    await page.getByRole("main").getByRole("link", { name: "Your events", exact: true }).click();
     await expect(page.getByRole("row").filter({ hasText: "Sample Music Night" })).toContainText(
       "Published",
     );
@@ -391,6 +396,10 @@ test.describe("Organiser event wizard", () => {
           fullPage: true,
         });
         await missing.click();
+        // Step navigation must complete before interacting with category fields.
+        await expect(page.getByRole("heading", { name: "Tell people about your event" })).toBeVisible({
+          timeout: 20_000,
+        });
         const comedians = page.getByRole("group", { name: "Comedians" });
         await comedians.getByRole("button", { name: "Add another" }).click();
         await comedians.getByLabel("Name", { exact: true }).fill("Jay Rao");
