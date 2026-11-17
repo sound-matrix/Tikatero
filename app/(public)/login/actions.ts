@@ -69,9 +69,10 @@ export async function requestSignInCode(
   }
 }
 
-export async function verifySignInCode(emailInput: string, token: string) {
+export async function verifySignInCode(emailInput: string, token: string, password?: string) {
   const email = emailOf(emailInput);
   if (!email || !/^\d{6}$/.test(token)) return { error: "Enter the 6-digit code from your email." };
+  if (password !== undefined && !validPassword(password)) return { error: "Use a password between 8 and 128 characters." };
   const ip = await requestIp();
   const [byIp, byEmail] = await Promise.all([
     allowRequest("login-verify-ip", ip, 40, 600),
@@ -83,6 +84,10 @@ export async function verifySignInCode(emailInput: string, token: string) {
     const { error } = await client.auth.verifyOtp({ email, token, type: "email" });
     if (error)
       return { error: "That code is incorrect or has expired. Try again or request a new email." };
+    if (password !== undefined) {
+      const { error: passwordError } = await client.auth.updateUser({ password });
+      if (passwordError) return { error: "Email verified, but password setup failed. Please request a new code and try again." };
+    }
     return { ok: true as const };
   } catch {
     return { error: UNAVAILABLE };
@@ -116,15 +121,3 @@ export async function signInWithPassword(emailInput: string, password: string, n
   } catch { return { error: UNAVAILABLE }; }
 }
 
-/** Requires the OTP-established Supabase user session (not a self-reported email). */
-export async function setVerifiedPassword(password: string) {
-  if (!validPassword(password)) return { error: "Use a password between 8 and 128 characters." };
-  try {
-    const client = await createClient();
-    const { data, error: authError } = await client.auth.getUser();
-    if (authError || !data.user?.email) return { error: "Verify your email code before setting a password." };
-    const { error } = await client.auth.updateUser({ password });
-    if (error) return { error: "Could not set your password. Try again." };
-    return { ok: true as const };
-  } catch { return { error: UNAVAILABLE }; }
-}
