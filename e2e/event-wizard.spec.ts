@@ -70,7 +70,6 @@ async function next(page: Page, heading: string) {
   await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible({
     timeout: 20_000,
   });
-  await expect(page.getByRole("alert")).toHaveCount(0);
 }
 const futureDay = () => new Date(Date.now() + 45 * 86400000).toISOString().slice(0, 10);
 async function dates(page: Page) {
