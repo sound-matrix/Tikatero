@@ -69,9 +69,10 @@ export async function requestSignInCode(
   }
 }
 
-export async function verifySignInCode(emailInput: string, token: string) {
+export async function verifySignInCode(emailInput: string, token: string, password?: string) {
   const email = emailOf(emailInput);
   if (!email || !/^\d{6}$/.test(token)) return { error: "Enter the 6-digit code from your email." };
+  if (password !== undefined && !validPassword(password)) return { error: "Use a password between 8 and 128 characters." };
   const ip = await requestIp();
   const [byIp, byEmail] = await Promise.all([
     allowRequest("login-verify-ip", ip, 40, 600),
@@ -83,8 +84,40 @@ export async function verifySignInCode(emailInput: string, token: string) {
     const { error } = await client.auth.verifyOtp({ email, token, type: "email" });
     if (error)
       return { error: "That code is incorrect or has expired. Try again or request a new email." };
+    if (password !== undefined) {
+      const { error: passwordError } = await client.auth.updateUser({ password });
+      if (passwordError) return { error: "Email verified, but password setup failed. Please request a new code and try again." };
+    }
     return { ok: true as const };
   } catch {
     return { error: UNAVAILABLE };
   }
 }
+
+function validPassword(password: string) {
+  return password.length >= 8 && password.length <= 128;
+}
+
+/** Returning members sign in with a password; never reveal whether an email exists. */
+export async function signInWithPassword(emailInput: string, password: string, next?: string | null) {
+  const email = emailOf(emailInput);
+  if (!email || !password) return { error: "Enter your email and password." };
+  const ip = await requestIp();
+  const [byIp, byEmail] = await Promise.all([
+    allowRequest("password-login-ip", ip, 20, 600),
+    allowRequest("password-login-email", email, 8, 600),
+  ]);
+  if (!byIp || !byEmail) return { error: LIMITED };
+  try {
+    const client = await createClient();
+    const { error } = await client.auth.signInWithPassword({ email, password });
+    if (error) return { error: "Email or password is incorrect. If you previously signed in by email code, choose Set up password." };
+    const destination = returnPath(next);
+    (await cookies()).set("tikatero_auth_return", destination ?? "", {
+      httpOnly: true, sameSite: "lax", path: "/auth",
+      maxAge: destination ? 1800 : 0, secure: siteOrigin().startsWith("https:"),
+    });
+    return { ok: true as const };
+  } catch { return { error: UNAVAILABLE }; }
+}
+

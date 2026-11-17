@@ -33,7 +33,7 @@ export default function LoginPage({
     <main className="mx-auto w-full max-w-md px-4 py-10">
       <p className="mb-3 text-sm font-semibold text-teal">Welcome to Tikatero</p>
       <h1 className="text-3xl font-extrabold tracking-tight text-ink">Sign in</h1>
-      <p className="mt-3 text-muted">Choose what you want to do, then verify your email.</p>
+      <p className="mt-3 text-muted">Log in with your password, or create an account and confirm your email once.</p>
       <Suspense fallback={<p className="mt-6">Loading sign-in…</p>}>
         <Form searchParams={searchParams} />
       </Suspense>

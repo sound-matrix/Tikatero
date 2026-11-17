@@ -113,7 +113,7 @@ test("staff saves a version; preview and public fees update; previous version is
       path: testInfo.outputPath("pricing-saved-mobile.png"),
       fullPage: true,
     });
-    await page.goto("/");
+    await page.goto("/pricing");
     await expect(page.getByText(/Free for free events\. Paid tickets: 2%/)).toContainText(
       "₹ 964.60",
     );
