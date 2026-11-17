@@ -85,7 +85,7 @@ export function TicketPdf({ facts, logo, qr }: { facts: TicketFacts; logo: strin
         </View>
         <Text style={styles.muted}>{BRIGHTNESS_HINT}</Text>
         <Text style={styles.terms}>{TICKET_TERMS}</Text>
-        <Text style={styles.footer}>© Sound Matrix</Text>
+        <Link src="https://www.tikatero.com" style={styles.footer}>Powered by Tikatero · www.tikatero.com</Link>
       </Page>
     </Document>
   );
