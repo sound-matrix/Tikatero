@@ -10,6 +10,7 @@ import { recaptchaSiteKey } from "@/lib/security/recaptcha";
 import { checkoutDefaults } from "@/lib/account/checkout";
 import { shareChannel } from "@/lib/sharing/links";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
+import { TrackEventReferral } from "@/components/discovery/share-button";
 import { formatIst } from "@/lib/format";
 import { readRefundPolicyText } from "@/lib/refunds/read";
 import { createAnonClient } from "@/lib/supabase/anon";
@@ -40,6 +41,9 @@ async function Checkout({ params, searchParams }: Props) {
     (!event.is_free && recaptchaRequired() && !recaptchaReady ? PAYMENTS_UNAVAILABLE : "");
   return (
     <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+      {shareChannel(query.ref) && (
+        <TrackEventReferral slug={event.slug} channel={shareChannel(query.ref)!} />
+      )}
       <Link className="text-sm font-semibold text-muted underline" href={`/e/${event.slug}`}>
         Back to event
       </Link>
