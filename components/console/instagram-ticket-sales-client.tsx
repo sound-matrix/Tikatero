@@ -78,7 +78,7 @@ export function InstagramTicketSalesClient({ origin, slug, title, city }: Props)
         </div>
         <div className="rounded-2xl border border-line p-4">
           <h3 className="font-bold">Instagram caption</h3>
-          <p className="mt-1 text-sm text-muted">Use this caption with your Reel or regular post. Instagram captions aren't clickable; direct people to your bio or Story link.</p>
+          <p className="mt-1 text-sm text-muted">Use this caption with your Reel or regular post. Instagram captions aren&apos;t clickable; direct people to your bio or Story link.</p>
           <textarea readOnly aria-label="Suggested Instagram caption"
             value={instagramEventCaption(title, city, first)}
             className="mt-4 min-h-40 w-full rounded-xl border border-line bg-soft p-3 text-sm" />
@@ -88,7 +88,7 @@ export function InstagramTicketSalesClient({ origin, slug, title, city }: Props)
           </button>
           <p className="mt-4 text-sm text-muted">
             For a native button under an Instagram ad, use Meta Ads Manager.
-            Tikatero can't add buttons to ordinary organic posts.
+            Tikatero can&apos;t add buttons to ordinary organic posts.
           </p>
           <a href="https://adsmanager.facebook.com/" target="_blank" rel="noopener noreferrer"
             className="mt-3 inline-block text-sm font-bold text-teal underline">Open Meta Ads Manager</a>
