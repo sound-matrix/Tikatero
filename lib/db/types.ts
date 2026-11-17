@@ -744,7 +744,7 @@ export type Database = {
         Row: {
           payout_mode: PayoutMode;
           ref_channel: ShareChannel | null;
-          payment_provider: "mock" | "cashfree" | "free" | null;
+          payment_provider: "mock" | "cashfree" | "payu" | "free" | null;
           payment_session_id: string | null;
           vendor_id: string | null;
           organiser_share_paise: number;
@@ -780,7 +780,7 @@ export type Database = {
         Insert: {
           payout_mode?: PayoutMode;
           ref_channel?: ShareChannel | null;
-          payment_provider?: "mock" | "cashfree" | "free" | null;
+          payment_provider?: "mock" | "cashfree" | "payu" | "free" | null;
           payment_session_id?: string | null;
           vendor_id?: string | null;
           organiser_share_paise?: number;
@@ -815,7 +815,7 @@ export type Database = {
         Update: {
           payout_mode?: PayoutMode;
           ref_channel?: ShareChannel | null;
-          payment_provider?: "mock" | "cashfree" | "free" | null;
+          payment_provider?: "mock" | "cashfree" | "payu" | "free" | null;
           payment_session_id?: string | null;
           vendor_id?: string | null;
           organiser_share_paise?: number;
