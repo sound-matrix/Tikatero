@@ -85,6 +85,7 @@ export class PayU implements PaymentGateway {
     const result = await postservice("verify_payment", payuTransactionId(order.id));
     const item = transactionDetails(result, payuTransactionId(order.id));
     if (!item) return { state: "pending", amount: order.total_paise, currency: "INR" };
+    if (String(item.txnid ?? "") !== payuTransactionId(order.id)) throw new Error("PayU order identity mismatch.");
     const amount = providerPaise(item.amt ?? item.amount);
     const state = String(item.status ?? "").toLowerCase();
     return {
@@ -92,6 +93,20 @@ export class PayU implements PaymentGateway {
       amount, currency: "INR",
       paymentId: item.mihpayid ? String(item.mihpayid) : undefined,
     };
+  }
+  async refundStatus(requestId: string, expected: { paymentId: string; amountPaise: number; token: string }) {
+    if (!/^[0-9]+$/.test(requestId)) throw new Error("Invalid PayU refund request ID.");
+    const result = await postservice("check_action_status_txnid", requestId) as Record<string, unknown>;
+    if (String(result.status) !== "1") return "pending" as const;
+    const outer = result.transaction_details as Record<string, Record<string, unknown>> | undefined;
+    const inner = outer?.[requestId]?.[requestId] as Record<string, unknown> | undefined;
+    if (!inner || inner.action !== "refund") return "pending" as const;
+    if (String(inner.mihpayid) !== expected.paymentId ||
+        String(inner.token) !== expected.token ||
+        providerPaise(inner.amt) !== expected.amountPaise)
+      throw new Error("PayU refund details do not match.");
+    const state = String(inner.status).toLowerCase();
+    return state === "success" ? "processed" as const : state === "failure" ? "failed" as const : "pending" as const;
   }
   async refund(input: ProviderRefund): Promise<ProviderRefundResult> {
     if (!input.orderId || !/^[0-9]+$/.test(input.orderId)) throw new Error("PayU payment ID unavailable for refund.");
@@ -103,8 +118,9 @@ export class PayU implements PaymentGateway {
     const accepted = String(result.status) === "1" || String(result.error_code) === "102";
     if (!accepted) throw new Error("PayU refund request was rejected.");
     const requestId = result.request_id;
+    if (requestId == null || !/^[0-9]+$/.test(String(requestId))) throw new Error("PayU did not return a refund request ID.");
     return {
-      cfRefundId: requestId == null ? token : String(requestId),
+      cfRefundId: String(requestId),
       status: "pending",
     };
   }
