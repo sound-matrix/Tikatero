@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { requestSignInCode, verifySignInCode, signInWithPassword, setVerifiedPassword } from "@/app/(public)/login/actions";
+import { requestSignInCode, verifySignInCode, signInWithPassword } from "@/app/(public)/login/actions";
 import { withReturnPath } from "@/lib/auth/return-path";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,16 +73,11 @@ export function LoginForm({
     setBusy(true);
     setMessage("");
     try {
-      const verified = await verifySignInCode(email, token);
-      if (verified.error) {
-        setMessage(verified.error);
-      } else {
-        const updated = await setVerifiedPassword(password);
-        if (updated.error) setMessage(updated.error);
-        else {
-          window.location.assign(withReturnPath("/auth/complete", next));
-          return;
-        }
+      const verified = await verifySignInCode(email, token, password);
+      if (verified.error) setMessage(verified.error);
+      else {
+        window.location.assign(withReturnPath("/auth/complete", next));
+        return;
       }
     } catch {
       setMessage("We could not verify your code. Please try again.");
