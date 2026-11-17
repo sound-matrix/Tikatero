@@ -8,7 +8,7 @@ import { consoleNavFor } from "@/lib/nav";
 
 function NavFallback() {
   return (
-    <div className="min-h-16 border-b border-line bg-white md:w-60 md:border-r md:border-b-0" />
+    <div className="min-h-16 border-b border-line bg-white md:w-64 md:border-r md:border-b-0" />
   );
 }
 
