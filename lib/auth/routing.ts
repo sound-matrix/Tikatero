@@ -52,6 +52,9 @@ export function routeRedirect(account: Account, path: string): string | null {
     if (!account.organisers.length) {
       if (["staff", "admin"].includes(account.profile.role) || !assignments.length) return landing;
       if (path === "/console/events") return null;
+      const tool = /^\/console\/tools\/(sales|team|scan)$/.exec(path)?.[1];
+      if (tool && assignments.some((item) => tool === "scan" || item.role === "manager"))
+        return null;
       if (
         (path === "/console/payouts" ||
           within(path, "/console/payouts/export") ||

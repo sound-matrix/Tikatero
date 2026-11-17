@@ -6,7 +6,6 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireAccount } from "@/lib/auth/account";
 import { ShareEventCard } from "@/components/console/share-event";
-import { InstagramTicketSales } from "@/components/console/instagram-ticket-sales";
 import { LiveSalesFigures } from "@/components/console/live-sales";
 import { Button } from "@/components/ui/button";
 import { loadEventSales } from "@/lib/payouts/read";
@@ -56,10 +55,7 @@ async function EventSales({
         />
       )}
       {event && ownsEvent && event.status === "published" && !event.hidden_at && (
-        <>
-          <InstagramTicketSales client={client} event={event} />
-          <ShareEventCard client={client} event={event} />
-        </>
+        <ShareEventCard client={client} event={event} />
       )}
       {desk && (
         <RefundDeskView
