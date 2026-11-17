@@ -118,7 +118,7 @@ export async function transition(
   return data;
 }
 export async function reconcile(order: CheckoutOrder) {
-  if (!["created", "pending"].includes(order.status)) return order.status;
+  if (!["created", "pending"].includes(order.status) && !(order.payment_provider === "payu" && order.status === "expired")) return order.status;
   const stale = Date.parse(order.hold_expires_at ?? "") <= Date.now();
   if (order.payment_provider === "cashfree" || order.payment_provider === "payu") {
     // A provider timeout keeps the order pending for the next reconciliation.
@@ -144,7 +144,7 @@ const ON_DEMAND_RECONCILE_MS = 10_000;
  * polling visitor cannot call the provider more than once every 10 seconds.
  */
 export async function reconcileOnDemand(order: CheckoutOrder) {
-  if (!["created", "pending"].includes(order.status)) return order.status;
+  if (!["created", "pending"].includes(order.status) && !(order.payment_provider === "payu" && order.status === "expired")) return order.status;
   const last = Date.parse(order.reconciled_at ?? "");
   if (Number.isFinite(last) && Date.now() - last <= ON_DEMAND_RECONCILE_MS) return order.status;
   try {
