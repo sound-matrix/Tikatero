@@ -1593,27 +1593,42 @@ export type Database = {
         Row: {
           created_at: string;
           event_id: string;
+          hash_valid: boolean | null;
           id: string;
           payload: NonNullable<Json>;
           processed_at: string | null;
+          provider: string | null;
+          received_at: string | null;
           source: string;
+          status: string | null;
+          txnid: string | null;
         };
         ComputedFields: never;
         Insert: {
           created_at?: string;
           event_id: string;
+          hash_valid?: boolean | null;
           id?: string;
           payload: NonNullable<Json>;
           processed_at?: string | null;
+          provider?: string | null;
+          received_at?: string | null;
           source: string;
+          status?: string | null;
+          txnid?: string | null;
         };
         Update: {
           created_at?: string;
           event_id?: string;
+          hash_valid?: boolean | null;
           id?: string;
           payload?: NonNullable<Json>;
           processed_at?: string | null;
+          provider?: string | null;
+          received_at?: string | null;
           source?: string;
+          status?: string | null;
+          txnid?: string | null;
         };
         Relationships: [];
       };

@@ -52,10 +52,10 @@ export function contentSecurityPolicy(input: SecurityHeaderInput = {}) {
     `img-src ${images.join(" ")}`,
     "font-src 'self'",
     `connect-src ${connect.join(" ")}`,
-    `frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/ ${cashfree.join(" ")}`,
+    `frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/ https://www.openstreetmap.org ${cashfree.join(" ")}`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
-    "form-action 'self'",
+    "form-action 'self' https://secure.payu.in https://test.payu.in https://*.payu.in",
     "object-src 'none'",
   ];
   return directives.join("; ");
