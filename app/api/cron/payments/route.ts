@@ -35,9 +35,9 @@ export async function GET(request: Request) {
   let checked = 0,
     failed = 0;
   // Bounded batches prevent one slow provider call from starving every other hold.
-  for (let i = 0; i < orders.length; i += 5)
+  for (let i = 0; i < orders.length; i += 10)
     await Promise.all(
-      orders.slice(i, i + 5).map(async (order) => {
+      orders.slice(i, i + 10).map(async (order) => {
         try {
           const status = await reconcile(order);
           if (status === "pending" && Date.parse(order.hold_expires_at ?? "") <= Date.now())
