@@ -33,6 +33,12 @@ it("sends a strict baseline without unsafe-eval", () => {
   expect(directives["connect-src"]).toEqual(
     expect.arrayContaining(["https://maps.googleapis.com", "https://places.googleapis.com"]),
   );
+  expect(directives["form-action"]).toEqual(expect.arrayContaining([
+    "'self'", "https://secure.payu.in", "https://test.payu.in",
+  ]));
+  expect(directives["frame-src"]).toContain("https://www.openstreetmap.org");
+  expect(directives["frame-ancestors"]).toEqual(["'none'"]);
+  expect(directives["object-src"]).toEqual(["'none'"]);
   expect(policy).toContain("http://127.0.0.1:54321");
   expect(policy).toContain("ws://127.0.0.1:54321");
   const headers = Object.fromEntries(securityHeaders().map((header) => [header.key, header.value]));

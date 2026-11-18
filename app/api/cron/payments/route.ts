@@ -21,12 +21,23 @@ export async function GET(request: Request) {
     .order("reconciled_at", { ascending: true, nullsFirst: true })
     .limit(100);
   if (error) return new Response(null, { status: 503 });
+  const { data: expired, error: expiredError } = await createServiceClient()
+    .from("orders")
+    .select("*")
+    .eq("status", "expired")
+    .eq("payment_provider", "payu")
+    .not("payment_session_id", "is", null)
+    .gte("hold_expires_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    .order("reconciled_at", { ascending: true, nullsFirst: true })
+    .limit(50);
+  if (expiredError) return new Response(null, { status: 503 });
+  const orders = [...(data ?? []), ...(expired ?? [])];
   let checked = 0,
     failed = 0;
   // Bounded batches prevent one slow provider call from starving every other hold.
-  for (let i = 0; i < (data ?? []).length; i += 5)
+  for (let i = 0; i < orders.length; i += 10)
     await Promise.all(
-      data!.slice(i, i + 5).map(async (order) => {
+      orders.slice(i, i + 10).map(async (order) => {
         try {
           const status = await reconcile(order);
           if (status === "pending" && Date.parse(order.hold_expires_at ?? "") <= Date.now())
