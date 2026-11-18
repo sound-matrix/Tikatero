@@ -65,7 +65,7 @@ begin
 end $$;
 drop trigger if exists enforce_free_event_publication_trigger on public.events;
 create trigger enforce_free_event_publication_trigger
-before insert or update of status, is_free on public.events
+after insert or update of status, is_free on public.events
 for each row execute function public.enforce_free_event_publication();
 
 -- Reject any paid tier attached to a free event even via direct client/API access.
@@ -86,6 +86,11 @@ for each row execute function public.enforce_zero_price_for_free_event();
 create or replace function public.enforce_free_event_tier_prices_on_event()
 returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
 begin
+  if new.is_free and not old.is_free then
+    update public.ticket_types
+      set price_paise = 0
+      where event_id = new.id and price_paise <> 0 and qty_sold = 0;
+  end if;
   if new.is_free and exists(
     select 1 from public.ticket_types where event_id = new.id and price_paise <> 0
   ) then
