@@ -73,9 +73,9 @@ values ('f2620000-0000-4000-8000-000000000002','f2610000-0000-4000-8000-00000000
   'f2600000-0000-4000-8000-000000000002', now());
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"f2600000-0000-4000-8000-000000000001","role":"authenticated"}',true);
-select lives_ok($
+select lives_ok($$
   select * from public.save_event_wizard('f2620000-0000-4000-8000-000000000002','f2610000-0000-4000-8000-000000000001',1,7,7,'{}',true)
-$,'the wedding publishes without extra answers');
+$$,'the wedding publishes without extra answers');
 select throws_ok($$
   select public.admin_set_event_unlisted('f2620000-0000-4000-8000-000000000002', false, 'Host tried admin action', 2)
 $$,'42501','Staff access required','host cannot use the admin action');
