@@ -286,6 +286,14 @@ export function EventWizard({
         </div>
         <Button href="/console/events">Your events</Button>
       </header>
+      {values.free && draft && !alreadyPublished && (
+        <p className="rounded-xl border border-line bg-soft p-4 text-sm">
+          Your first free event is included. Additional free events require approval from Tikatero.{" "}
+          <Link className="font-bold text-teal underline" href={`/console/events/${id}/free-request`}>
+            Request free hosting approval
+          </Link>
+        </p>
+      )}
       <nav aria-label="Event creation steps" className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         {steps.map((name, index) => (
           <button
@@ -445,12 +453,7 @@ export function EventWizard({
                     checked={values.free}
                     disabled={freeOnly}
                     onChange={(e) => {
-                      update("free", e.target.checked);
-                      if (e.target.checked)
-                        update(
-                          "tiers",
-                          values.tiers.map((t) => ({ ...t, price: "0" })),
-                        );
+                      patchValues({ free: e.target.checked, ...(e.target.checked ? { tiers: values.tiers.map((t) => ({ ...t, price: "0" })) } : {}) });
                     }}
                   />
                   Free entry
