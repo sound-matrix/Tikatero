@@ -18,6 +18,16 @@ export function instagramTicketUrl(origin: string, slug: string, placement: Inst
   return url.toString();
 }
 
+/** Facebook captions can include a clickable event link. The path stays on /e/<slug>. */
+export function facebookTicketUrl(origin: string, slug: string) {
+  const target = new URL(`/e/${encodeURIComponent(slug)}`, origin);
+  const url = new URL(referralLink(target.toString(), "facebook"));
+  url.searchParams.set("utm_source", "facebook");
+  url.searchParams.set("utm_medium", "organic_social");
+  url.searchParams.set("utm_campaign", slug);
+  return url.toString();
+}
+
 export function instagramEventCaption(title: string, city: string | null, url: string) {
   const intro = [title, city].filter(Boolean).join(" · ");
   return `🎟️ ${intro}\nTickets are available on Tikatero!\nBook here: ${url}\n\n#Tikatero #BookTickets #Events`;

@@ -24,6 +24,7 @@ import { statusLabels } from "@/lib/admin/model";
 import { formatInr, formatIst } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { EventSocialCard } from "@/components/admin/event-social-card";
 
 export const metadata: Metadata = { title: "Event review" };
 type Props = {
@@ -34,6 +35,7 @@ type Props = {
     notice?: string;
     review_error?: string;
     visibility?: string;
+    social?: string;
   }>;
 };
 const historyLabels: Record<string, string> = {
@@ -61,12 +63,25 @@ async function Review({ params, searchParams }: Props) {
   const { event, host, tickets, request, history, hasOrders, grossPaise } = review;
   const admin = account.profile.role === "admin";
   const service = createServiceClient();
-  const [pause, rules, refundEvent] = await Promise.all([
+  const [pause, rules, refundEvent, socialSettings, socialPosts] = await Promise.all([
     loadRefundPause(client, id),
     readRefundRules(service, id),
     service.from("events").select("refund_policy, refund_auto_approve").eq("id", id).single(),
+    client
+      .from("event_social_settings")
+      .select("autopost,is_test,ig_collaborator")
+      .eq("event_id", id)
+      .maybeSingle(),
+    client
+      .from("social_posts")
+      .select("id,platform,kind,status,permalink")
+      .eq("event_id", id)
+      .order("platform")
+      .order("kind"),
   ]);
-  if (refundEvent.error) throw new Error("Refund settings could not be loaded.");
+  if (refundEvent.error || socialSettings.error || socialPosts.error) {
+    throw new Error("Refund settings could not be loaded.");
+  }
   const own =
     account.organisers.some((org) => org.id === event.organiser_id) ||
     account.assignments?.some((item) => item.eventId === id && item.role === "manager");
@@ -190,6 +205,15 @@ async function Review({ params, searchParams }: Props) {
           </Button>
         </>
       )}
+      <EventSocialCard
+        eventId={id}
+        autopost={socialSettings.data?.autopost ?? true}
+        isTest={socialSettings.data?.is_test ?? null}
+        collaborator={socialSettings.data?.ig_collaborator ?? null}
+        posts={socialPosts.data ?? []}
+        notice={query.social}
+        error={query.social}
+      />
       <section id="refund-settings">
         <Card className="space-y-4">
           <h2 className="text-xl font-extrabold">Refund settings</h2>

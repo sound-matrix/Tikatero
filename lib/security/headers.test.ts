@@ -33,9 +33,9 @@ it("sends a strict baseline without unsafe-eval", () => {
   expect(directives["connect-src"]).toEqual(
     expect.arrayContaining(["https://maps.googleapis.com", "https://places.googleapis.com"]),
   );
-  expect(directives["form-action"]).toEqual(expect.arrayContaining([
-    "'self'", "https://secure.payu.in", "https://test.payu.in",
-  ]));
+  expect(directives["form-action"]).toEqual(
+    expect.arrayContaining(["'self'", "https://secure.payu.in", "https://test.payu.in"]),
+  );
   expect(directives["frame-src"]).toContain("https://www.openstreetmap.org");
   expect(directives["frame-ancestors"]).toEqual(["'none'"]);
   expect(directives["object-src"]).toEqual(["'none'"]);
@@ -51,7 +51,10 @@ it("sends a strict baseline without unsafe-eval", () => {
 it("pins functions to Mumbai and keeps the payments cron", () => {
   const vercel = JSON.parse(readFileSync("vercel.json", "utf8"));
   expect(vercel.regions).toEqual(["bom1"]);
-  expect(vercel.crons).toEqual([{ path: "/api/cron/payments", schedule: "*/5 * * * *" }]);
+  expect(vercel.crons).toEqual([
+    { path: "/api/cron/payments", schedule: "*/5 * * * *" },
+    { path: "/api/cron/social", schedule: "*/10 * * * *" },
+  ]);
   const payouts = readFileSync("app/console/payouts/page.tsx", "utf8");
   expect(payouts).not.toContain("payoutWindowCopy(2)");
   expect(payouts).toContain("earningsPaymentCopy(hold_days)");

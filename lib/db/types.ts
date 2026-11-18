@@ -740,6 +740,83 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["platform_payment_settings"]["Row"]>;
         Relationships: [];
       };
+      platform_social_settings: {
+        Row: {
+          id: boolean;
+          autopost_paused: boolean;
+          autopost_since: string;
+          post_window_start: string;
+          post_window_end: string;
+          ig_daily_cap: number;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: Partial<Database["public"]["Tables"]["platform_social_settings"]["Row"]>;
+        Update: Partial<Database["public"]["Tables"]["platform_social_settings"]["Row"]>;
+        Relationships: [];
+      };
+      event_social_settings: {
+        Row: {
+          event_id: string;
+          autopost: boolean;
+          is_test: boolean | null;
+          ig_collaborator: string | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: Partial<Database["public"]["Tables"]["event_social_settings"]["Row"]> & {
+          event_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["event_social_settings"]["Row"]>;
+        Relationships: [
+          {
+            foreignKeyName: "event_social_settings_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: true;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      social_posts: {
+        Row: {
+          id: string;
+          event_id: string;
+          platform: "instagram" | "facebook";
+          kind: "feed" | "story" | "last_seats";
+          status: "queued" | "processing" | "posted" | "failed" | "skipped";
+          caption: string | null;
+          image_path: string | null;
+          ig_container_id: string | null;
+          meta_photo_id: string | null;
+          meta_post_id: string | null;
+          permalink: string | null;
+          error: string | null;
+          skipped_reason: string | null;
+          attempts: number;
+          next_attempt_at: string;
+          locked_until: string | null;
+          posted_at: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["social_posts"]["Row"]> & {
+          event_id: string;
+          platform: "instagram" | "facebook";
+          kind: "feed" | "story" | "last_seats";
+        };
+        Update: Partial<Database["public"]["Tables"]["social_posts"]["Row"]>;
+        Relationships: [
+          {
+            foreignKeyName: "social_posts_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       orders: {
         Row: {
           payout_mode: PayoutMode;
@@ -1864,6 +1941,41 @@ export type Database = {
         Args: { p_event_id: string; p_is_unlisted: boolean; p_reason: string; p_revision: number };
         Returns: undefined;
       };
+      admin_social_retry: { Args: { p_id: string }; Returns: undefined };
+      admin_social_skip: { Args: { p_id: string; p_reason: string }; Returns: undefined };
+      admin_social_update_caption: { Args: { p_id: string; p_caption: string }; Returns: undefined };
+      admin_social_queue_event: { Args: { p_event_id: string }; Returns: undefined };
+      admin_set_event_social: {
+        Args: {
+          p_event_id: string;
+          p_autopost: boolean;
+          p_is_test: boolean | null;
+          p_ig_collaborator: string | null;
+          p_reason: string;
+        };
+        Returns: undefined;
+      };
+      admin_update_social_settings: {
+        Args: {
+          p_paused: boolean;
+          p_window_start: string;
+          p_window_end: string;
+          p_ig_daily_cap: number;
+          p_reason: string;
+        };
+        Returns: undefined;
+      };
+      social_enqueue_due: { Args: { p_limit: number }; Returns: number };
+      social_claim_due: {
+        Args: { p_limit: number };
+        Returns: Database["public"]["Tables"]["social_posts"]["Row"][];
+      };
+      social_finish: {
+        Args: { p_id: string; p_status: string; p_fields: Json };
+        Returns: undefined;
+      };
+      social_ig_posted_last_24h: { Args: Record<PropertyKey, never>; Returns: number };
+      social_live_event: { Args: { p_event_id: string }; Returns: Json };
       save_event_wizard: {
         Args: {
           p_event_id: string;
