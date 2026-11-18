@@ -1,7 +1,7 @@
 -- Tikatero free-event entitlement: one lifetime self-serve free event per organiser.
 -- Subsequent free events require an event-specific admin decision.
 create table if not exists public.free_event_publications (
-  event_id uuid primary key references public.events(id) on delete restrict,
+  event_id uuid primary key,
   organiser_id uuid not null references public.organisers(id),
   published_at timestamptz not null default now()
 );
@@ -43,6 +43,7 @@ create or replace function public.enforce_free_event_publication()
 returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
 declare
   already_used boolean;
+  already_recorded boolean;
   approved boolean;
 begin
   if new.is_free and new.status::text = 'published'
@@ -52,10 +53,12 @@ begin
     perform pg_advisory_xact_lock(hashtextextended(new.organiser_id::text, 40));
     select exists(select 1 from public.free_event_publications
                   where organiser_id = new.organiser_id) into already_used;
+    select exists(select 1 from public.free_event_publications
+                  where event_id = new.id and organiser_id = new.organiser_id) into already_recorded;
     select exists(select 1 from public.free_event_requests
                   where event_id = new.id and organiser_id = new.organiser_id
                   and status = 'approved') into approved;
-    if already_used and not approved then
+    if already_used and not already_recorded and not approved then
       raise exception 'FREE_EVENT_APPROVAL_REQUIRED' using errcode = 'P0001';
     end if;
     insert into public.free_event_publications(event_id,organiser_id)
