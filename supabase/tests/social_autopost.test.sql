@@ -20,7 +20,7 @@ insert into public.events(id, organiser_id, slug, title, category, status, start
   ('f4030000-0000-4000-8000-000000000002', 'f4020000-0000-4000-8000-000000000001', 'social-draft', 'Draft Night', 'Comedy', 'draft', now() + interval '5 days', 'Hyderabad', 'Sound Hall', false),
   ('f4030000-0000-4000-8000-000000000003', 'f4020000-0000-4000-8000-000000000001', 'social-hidden', 'Hidden Night', 'Comedy', 'published', now() + interval '5 days', 'Hyderabad', 'Sound Hall', false),
   ('f4030000-0000-4000-8000-000000000004', 'f4020000-0000-4000-8000-000000000001', 'social-cancelled', 'Cancelled Night', 'Comedy', 'cancelled', now() + interval '5 days', 'Hyderabad', 'Sound Hall', false),
-  ('f4030000-0000-4000-8000-000000000005', 'f4020000-0000-4000-8000-000000000001', 'social-unlisted', 'Private Night', 'Comedy', 'published', now() + interval '5 days', 'Hyderabad', 'Sound Hall', false),
+  ('f4030000-0000-4000-8000-000000000005', 'f4020000-0000-4000-8000-000000000001', 'social-unlisted', 'Private Night', 'Other', 'published', now() + interval '5 days', 'Hyderabad', 'Sound Hall', false),
   ('f4030000-0000-4000-8000-000000000006', 'f4020000-0000-4000-8000-000000000001', 'social-test-title', 'TEST EVENT', 'Comedy', 'published', now() + interval '5 days', 'Hyderabad', 'Sound Hall', false),
   ('f4030000-0000-4000-8000-000000000007', 'f4020000-0000-4000-8000-000000000001', 'social-off', 'Quiet Night', 'Comedy', 'published', now() + interval '5 days', 'Hyderabad', 'Sound Hall', false),
   ('f4030000-0000-4000-8000-000000000008', 'f4020000-0000-4000-8000-000000000001', 'social-soon', 'Soon Night', 'Comedy', 'published', now() + interval '2 hours', 'Hyderabad', 'Sound Hall', false),

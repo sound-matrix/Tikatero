@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { io } from "next/cache";
 import { Suspense } from "react";
 import Link from "next/link";
 import { EventMedia } from "@/components/discovery/media";
@@ -22,6 +23,7 @@ function titleLink(bookUrl: string, slug: string) {
 }
 
 async function UpcomingList() {
+  await io();
   const origin = await siteOrigin();
   const events = await upcomingEvents(istDay(new Date()));
   return events.length ? (
