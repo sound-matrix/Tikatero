@@ -72,6 +72,8 @@ export async function saveEvent(input: unknown): Promise<SaveResult> {
     p_data: payload,
     p_publish: data.publish,
   });
+  if (error?.message.includes("FREE_EVENT_APPROVAL_REQUIRED")) return { error: "Your first free event has already been used. Save this draft and request approval for this free event from Tikatero." };
+  if (error?.message.includes("FREE_EVENT_TICKET_MUST_BE_ZERO")) return { error: "Every ticket type in a free event must be free. Review your tickets." };
   if (error?.message === INTERNATIONAL_PAID_TICKETS) return { error: INTERNATIONAL_PAID_TICKETS };
   if (error?.message.startsWith("You've already sold ")) return { error: error.message };
   if (error?.message === "Shorten the extra event details and try again.")
