@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Tikatero",
+    "slug": "tikatero-android",
+    "scheme": "tikatero",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "android": {
+      "package": "com.soundmatrix.tikatero",
+      "edgeToEdgeEnabled": true
+    }
+  }
+}
