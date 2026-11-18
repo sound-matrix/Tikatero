@@ -83,7 +83,7 @@ begin
 end $$;
 drop trigger if exists enforce_zero_price_for_free_event_trigger on public.ticket_types;
 create trigger enforce_zero_price_for_free_event_trigger
-before insert or update of price_paise, event_id on public.ticket_types
+after insert or update of price_paise, event_id on public.ticket_types
 for each row execute function public.enforce_zero_price_for_free_event();
 
 create or replace function public.enforce_free_event_tier_prices_on_event()
