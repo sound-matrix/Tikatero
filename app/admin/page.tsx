@@ -88,6 +88,9 @@ async function Dashboard() {
         ))}
       </div>
       <Card>
+        <Link href="/admin/free-events" className="font-bold text-teal underline">Review free event hosting requests</Link>
+      </Card>
+      <Card>
         <h2 className="text-xl font-bold">Review with confidence</h2>
         <p className="mt-2 text-muted">
           Check each result and the private documents before approving. Simulated checks are

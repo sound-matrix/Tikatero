@@ -64,6 +64,15 @@ $$,'wedding wizard defaults to unlisted');
 select is((select is_unlisted from public.events where slug='link-only-celebration'), true, 'wedding draft is unlisted');
 update public.events set starts_at=now()+interval '1 day', wizard_completed_steps=array[0,1,2,3,4,5,6]::smallint[]
 where slug='link-only-celebration';
+-- The first free event above consumed the host's lifetime self-service slot.
+-- Grant this second event an explicit admin approval before asserting publication.
+reset role;
+insert into public.free_event_requests(event_id, organiser_id, reason, status, admin_note, reviewed_by, reviewed_at)
+values ('f2620000-0000-4000-8000-000000000002','f2610000-0000-4000-8000-000000000001',
+  'Wedding requires free admission and special approval', 'approved', 'Approved for category test',
+  'f2600000-0000-4000-8000-000000000002', now());
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"f2600000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 select lives_ok($$
   select * from public.save_event_wizard('f2620000-0000-4000-8000-000000000002','f2610000-0000-4000-8000-000000000001',1,7,7,'{}',true)
 $$,'the wedding publishes without extra answers');
