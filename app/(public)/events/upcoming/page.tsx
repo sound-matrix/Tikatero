@@ -39,12 +39,12 @@ async function UpcomingList() {
                 theme={event.theme}
                 compact
               />
-              <span>
+              <div>
                 <h2 className="block text-lg font-extrabold leading-snug">{event.title}</h2>
                 <span className="mt-1 block text-sm text-muted">{formatIst(event.starts_at)}</span>
                 {event.city ? <span className="mt-1 block text-sm">{event.city}</span> : null}
                 <span className="mt-2 block font-bold">{socialPriceLabel(event)}</span>
-              </span>
+              </div>
             </Link>
             <Button href={book} variant="primary" className="mt-3 w-full">
               Book
