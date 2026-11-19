@@ -251,7 +251,9 @@ test("admin social page shows that Meta is not set up and can skip then retry", 
     .filter({ hasText: title })
     .getByRole("button", { name: "Post this event" })
     .click();
-  await page.goto("/admin/social?status=queued");
+  await expect(page).toHaveURL(/\/admin\/social\?status=queued&action=saved/, {
+    timeout: 20_000,
+  });
   const row = page
     .getByRole("row")
     .filter({ has: page.locator(`a[href="/admin/events/${eventId}"]`) })
