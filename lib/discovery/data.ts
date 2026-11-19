@@ -62,6 +62,20 @@ export async function requestTime() {
   return Date.now();
 }
 
+/** Upcoming public events from the start of an IST day. Unlisted events are not in the view. */
+export async function upcomingEvents(dayIst: string) {
+  if (!configured() || !/^\d{4}-\d{2}-\d{2}$/.test(dayIst)) return [] as PublicEvent[];
+  const { data, error } = await createAnonClient()
+    .from("discovery_events")
+    .select("*")
+    .gte("starts_at", istDayStart(dayIst))
+    .order("starts_at", { ascending: true })
+    .order("id")
+    .limit(60);
+  if (error) return [] as PublicEvent[];
+  return (data ?? []).map(event);
+}
+
 /** The sitemap uses the same visibility rules as browse and search. */
 export async function sitemapEventSlugs() {
   "use cache";

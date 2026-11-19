@@ -3,8 +3,8 @@ import { join } from "node:path";
 
 const root = process.argv[2] ?? ".next/static";
 const forbiddenName =
-  /SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY|RESEND_API_KEY|CASHFREE_SECURE_ID_CLIENT_SECRET|CASHFREE_APP_ID|CASHFREE_SECRET_KEY|CASHFREE_WEBHOOK_SECRET|RECAPTCHA_SECRET_KEY|CRON_SECRET|TICKET_QR_SECRET|CONTACT_TO_EMAIL/;
-const forbiddenValue = /sb_secret_[A-Za-z0-9_-]+|\bre_[A-Za-z0-9_-]{16,}/;
+  /SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY|RESEND_API_KEY|CASHFREE_SECURE_ID_CLIENT_SECRET|CASHFREE_APP_ID|CASHFREE_SECRET_KEY|CASHFREE_WEBHOOK_SECRET|RECAPTCHA_SECRET_KEY|CRON_SECRET|TICKET_QR_SECRET|CONTACT_TO_EMAIL|META_PAGE_ACCESS_TOKEN|META_APP_SECRET/;
+const forbiddenValue = /sb_secret_[A-Za-z0-9_-]+|\bre_[A-Za-z0-9_-]{16,}|EAA[A-Za-z0-9]{20,}/;
 const serverValues = [
   process.env.SUPABASE_SERVICE_ROLE_KEY,
   process.env.SUPABASE_SECRET_KEY,
@@ -15,6 +15,8 @@ const serverValues = [
   process.env.CASHFREE_WEBHOOK_SECRET,
   process.env.RECAPTCHA_SECRET_KEY,
   process.env.CRON_SECRET,
+  process.env.META_PAGE_ACCESS_TOKEN,
+  process.env.META_APP_SECRET,
 ].filter(Boolean);
 let files = 0;
 let leaks = false;

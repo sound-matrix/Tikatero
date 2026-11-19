@@ -32,8 +32,13 @@ it("returns 401 unless the bearer matches CRON_SECRET", async () => {
 
 it("schedules the Vercel payments cron every five minutes", () => {
   const vercel = JSON.parse(readFileSync("vercel.json", "utf8")) as {
+    regions: string[];
     crons: { path: string; schedule: string }[];
   };
-  expect(vercel.crons).toEqual([{ path: "/api/cron/payments", schedule: "*/5 * * * *" }]);
+  expect(vercel.regions).toEqual(["bom1"]);
+  expect(vercel.crons).toEqual([
+    { path: "/api/cron/payments", schedule: "*/5 * * * *" },
+    { path: "/api/cron/social", schedule: "*/10 * * * *" },
+  ]);
   expect(existsSync(".github/workflows/payments-cron.yml")).toBe(false);
 });

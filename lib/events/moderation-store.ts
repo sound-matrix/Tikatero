@@ -88,8 +88,11 @@ export async function cleanDeletedEventMedia(eventId: string) {
   if (error) throw error;
   if (!data) return;
   const bucket = service.storage.from(PUBLIC_BUCKET);
-  for (const kind of ["poster", "guest_photo"]) {
-    const prefix = `media/${kind}/${eventId}`;
+  for (const prefix of [
+    `media/poster/${eventId}`,
+    `media/guest_photo/${eventId}`,
+    `social/${eventId}`,
+  ]) {
     while (true) {
       const files = await bucket.list(prefix, { limit: 100 });
       if (files.error) throw files.error;

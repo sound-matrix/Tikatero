@@ -72,6 +72,15 @@ async function EventSales({
         <Button href={`/console/events/${id}/export`} prefetch={false}>
           Download sales CSV
         </Button>
+        {event &&
+          ownsEvent &&
+          event.status === "published" &&
+          !event.hidden_at &&
+          !event.is_unlisted && (
+            <Button href={`/console/events/${id}/marketing#share-kit`} variant="primary">
+              Share kit
+            </Button>
+          )}
         <Link
           className="inline-flex min-h-12 items-center font-semibold text-teal underline"
           href={`/console/events/${id}/scan`}
