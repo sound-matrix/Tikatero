@@ -109,9 +109,10 @@ test("upcoming page lists only public events and keeps the Sound Matrix footer",
     ).error,
   ).toBeNull();
   await page.goto("/events/upcoming");
-  await expect(page.getByRole("heading", { name: "Bio Link Night" })).toBeVisible();
+  const liveEvent = page.getByRole("listitem").filter({ hasText: "Bio Link Night" });
+  await expect(liveEvent.getByRole("heading", { name: "Bio Link Night" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Hidden Bio Night" })).toHaveCount(0);
-  const book = page.getByRole("link", { name: "Book", exact: true }).first();
+  const book = liveEvent.getByRole("link", { name: "Book", exact: true });
   await expect(book).toHaveAttribute("href", new RegExp(`/e/${slug}/book`));
   await expect(book).toHaveAttribute("href", /utm_source=instagram/);
   await expect(book).toHaveAttribute("href", /utm_content=bio/);
