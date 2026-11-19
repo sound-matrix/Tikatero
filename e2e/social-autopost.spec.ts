@@ -56,6 +56,7 @@ test("upcoming page lists only public events and keeps the Sound Matrix footer",
   const liveId = crypto.randomUUID();
   const hiddenId = crypto.randomUUID();
   const slug = `social-live-${liveId.slice(0, 8)}`;
+  const title = `Bio Link Night ${liveId.slice(0, 8)}`;
   expect(
     (
       await admin.from("organisers").insert({
@@ -76,7 +77,7 @@ test("upcoming page lists only public events and keeps the Sound Matrix footer",
           id: liveId,
           organiser_id: organiserId,
           slug,
-          title: "Bio Link Night",
+          title,
           city: "Hyderabad",
           starts_at: starts,
           status: "published",
@@ -109,8 +110,8 @@ test("upcoming page lists only public events and keeps the Sound Matrix footer",
     ).error,
   ).toBeNull();
   await page.goto("/events/upcoming");
-  const liveEvent = page.getByRole("listitem").filter({ hasText: "Bio Link Night" });
-  await expect(liveEvent.getByRole("heading", { name: "Bio Link Night" })).toBeVisible();
+  const liveEvent = page.getByRole("listitem").filter({ hasText: title });
+  await expect(liveEvent.getByRole("heading", { name: title })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Hidden Bio Night" })).toHaveCount(0);
   const book = liveEvent.getByRole("link", { name: "Book", exact: true });
   await expect(book).toHaveAttribute("href", new RegExp(`/e/${slug}/book`));
