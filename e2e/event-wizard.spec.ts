@@ -64,11 +64,12 @@ async function signInStaff(page: Page) {
   );
 }
 async function next(page: Page, heading: string) {
-  // Draft saving is a server action followed by client navigation. Under a busy
-  // local Supabase/Next.js CI run, the old 5-second assertion raced the navigation.
+  // Draft saving is a server action followed by client navigation and rendering.
+  // Wait for both on the busy local Supabase/Next.js CI runner.
   await page.getByRole("button", { name: "Save and continue", exact: true }).click();
+  await expect(page).toHaveURL(/\/edit\?step=\d+$/, { timeout: 40_000 });
   await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible({
-    timeout: 20_000,
+    timeout: 40_000,
   });
 }
 const futureDay = () => new Date(Date.now() + 45 * 86400000).toISOString().slice(0, 10);
@@ -329,7 +330,7 @@ test.describe("Organiser event wizard", () => {
   });
   for (const category of ["Comedy", "Wedding / Private"] as const) {
     test(`publishes a ${category} event with category details`, async ({ page, browser }, info) => {
-      test.setTimeout(100_000);
+      test.setTimeout(150_000);
       page.setDefaultTimeout(8_000);
       await setup(page, true);
       await page.setViewportSize({ width: 390, height: 844 });

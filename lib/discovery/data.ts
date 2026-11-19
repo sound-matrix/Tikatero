@@ -64,9 +64,6 @@ export async function requestTime() {
 
 /** Upcoming public events from the start of an IST day. Unlisted events are not in the view. */
 export async function upcomingEvents(dayIst: string) {
-  "use cache";
-  cacheLife({ stale: 30, revalidate: 60, expire: 300 });
-  cacheTag("public-events");
   if (!configured() || !/^\d{4}-\d{2}-\d{2}$/.test(dayIst)) return [] as PublicEvent[];
   const { data, error } = await createAnonClient()
     .from("discovery_events")

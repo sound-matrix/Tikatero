@@ -242,7 +242,7 @@ test("admin social page shows that Meta is not set up and can skip then retry", 
   await expect(page.getByText("META_PAGE_ACCESS_TOKEN")).toBeVisible();
   await expect(page.getByText("META_APP_SECRET")).toBeVisible();
   await page.getByLabel("Auto-posting").selectOption("no");
-  await page.getByLabel("Reason").fill("Turn on for the social test");
+  await page.getByLabel("Reason", { exact: true }).fill("Turn on for the social test");
   await page.getByRole("button", { name: "Save auto-posting" }).click();
   await expect(page.getByText("Social settings saved.")).toBeVisible();
   await expect(page.getByText(title)).toBeVisible();
@@ -268,7 +268,7 @@ test("admin social page shows that Meta is not set up and can skip then retry", 
   await expect(page.getByRole("heading", { name: "Tikatero social" })).toBeVisible();
   await page.goto("/admin/social");
   await page.getByLabel("Auto-posting").selectOption("yes");
-  await page.getByLabel("Reason").fill("Pause again after the social test");
+  await page.getByLabel("Reason", { exact: true }).fill("Pause again after the social test");
   await page.getByRole("button", { name: "Save auto-posting" }).click();
   await expect(page.getByText("Auto-posting is paused")).toBeVisible();
 });
