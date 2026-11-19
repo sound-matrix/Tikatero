@@ -170,7 +170,15 @@ test("host share kit downloads a JPEG and a scanner cannot open it", async ({ pa
   expect(body[1]).toBe(0xd8);
 
   const door = await browser.newPage();
-  await signIn(door, `social-door-${crypto.randomUUID()}@example.test`, "Door Person");
+  const doorId = await signIn(
+    door,
+    `social-door-${crypto.randomUUID()}@example.test`,
+    "Door Person",
+  );
+  expect(
+    (await admin.from("event_team").insert({ event_id: eventId, user_id: doorId, role: "door" }))
+      .error,
+  ).toBeNull();
   await door.goto("/me");
   await expect(door.getByText("Welcome, Door Person.")).toBeVisible();
   const denied = await door.request.get(`/console/events/${eventId}/share-kit/square`, {
@@ -178,7 +186,9 @@ test("host share kit downloads a JPEG and a scanner cannot open it", async ({ pa
   });
   expect([303, 404]).toContain(denied.status());
   if (denied.status() === 303) {
-    expect(denied.headers().location).toMatch(/^\/(login|auth\/complete)(?:[?#]|$)/);
+    expect(new URL(denied.headers().location, "http://127.0.0.1:3000").pathname).toBe(
+      `/console/events/${eventId}/scan`,
+    );
   }
   expect(denied.headers()["content-type"] ?? "").not.toContain("image/jpeg");
   await door.close();
