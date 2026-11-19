@@ -92,6 +92,8 @@ test("upcoming page lists only public events and keeps the Sound Matrix footer",
           starts_at: starts,
           status: "published",
           hidden_at: new Date().toISOString(),
+          is_free: false,
+          category: "Comedy",
         },
       ])
     ).error,
@@ -210,6 +212,8 @@ test("admin social page shows that Meta is not set up and can skip then retry", 
         city: "Hyderabad",
         starts_at: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(),
         status: "published",
+        is_free: false,
+        category: "Comedy",
       })
     ).error,
   ).toBeNull();
