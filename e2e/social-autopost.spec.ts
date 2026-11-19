@@ -209,6 +209,7 @@ test("admin social page shows that Meta is not set up and can skip then retry", 
   if (!owner.data.user) throw new Error("Could not create the host.");
   const organiserId = crypto.randomUUID();
   const eventId = crypto.randomUUID();
+  const title = `Admin Social Night ${eventId.slice(0, 8)}`;
   expect(
     (
       await admin.from("organisers").insert({
@@ -227,7 +228,7 @@ test("admin social page shows that Meta is not set up and can skip then retry", 
         id: eventId,
         organiser_id: organiserId,
         slug: `admin-social-${eventId.slice(0, 8)}`,
-        title: "Admin Social Night",
+        title,
         city: "Hyderabad",
         starts_at: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(),
         status: "published",
@@ -244,15 +245,23 @@ test("admin social page shows that Meta is not set up and can skip then retry", 
   await page.getByLabel("Reason").fill("Turn on for the social test");
   await page.getByRole("button", { name: "Save auto-posting" }).click();
   await expect(page.getByText("Social settings saved.")).toBeVisible();
-  await expect(page.getByText("Admin Social Night")).toBeVisible();
-  await page.getByRole("button", { name: "Post this event" }).click();
+  await expect(page.getByText(title)).toBeVisible();
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: title })
+    .getByRole("button", { name: "Post this event" })
+    .click();
   await page.goto("/admin/social?status=queued");
-  await expect(page.getByText("Waiting").first()).toBeVisible();
-  await page.getByLabel("Reason to skip").first().fill("Skip this test post");
-  await page.getByRole("button", { name: "Skip" }).first().click();
-  await expect(page.getByText("Skipped").first()).toBeVisible();
-  await page.getByRole("button", { name: "Retry" }).first().click();
-  await expect(page.getByText("Waiting").first()).toBeVisible();
+  const row = page
+    .getByRole("row")
+    .filter({ has: page.locator(`a[href="/admin/events/${eventId}"]`) })
+    .first();
+  await expect(row.getByText("Waiting")).toBeVisible();
+  await row.getByLabel("Reason to skip").fill("Skip this test post");
+  await row.getByRole("button", { name: "Skip" }).click();
+  await expect(row.getByText("Skipped")).toBeVisible();
+  await row.getByRole("button", { name: "Retry" }).click();
+  await expect(row.getByText("Waiting")).toBeVisible();
   await page.goto("/admin/events/" + eventId);
   await expect(page.getByRole("heading", { name: "Tikatero social" })).toBeVisible();
   await page.goto("/admin/social");
