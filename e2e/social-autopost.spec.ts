@@ -170,9 +170,13 @@ test("host share kit downloads a JPEG and a scanner cannot open it", async ({ pa
 
   const door = await browser.newPage();
   await signIn(door, `social-door-${crypto.randomUUID()}@example.test`, "Door Person");
-  expect((await door.request.get(`/console/events/${eventId}/share-kit/square`)).status()).toBe(
-    404,
-  );
+  await door.goto("/me");
+  await expect(door.getByText("Welcome, Door Person.")).toBeVisible();
+  const denied = await door.request.get(`/console/events/${eventId}/share-kit/square`, {
+    maxRedirects: 0,
+  });
+  expect(denied.status()).toBe(404);
+  expect(denied.headers()["content-type"] ?? "").not.toContain("image/jpeg");
   await door.close();
 });
 
