@@ -1,5 +1,5 @@
 begin;
-select plan(55);
+select plan(58);
 
 insert into auth.users(id, email) values
   ('f4010000-0000-4000-8000-000000000001', 'social-host@example.test'),
@@ -71,7 +71,9 @@ insert into public.events(id, organiser_id, slug, title, status, starts_at) valu
   ('f4030000-0000-4000-8000-000000000013', 'f4020000-0000-4000-8000-000000000001', 'social-while-paused', 'Paused Night', 'published', now() + interval '6 days');
 select is(social_private.enqueue_due(20), 0, 'paused settings insert nothing');
 select is((select count(*) from public.social_posts where event_id = 'f4030000-0000-4000-8000-000000000013'), 0::bigint, 'the event published while paused stays unqueued');
-update public.platform_social_settings set autopost_paused = false where id;
+-- pgTAP keeps this fixture in one transaction; advance the resume cutoff past
+-- events created earlier in that transaction to model a later admin request.
+update public.platform_social_settings set autopost_paused = false, autopost_since = now() + interval '1 second' where id;
 
 insert into public.events(id, organiser_id, slug, title, status, starts_at, city) values
   ('f4030000-0000-4000-8000-000000000011', 'f4020000-0000-4000-8000-000000000001', 'social-few', 'Few Seats Night', 'published', now() + interval '5 days', 'Hyderabad');
@@ -145,7 +147,7 @@ select lives_ok(
   'admin can retry the story before editing its caption'
 );
 select lives_ok(
-  $$select public.admin_social_update_caption((select id from public.social_posts where event_id = 'f4030000-0000-4000-8000-000000000001' and platform = 'instagram' and kind = 'story'), E'Hello\x00 there')$$,
+  $$select public.admin_social_update_caption((select id from public.social_posts where event_id = 'f4030000-0000-4000-8000-000000000001' and platform = 'instagram' and kind = 'story'), E'Hello\x01 there')$$,
   'admin can edit a waiting caption'
 );
 select is(
@@ -169,6 +171,14 @@ select is(
   7::bigint,
   'every admin social action writes an audit row'
 );
+select lives_ok(
+  $$select public.admin_update_social_settings(false, '09:00', '21:30', 20, 'Resume after review')$$,
+  'an admin can resume posting'
+);
+select ok(
+  (select autopost_since >= now() - interval '5 seconds' from public.platform_social_settings where id),
+  'resuming posting starts from the resume time'
+);
 reset role;
 
 select set_config('request.jwt.claims', '{"sub":"f4010000-0000-4000-8000-000000000002","role":"authenticated"}', true);
@@ -177,9 +187,13 @@ select throws_ok(
   $$select public.admin_update_social_settings(false, '09:00', '21:30', 25, 'Staff attempt')$$,
   '42501', null, 'only an admin can change site social settings'
 );
-select lives_ok($$select * from public.platform_social_settings$$, 'staff can read social settings');
-select lives_ok($$select * from public.event_social_settings$$, 'staff can read event social settings');
-select lives_ok($$select * from public.social_posts$$, 'staff can read social posts');
+select is((select count(*) from public.platform_social_settings), 0::bigint, 'staff cannot read social settings');
+select is((select count(*) from public.event_social_settings), 0::bigint, 'staff cannot read event social settings');
+select is((select count(*) from public.social_posts), 0::bigint, 'staff cannot read social posts');
+select throws_ok(
+  $$select public.admin_social_queue_event('f4030000-0000-4000-8000-000000000001')$$,
+  '42501', null, 'staff cannot queue social posts'
+);
 reset role;
 
 select set_config('request.jwt.claims', '{"sub":"f4010000-0000-4000-8000-000000000001","role":"authenticated"}', true);

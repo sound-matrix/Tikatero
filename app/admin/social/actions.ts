@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requireStaff } from "@/lib/admin/access";
+import { requireSocialAdmin } from "@/lib/admin/access";
 import { allowRequest } from "@/lib/security/rate-limit";
 import { checkMetaLogin } from "@/lib/social/meta";
 
@@ -14,7 +14,7 @@ function back(query: string): never {
 }
 
 export async function saveSocialSettings(form: FormData) {
-  const { account, client } = await requireStaff();
+  const { client } = await requireSocialAdmin();
   const reason = String(form.get("reason") ?? "")
     .trim()
     .slice(0, 1000);
@@ -22,7 +22,6 @@ export async function saveSocialSettings(form: FormData) {
   const start = String(form.get("window_start") ?? "");
   const end = String(form.get("window_end") ?? "");
   if (
-    account.profile.role !== "admin" ||
     !reason ||
     !/^\d{1,2}$/.test(cap) ||
     Number(cap) < 1 ||
@@ -45,7 +44,7 @@ export async function saveSocialSettings(form: FormData) {
 }
 
 export async function checkMetaConnection() {
-  const { account } = await requireStaff();
+  const { account } = await requireSocialAdmin();
   if (!(await allowRequest("social-meta-check", account.profile.id, 10, 3600))) {
     back("meta=rate#social-setup");
   }
@@ -64,7 +63,7 @@ export async function checkMetaConnection() {
 }
 
 export async function retrySocialPost(form: FormData) {
-  const { client } = await requireStaff();
+  const { client } = await requireSocialAdmin();
   const id = form.get("id");
   if (typeof id !== "string" || !idSchema.safeParse(id).success) back("action=error");
   const { error } = await client.rpc("admin_social_retry", { p_id: id });
@@ -73,7 +72,7 @@ export async function retrySocialPost(form: FormData) {
 }
 
 export async function skipSocialPost(form: FormData) {
-  const { client } = await requireStaff();
+  const { client } = await requireSocialAdmin();
   const id = form.get("id");
   const reason = String(form.get("reason") ?? "")
     .trim()
@@ -85,7 +84,7 @@ export async function skipSocialPost(form: FormData) {
 }
 
 export async function updateSocialCaption(form: FormData) {
-  const { client } = await requireStaff();
+  const { client } = await requireSocialAdmin();
   const id = form.get("id");
   const caption = String(form.get("caption") ?? "");
   if (typeof id !== "string" || !idSchema.safeParse(id).success || !caption.trim())
@@ -99,7 +98,7 @@ export async function updateSocialCaption(form: FormData) {
 }
 
 export async function queueSocialEvent(form: FormData) {
-  const { client } = await requireStaff();
+  const { client } = await requireSocialAdmin();
   const id = form.get("event_id");
   if (typeof id !== "string" || !idSchema.safeParse(id).success) back("action=error");
   const { error } = await client.rpc("admin_social_queue_event", { p_event_id: id });
@@ -108,7 +107,7 @@ export async function queueSocialEvent(form: FormData) {
 }
 
 export async function saveEventSocial(form: FormData) {
-  const { client } = await requireStaff();
+  const { client } = await requireSocialAdmin();
   const id = form.get("event_id");
   const reason = String(form.get("reason") ?? "")
     .trim()

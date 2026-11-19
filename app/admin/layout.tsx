@@ -15,15 +15,15 @@ function NavFallback() {
 }
 
 async function AdminNav() {
-  const { client } = await requireStaff();
+  const { client, account } = await requireStaff();
   const { count, error } = await client
     .from("event_removal_requests")
     .select("id", { count: "exact", head: true })
     .eq("status", "pending");
   if (error) throw new Error("Removal requests could not be loaded.");
-  const items = adminNav.map((item) =>
-    item.href === "/admin/events" ? { ...item, count: count ?? 0 } : item,
-  );
+  const items = adminNav
+    .filter((item) => item.href !== "/admin/social" || account.profile.role === "admin")
+    .map((item) => (item.href === "/admin/events" ? { ...item, count: count ?? 0 } : item));
   return <SideNav title="Tikatero admin" items={items} />;
 }
 

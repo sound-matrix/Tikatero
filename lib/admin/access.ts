@@ -8,3 +8,9 @@ export async function requireStaff() {
     redirect(landingPath(result.account));
   return result;
 }
+
+export async function requireSocialAdmin() {
+  const result = await requireStaff();
+  if (result.account.profile.role !== "admin") redirect("/admin");
+  return result;
+}

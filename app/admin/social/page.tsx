@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireStaff } from "@/lib/admin/access";
+import { requireSocialAdmin } from "@/lib/admin/access";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatIst } from "@/lib/format";
@@ -40,7 +40,7 @@ export default async function SocialAdminPage({
   searchParams: Promise<Search & { page?: string }>;
 }) {
   const query = await searchParams;
-  const { account, client } = await requireStaff();
+  const { account, client } = await requireSocialAdmin();
   const admin = account.profile.role === "admin";
   const status = statuses.has(query.status as (typeof postFilters)[number]["status"])
     ? (query.status as (typeof postFilters)[number]["status"])

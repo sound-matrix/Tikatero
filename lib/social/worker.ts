@@ -106,6 +106,13 @@ export async function runSocialCron(options?: { budgetMs?: number; now?: Date })
   };
   if (!origin) return idle;
   const client = createServiceClient();
+  const pause = await client
+    .from("platform_social_settings")
+    .select("autopost_paused")
+    .eq("id", true)
+    .single();
+  if (pause.error) throw pause.error;
+  if (pause.data.autopost_paused) return idle;
   const enqueued = await client.rpc("social_enqueue_due", { p_limit: 20 });
   if (enqueued.error) throw enqueued.error;
   const claimed = await client.rpc("social_claim_due", { p_limit: 6 });
@@ -135,6 +142,13 @@ async function processPost(client: Client, row: PostRow, origin: string, now: Da
   ]);
   if (settings.error || live.error || social.error)
     throw settings.error ?? live.error ?? social.error;
+  if (settings.data.autopost_paused) {
+    await finish(client, row.id, "queued", {
+      next_attempt_at: new Date(now.getTime() + 10 * 60 * 1000).toISOString(),
+      refund_attempt: true,
+    });
+    return "waiting" as const;
+  }
   const event = asEvent(live.data);
   const reason = skipReason(
     settings.data,
@@ -250,7 +264,7 @@ function skipReason(
   isTest: boolean | null,
   now: Date,
 ) {
-  if (!settings || settings.autopost_paused) return "Posting is paused";
+  if (!settings) return "Posting is not configured";
   if (!event) return "Event is hidden now";
   if (!autopost) return "Turned off by admin";
   if (isTestEvent({ title: event.title, slug: event.slug, is_test: isTest }))

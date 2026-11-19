@@ -6,6 +6,35 @@ create schema if not exists social_private;
 revoke all on schema social_private from public, anon, authenticated;
 grant usage on schema social_private to service_role;
 
+create function public.is_social_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'admin' and blocked_at is null
+  );
+$$;
+revoke all on function public.is_social_admin() from public, anon, authenticated, service_role;
+grant execute on function public.is_social_admin() to authenticated;
+
+create function social_private.require_admin()
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.is_social_admin() then
+    raise exception 'Only an admin can manage social posts.' using errcode = '42501';
+  end if;
+  return auth.uid();
+end;
+$$;
+
 create table public.platform_social_settings (
   id boolean primary key default true check (id),
   autopost_paused boolean not null default true,
@@ -22,7 +51,7 @@ alter table public.platform_social_settings enable row level security;
 revoke all on public.platform_social_settings from public, anon, authenticated, service_role;
 grant select on public.platform_social_settings to authenticated, service_role;
 create policy platform_social_settings_staff on public.platform_social_settings
-  for select to authenticated using (public.is_staff());
+  for select to authenticated using (public.is_social_admin());
 
 create table public.event_social_settings (
   event_id uuid primary key references public.events (id) on delete cascade,
@@ -36,7 +65,7 @@ alter table public.event_social_settings enable row level security;
 revoke all on public.event_social_settings from public, anon, authenticated, service_role;
 grant select on public.event_social_settings to authenticated, service_role;
 create policy event_social_settings_staff on public.event_social_settings
-  for select to authenticated using (public.is_staff());
+  for select to authenticated using (public.is_social_admin());
 
 create table public.social_posts (
   id uuid primary key default gen_random_uuid(),
@@ -70,14 +99,14 @@ alter table public.social_posts enable row level security;
 revoke all on public.social_posts from public, anon, authenticated, service_role;
 grant select on public.social_posts to authenticated, service_role;
 create policy social_posts_staff on public.social_posts
-  for select to authenticated using (public.is_staff());
+  for select to authenticated using (public.is_social_admin());
 
 comment on table public.platform_social_settings is
   'One row. Auto-posting starts paused until an admin turns it on.';
 comment on table public.event_social_settings is
   'Staff-only per-event social switch. A missing row means auto-post on and the title test rule.';
 comment on table public.social_posts is
-  'One row per event, platform and kind. Staff can read. Hosts cannot.';
+  'One row per event, platform and kind. Admins can read. Hosts and staff cannot.';
 
 -- The worker reads public.discovery_events as the only eligibility source.
 grant select on public.discovery_events to service_role;
@@ -238,6 +267,9 @@ set search_path = ''
 as $$
 begin
   if p_limit is null or p_limit < 1 then
+    return;
+  end if;
+  if (select autopost_paused from public.platform_social_settings where id) is distinct from false then
     return;
   end if;
   return query
@@ -437,7 +469,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  actor uuid := admin_private.require_staff();
+  actor uuid := social_private.require_admin();
   post public.social_posts;
 begin
   select * into post from public.social_posts where id = p_id for update;
@@ -475,7 +507,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  actor uuid := admin_private.require_staff();
+  actor uuid := social_private.require_admin();
   reason text := social_private.require_reason(p_reason);
   post public.social_posts;
 begin
@@ -508,7 +540,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  actor uuid := admin_private.require_staff();
+  actor uuid := social_private.require_admin();
   post public.social_posts;
   clean text := btrim(social_private.clean_caption(p_caption));
   hashtags integer;
@@ -554,7 +586,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  actor uuid := admin_private.require_staff();
+  actor uuid := social_private.require_admin();
   paused boolean;
   live jsonb;
   starts timestamptz;
@@ -605,7 +637,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  actor uuid := admin_private.require_staff();
+  actor uuid := social_private.require_admin();
   reason text := social_private.require_reason(p_reason);
   prior public.event_social_settings;
   collaborator text := nullif(lower(btrim(coalesce(p_ig_collaborator, ''))), '');
@@ -664,7 +696,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  actor uuid := admin_private.require_staff();
+  actor uuid := social_private.require_admin();
   reason text := social_private.require_reason(p_reason);
   prior jsonb;
   changed jsonb;
@@ -687,6 +719,8 @@ begin
   select to_jsonb(s) into prior from public.platform_social_settings s where id for update;
   update public.platform_social_settings s
   set autopost_paused = p_paused,
+      autopost_since = case when (prior ->> 'autopost_paused')::boolean and not p_paused
+        then now() else s.autopost_since end,
       post_window_start = p_window_start,
       post_window_end = p_window_end,
       ig_daily_cap = p_ig_daily_cap,
@@ -757,6 +791,7 @@ revoke all on function social_private.finish(uuid, text, jsonb) from public, ano
 revoke all on function social_private.ig_posted_last_24h() from public, anon, authenticated, service_role;
 revoke all on function social_private.live_event(uuid) from public, anon, authenticated, service_role;
 revoke all on function social_private.require_reason(text) from public, anon, authenticated, service_role;
+revoke all on function social_private.require_admin() from public, anon, authenticated, service_role;
 revoke all on function social_private.queue_pair(uuid, uuid, timestamptz) from public, anon, authenticated, service_role;
 grant execute on function social_private.is_test_event(uuid) to service_role;
 grant execute on function social_private.enqueue_due(integer) to service_role;
