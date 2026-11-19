@@ -158,7 +158,7 @@ test("host share kit downloads a JPEG and a scanner cannot open it", async ({ pa
   ).toBeNull();
   await page.goto(`/console/events/${eventId}/marketing`);
   await expect(page.getByRole("heading", { name: "Share kit" })).toBeVisible();
-  await expect(page.getByText("@tikatero_official")).toBeVisible();
+  await expect(page.getByText("@tikatero_official").first()).toBeVisible();
   const download = await page.request.get(`/console/events/${eventId}/share-kit/square`);
   expect(download.status()).toBe(200);
   expect(download.headers()["content-type"]).toContain("image/jpeg");

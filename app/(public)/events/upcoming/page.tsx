@@ -40,7 +40,7 @@ async function UpcomingList() {
                 compact
               />
               <span>
-                <span className="block text-lg font-extrabold leading-snug">{event.title}</span>
+                <h2 className="block text-lg font-extrabold leading-snug">{event.title}</h2>
                 <span className="mt-1 block text-sm text-muted">{formatIst(event.starts_at)}</span>
                 {event.city ? <span className="mt-1 block text-sm">{event.city}</span> : null}
                 <span className="mt-2 block font-bold">{socialPriceLabel(event)}</span>
