@@ -1,8 +1,10 @@
+import { connection } from "next/server";
 import { stopPromotionEmails } from "./actions";
 export const metadata = { title: "Unsubscribe from event promotions", robots: { index: false, follow: false } };
 export default async function Unsubscribe({ searchParams }: {
   searchParams: Promise<{ token?: string; done?: string }>
 }) {
+  await connection();
   const { token, done } = await searchParams;
   return <main className="mx-auto max-w-lg space-y-5 px-6 py-14">
     <h1 className="text-3xl font-bold">Event promotion preferences</h1>
