@@ -78,6 +78,8 @@ export const checkoutData = cache(async (slug: string) => {
     !organiser.cashfree_vendor_id?.trim()
   )
     disabled = "This organiser is not ready to accept payments. Please come back soon.";
+  else if (Date.parse(event.booking_close_at ?? event.starts_at ?? "") <= Date.now())
+    disabled = "Bookings closed";
   else if (Date.parse(event.ends_at ?? event.starts_at ?? "") <= Date.now())
     disabled = "This event has ended.";
   else if (
