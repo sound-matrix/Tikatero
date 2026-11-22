@@ -39,7 +39,7 @@ async function HomeContent({ searchParams }: { searchParams: Promise<Search> }) 
                 width={357}
                 height={358}
                 unoptimized
-                loading="lazy"
+                loading="eager"
                 className="hidden h-auto w-full motion-reduce:hidden sm:motion-safe:block"
               />
               <Image
