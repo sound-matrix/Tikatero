@@ -13,7 +13,7 @@ create table public.marketing_preferences (
 );
 alter table public.marketing_preferences enable row level security;
 revoke all on public.marketing_preferences from public, anon, authenticated;
-grant select on public.marketing_preferences to authenticated;
+grant select on public.marketing_preferences to authenticated, service_role;
 create policy marketing_preferences_self_read on public.marketing_preferences
   for select to authenticated using (user_id=auth.uid());
 
@@ -53,7 +53,7 @@ create table public.promotion_campaigns (
 create index promotion_campaigns_organiser_idx on public.promotion_campaigns(organiser_id,status);
 alter table public.promotion_campaigns enable row level security;
 revoke all on public.promotion_campaigns from public,anon,authenticated;
-grant select on public.promotion_campaigns to authenticated;
+grant select on public.promotion_campaigns to authenticated, service_role;
 create policy promotion_campaigns_visible on public.promotion_campaigns
   for select to authenticated using (
     exists(select 1 from public.organisers org
@@ -201,10 +201,12 @@ begin
     join public.promotion_campaigns c on c.id=d.campaign_id
     join public.events e on e.id=c.event_id
     join public.marketing_preferences p on p.user_id=d.buyer_id
+    join auth.users u on u.id=d.buyer_id and u.email_confirmed_at is not null
+      and u.deleted_at is null and u.email is not null
     where (d.status='queued' or (d.status='sending' and d.locked_until<now()))
       and d.attempts<3 and c.status='approved'
       and e.status='published' and e.hidden_at is null and not e.is_unlisted
-      and e.starts_at>now() and p.email_opt_in
+      and e.starts_at>now() and p.email_opt_in and p.email_consented_at is not null
     order by c.approved_at,d.buyer_id limit p_limit for update of d skip locked
   ), claimed as (
     update public.promotion_email_deliveries d
