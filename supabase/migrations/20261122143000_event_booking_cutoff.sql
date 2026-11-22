@@ -7,7 +7,9 @@ ALTER TABLE public.events ADD CONSTRAINT event_booking_close_before_start
 COMMENT ON COLUMN public.events.booking_close_at IS
   'Optional organiser-selected booking deadline. NULL falls back to event start. Enforced during order creation.';
 
--- Enforce the deadline inside the checkout RPC while the event row is locked.\n-- This deliberately does not intercept historical order backfills.\nCREATE OR REPLACE FUNCTION public.checkout_hold(p_order_id uuid, p_buyer_id uuid, p_slug text, p_name text, p_email text, p_phone text, p_lines jsonb, p_pricing_version_id uuid, p_fee_payer fee_payer, p_is_free boolean, p_amounts jsonb, p_provider text, p_token_hash text, p_attendees jsonb, p_is_test boolean)
+-- Enforce the deadline inside the checkout RPC while the event row is locked.
+-- This deliberately does not intercept historical order backfills.
+CREATE OR REPLACE FUNCTION public.checkout_hold(p_order_id uuid, p_buyer_id uuid, p_slug text, p_name text, p_email text, p_phone text, p_lines jsonb, p_pricing_version_id uuid, p_fee_payer fee_payer, p_is_free boolean, p_amounts jsonb, p_provider text, p_token_hash text, p_attendees jsonb, p_is_test boolean)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -66,7 +68,9 @@ begin
   end loop;
   return to_jsonb(saved);
 end; $function$
-;\n\n-- An existing event deadline must not be silently reopened by rescheduling
+;
+
+-- An existing event deadline must not be silently reopened by rescheduling
 -- the start time after checkout activity or after the cutoff has passed.
 CREATE OR REPLACE FUNCTION public.prevent_booking_deadline_reopen()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $
