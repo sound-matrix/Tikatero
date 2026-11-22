@@ -34,6 +34,7 @@ const sections = [
     paragraphs: [
       "After your event is published publicly, share the event page URL with your audience. Include it in social profiles, messages, email invitations and event announcements.",
       "Use a simple, consistent event title in your promotions. Explain the date, location, who the event is for and why attendees might want to come.",
+      "If you have an organiser website, add a visible link to your published Tikatero event page. On the public event page, select Share event, then Copy website link code. Place that snippet on a relevant page you control. Never link a private event without permission.",
     ],
   },
   {
