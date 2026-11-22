@@ -33,25 +33,24 @@ async function HomeContent({ searchParams }: { searchParams: Promise<Search> }) 
           </div>
           <div className="mx-auto w-full max-w-[260px] sm:max-w-[320px] lg:max-w-[360px]">
             <div className="overflow-hidden rounded-2xl border border-[#f3c9ad]/70 bg-[#fff3e9] shadow-sm">
-              <Image
-                src="/animations/tikatero-welcome-entry.gif"
-                alt="A hand-drawn guest scans a ticket QR code, the venue gate slides open, and she walks inside beneath the Welcome Tikatero sign."
-                width={357}
-                height={358}
-                unoptimized
-                loading="eager"
-                className="hidden h-auto w-full motion-reduce:hidden sm:motion-safe:block"
-              />
-              <Image
-                src="/animations/tikatero-welcome-poster.png"
-                alt="A guest approaches the Welcome Tikatero venue entrance with a QR ticket."
-                width={357}
-                height={358}
-                priority
-                sizes="(max-width: 640px) 260px, 320px"
-                quality={75}
-                className="block h-auto w-full motion-reduce:block sm:motion-safe:hidden"
-              />
+              <picture>
+                <source
+                  media="(min-width: 640px) and (prefers-reduced-motion: no-preference)"
+                  srcSet="/animations/tikatero-welcome-entry.gif"
+                  type="image/gif"
+                />
+                <Image
+                  src="/animations/tikatero-welcome-poster.png"
+                  alt="A guest approaches the Welcome Tikatero venue entrance with a QR ticket."
+                  width={357}
+                  height={358}
+                  loading="eager"
+                  fetchPriority="high"
+                  sizes="(max-width: 640px) 260px, 320px"
+                  quality={75}
+                  className="h-auto w-full"
+                />
+              </picture>
             </div>
           </div>
         </div>
