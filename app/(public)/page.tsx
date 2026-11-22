@@ -39,15 +39,18 @@ async function HomeContent({ searchParams }: { searchParams: Promise<Search> }) 
                 width={357}
                 height={358}
                 unoptimized
-                priority
-                className="h-auto w-full motion-reduce:hidden"
+                loading="lazy"
+                className="hidden h-auto w-full motion-reduce:hidden sm:motion-safe:block"
               />
               <Image
                 src="/animations/tikatero-welcome-poster.png"
                 alt="A guest approaches the Welcome Tikatero venue entrance with a QR ticket."
                 width={357}
                 height={358}
-                className="hidden h-auto w-full motion-reduce:block"
+                priority
+                sizes="(max-width: 640px) 260px, 320px"
+                quality={75}
+                className="block h-auto w-full motion-reduce:block sm:motion-safe:hidden"
               />
             </div>
           </div>
