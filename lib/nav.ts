@@ -40,6 +40,7 @@ export const adminNav = [
   { href: "/admin/kyc", label: "Host ID checks" },
   { href: "/admin/events", label: "Events" },
   { href: "/admin/social", label: "Social posts" },
+  { href: "/admin/promotions", label: "Smart Promotions" },
   { href: "/admin/payouts", label: "Host payouts" },
   { href: "/admin/pricing", label: "Pricing" },
   { href: "/admin/accounts", label: "Accounts" },
