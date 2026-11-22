@@ -1,4 +1,7 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
+import { connection } from "next/server";
+import { isFilteredListing } from "@/lib/discovery/indexing";
 import Link from "next/link";
 import { discover, PAGE_SIZE } from "@/lib/discovery/data";
 import { locationFilters } from "@/lib/discovery/location";
@@ -6,12 +9,21 @@ import { listingUrl, type Search } from "@/lib/discovery/model";
 import { DiscoveryFilters } from "@/components/discovery/filters";
 import { EventCard } from "@/components/discovery/event-card";
 import { LocationMemory } from "@/components/discovery/location-memory";
-export const metadata = {
-  title: "Find events",
-  alternates: { canonical: "https://tikatero.com/events" },
-  description:
-    "Discover concerts, comedy, workshops and more. Find events by city, date and ticket price.",
-};
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<Search>;
+}): Promise<Metadata> {
+  await connection();
+  const filtered = isFilteredListing(await searchParams);
+  return {
+    title: "Find events",
+    alternates: { canonical: "https://tikatero.com/events" },
+    description:
+      "Discover concerts, comedy, workshops and more. Find events by city, date and ticket price.",
+    robots: { index: !filtered, follow: true },
+  };
+}
 async function Results({ searchParams }: { searchParams: Promise<Search> }) {
   const value = await locationFilters(await searchParams),
     result = await discover(value),

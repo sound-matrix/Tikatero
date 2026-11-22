@@ -13,7 +13,8 @@ import { instagramTicketUrl } from "@/lib/sharing/instagram";
 
 export const metadata: Metadata = {
   title: "Upcoming events",
-  alternates: { canonical: "/events/upcoming" },
+  alternates: { canonical: "/events" },
+  robots: { index: false, follow: true },
 };
 
 function titleLink(bookUrl: string, slug: string) {
