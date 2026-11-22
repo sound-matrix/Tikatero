@@ -7,6 +7,7 @@ AS $$
 DECLARE
   ev public.events;
   org public.organisers;
+  bank public.kyc_applications;
   actor uuid := (SELECT auth.uid());
   b record;
   gross bigint := 0;
@@ -28,6 +29,7 @@ BEGIN
   SELECT * INTO ev FROM public.events WHERE id=p_event;
   IF NOT FOUND THEN RAISE EXCEPTION 'Statement unavailable.' USING errcode='42501'; END IF;
   SELECT * INTO org FROM public.organisers WHERE id=ev.organiser_id;
+  bank := payout_private.bank_check(org.id);
   IF actor IS NULL OR NOT (
     EXISTS (SELECT 1 FROM public.profiles p WHERE p.id=actor AND p.role IN ('admin','staff'))
     OR org.owner_id=actor
@@ -82,7 +84,11 @@ BEGIN
     WHEN pending_refunds>0 THEN 'reconciling_refunds'
     WHEN org.payouts_on_hold THEN 'payout_on_hold'
     WHEN org.kyc_status<>'approved' THEN 'verification_pending'
-    WHEN net<=0 AND paid_out>0 THEN 'paid'
+    WHEN (bank.step_progress #>> '{bank,passed}') IS DISTINCT FROM 'true'
+      OR (bank.step_progress #>> '{bank,mode}') IS DISTINCT FROM 'cashfree' THEN 'bank_verification_pending'
+    WHEN now()<coalesce(ev.ends_at,ev.starts_at + interval '1 day') THEN 'event_in_progress'
+    WHEN net<0 THEN 'recovery_needed'
+    WHEN net=0 AND paid_out>0 THEN 'paid'
     WHEN net<=0 THEN 'no_balance'
     WHEN payable<net THEN 'waiting_for_payout_date'
     ELSE 'ready_for_manual_transfer' END;
