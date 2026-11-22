@@ -11,23 +11,36 @@ const inter = Inter({
 
 function siteMetadataBase(): URL | undefined {
   const value = process.env.NEXT_PUBLIC_SITE_URL;
-  if (!value) return undefined;
+  if (!value) return new URL("https://tikatero.com");
   try {
     return new URL(value);
   } catch {
-    return undefined;
+    return new URL("https://tikatero.com");
   }
 }
 
 export const metadata: Metadata = {
   metadataBase: siteMetadataBase(),
   title: {
-    default: "Tikatero",
+    default: "Tikatero | Discover Events & Book Tickets Online",
     template: "%s · Tikatero",
   },
   description:
-    "Find events and book tickets with Tikatero, a product of Sound Matrix. Prices include GST.",
+    "Discover concerts, workshops, festivals and more on Tikatero. Book event tickets online or create and manage your own events across India.",
   applicationName: "Tikatero",
+  openGraph: {
+    type: "website",
+    siteName: "Tikatero",
+    title: "Tikatero | Discover Events & Book Tickets Online",
+    description: "Discover concerts, workshops and festivals. Book tickets or host your next event with Tikatero.",
+    url: "https://tikatero.com",
+    locale: "en_IN",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tikatero | Discover Events & Book Tickets Online",
+    description: "Discover events, book tickets and host experiences with Tikatero.",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
