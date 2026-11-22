@@ -80,6 +80,7 @@ async function dates(page: Page) {
     .filter({ visible: true })
     .fill(`${day}T19:00`);
   await page.getByLabel("Ends (IST, optional)").filter({ visible: true }).fill(`${day}T21:00`);
+  await page.getByLabel("Bookings close (IST, optional)").filter({ visible: true }).fill(`${day}T18:30`);
   await page
     .getByLabel("Gates open (IST, optional)")
     .filter({ visible: true })
