@@ -21,10 +21,16 @@ values('a5520000-0000-4000-8000-000000000001',
 'a5510000-0000-4000-8000-000000000001','settlement-show','Settlement Show',
 now()-interval '12 days',now()-interval '11 days','ended',false,now()-interval '12 days');
 
-insert into public.organiser_earnings_entries(organiser_id,event_id,payout_mode,kind,
+insert into public.orders(id,event_id,buyer_name,buyer_email,status,paid_at,subtotal_paise,
+ total_paise,organiser_share_paise,platform_share_paise,fee_payer,payout_mode,is_test)
+values('a5530000-0000-4000-8000-000000000001',
+'a5520000-0000-4000-8000-000000000001','Test Buyer','buyer@example.test','paid',
+now()-interval '12 days',12000,12000,12000,0,'organiser','manual',false);
+
+insert into public.organiser_earnings_entries(organiser_id,event_id,order_id,payout_mode,kind,
  amount_paise,available_at,is_test)
 values('a5510000-0000-4000-8000-000000000001',
-'a5520000-0000-4000-8000-000000000001','manual','ticket_sale',12000,
+'a5520000-0000-4000-8000-000000000001','a5530000-0000-4000-8000-000000000001','manual','ticket_sale',12000,
 now()-interval '12 days',false);
 
 set local role authenticated;
