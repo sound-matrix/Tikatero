@@ -9,6 +9,7 @@ import { loadMyTickets, type MyTicket } from "@/lib/tickets/mine";
 import { loadMyOrders } from "@/lib/refunds/account";
 import { CancelBooking } from "@/components/refunds/cancel-booking";
 import { PAUSE_REQUEST } from "@/lib/refunds/rules";
+import { MarketingPreferences } from "@/components/account/marketing-preferences";
 
 function TicketList({
   title,
@@ -55,6 +56,8 @@ async function AccountContent({ notice, error }: { notice?: string; error?: stri
   const destination = landingPath(account);
   const tickets = await loadMyTickets(account.profile.id);
   const orders = await loadMyOrders(account.profile.id, client);
+  const { data: marketing } = await client.from("marketing_preferences")
+    .select("email_opt_in,whatsapp_opt_in").eq("user_id", account.profile.id).maybeSingle();
   const upcoming = tickets.filter((ticket) => !ticket.past);
   const past = tickets.filter((ticket) => ticket.past).reverse();
   return (
@@ -109,6 +112,8 @@ async function AccountContent({ notice, error }: { notice?: string; error?: stri
         empty="You don’t have any upcoming tickets."
       />
       <TicketList title="Past tickets" tickets={past} empty="You don’t have any past tickets." />
+      <MarketingPreferences emailOptIn={marketing?.email_opt_in ?? false}
+        whatsappOptIn={marketing?.whatsapp_opt_in ?? false} />
       <div className="flex flex-wrap gap-3">
         <Button href="/me/settings">Edit your details</Button>
         {destination !== "/me" && (
