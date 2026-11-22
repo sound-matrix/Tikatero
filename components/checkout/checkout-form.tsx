@@ -10,6 +10,7 @@ import { computePricing, type PricingVersion } from "@/lib/pricing/compute";
 import { publicPrice } from "@/lib/discovery/model";
 import { tierUnavailable, type CheckoutTier } from "@/lib/checkout/model";
 import { submitCheckout } from "@/app/(public)/e/[slug]/checkout/actions";
+import { trackFunnelEvent } from "@/lib/analytics/funnel";
 export function CheckoutForm({
   slug,
   defaults,
@@ -65,6 +66,7 @@ export function CheckoutForm({
       className="mt-8 grid gap-8 md:grid-cols-[1fr_22rem]"
       onSubmit={(e) => {
         e.preventDefault();
+        if (!testMode) trackFunnelEvent("begin_checkout", { admission: isFree ? "free" : "paid" });
         const form = new FormData(e.currentTarget);
         start(async () => {
           setError("");
@@ -92,6 +94,9 @@ export function CheckoutForm({
               .filter(Boolean),
             recaptcha: token,
           });
+          if (result.url && !testMode) {
+            trackFunnelEvent("ticket_reservation_created", { admission: isFree ? "free" : "paid" });
+          }
           if (result.payment && window.Cashfree) {
             try {
               const response = await window
