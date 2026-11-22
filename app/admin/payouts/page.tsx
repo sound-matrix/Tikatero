@@ -92,6 +92,7 @@ function HostRow({
               {event.title ?? "Host balance"} · {formatInr(event.available_paise)} available ·{" "}
               {formatInr(event.remaining_paise)} remaining
               {event.event_id && <a className="ml-3 text-teal underline" href={`/api/settlements/${event.event_id}/csv`}>Settlement CSV</a>}
+              {event.event_id && <a className="ml-3 text-teal underline" href={`/admin/payouts/final/${event.event_id}`}>Final settlement</a>}
             </li>
           ))}
         </ul>
