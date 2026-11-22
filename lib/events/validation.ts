@@ -46,6 +46,7 @@ export const valuesSchema = z
     startsAt: text.max(30),
     endsAt: text.max(30),
     gatesAt: text.max(30),
+    bookingCloseAt: text.max(30),
     venue: text.max(150),
     address: text.max(500),
     city: text.max(100),
@@ -121,10 +122,12 @@ export function validateStep(v: Values, step: number, eventId: string) {
     case 1: {
       const start = fromIstInput(v.startsAt),
         end = fromIstInput(v.endsAt),
-        gates = fromIstInput(v.gatesAt);
+        gates = fromIstInput(v.gatesAt),
+        close = fromIstInput(v.bookingCloseAt);
       requireValue(start, "Choose a start date and time.");
       requireValue(!end || end > start, "The event must end after it starts.");
       requireValue(!gates || gates <= start, "Gates must open at or before the event starts.");
+      requireValue(!close || close <= start, "Bookings must close by the event start time.");
       break;
     }
     case 2:
@@ -274,6 +277,7 @@ export function validateSavedInput(v: Values, step: number, eventId: string) {
     fromIstInput(v.startsAt);
     fromIstInput(v.endsAt);
     fromIstInput(v.gatesAt);
+    fromIstInput(v.bookingCloseAt);
   }
   if (step === 2) {
     requireValue(!v.mapsUrl || isGoogleMapsUrl(v.mapsUrl), "Paste a valid HTTPS Google Maps link.");
