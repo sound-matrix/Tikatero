@@ -1,4 +1,7 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { alternates: { canonical: "https://tikatero.com/" } };
 import Link from "next/link";
 import Image from "next/image";
 import { discover } from "@/lib/discovery/data";
