@@ -6,6 +6,7 @@ import { withReturnPath } from "@/lib/auth/return-path";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { trackFunnelEvent } from "@/lib/analytics/funnel";
 
 type Mode = "login" | "signup" | "setup";
 type Role = "attendee" | "organiser";
@@ -54,6 +55,9 @@ export function LoginForm({
         const result = await requestSignInCode(email, role, next);
         if (result.error) setMessage(result.error);
         else {
+          if (mode === "signup" && role === "organiser") {
+            trackFunnelEvent("organiser_signup_intent", { role });
+          }
           setSent(true);
           setMessage("We sent a 6-digit verification code to your email.");
         }
@@ -76,6 +80,9 @@ export function LoginForm({
       const verified = await verifySignInCode(email, token, password);
       if (verified.error) setMessage(verified.error);
       else {
+        if (mode === "signup" && role === "organiser") {
+          trackFunnelEvent("organiser_email_verified", { role });
+        }
         window.location.assign(withReturnPath("/auth/complete", next));
         return;
       }
