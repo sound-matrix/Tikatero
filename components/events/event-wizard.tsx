@@ -80,7 +80,8 @@ function Section({
 }
 function price(value: string) {
   try {
-    return `${formatInr(toPaise(value))} incl. GST`;
+    const paise = toPaise(value);
+    return paise === 0 ? "FREE" : `${formatInr(paise)} incl. GST`;
   } catch {
     return "Price to be confirmed";
   }
@@ -267,7 +268,9 @@ export function EventWizard({
   function changeTier(index: number, key: keyof Tier, value: string | boolean) {
     update(
       "tiers",
-      values.tiers.map((t, i) => (i === index ? { ...t, [key]: value } : t)),
+      values.tiers.map((t, i) =>
+        i === index ? { ...t, [key]: values.free && key === "price" ? "0" : value } : t,
+      ),
     );
   }
   return (
