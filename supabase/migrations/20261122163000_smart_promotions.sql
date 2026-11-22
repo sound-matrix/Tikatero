@@ -114,11 +114,15 @@ grant execute on function public.promotion_audience_count(uuid) to authenticated
 
 -- Publishing a public event proposes a campaign, not an unsolicited send.
 create function promotions_private.queue_published_event()
-returns trigger language plpgsql security definer set search_path='' as $$
+returns trigger language plpgsql security definer set search_path='' as $
+declare newly_published boolean := (tg_op='INSERT');
 begin
+  if not newly_published then
+    newly_published := old.status is distinct from 'published';
+  end if;
   if new.status='published' and new.hidden_at is null and not new.is_unlisted
     and new.starts_at>now()
-    and (tg_op='INSERT' or old.status is distinct from 'published') then
+    and newly_published then
     insert into public.promotion_campaigns(event_id,organiser_id)
       values(new.id,new.organiser_id) on conflict(event_id) do nothing;
   end if;
