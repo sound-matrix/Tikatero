@@ -27,11 +27,7 @@ values('a5530000-0000-4000-8000-000000000001',
 'a5520000-0000-4000-8000-000000000001','Test Buyer','buyer@example.test','paid',
 now()-interval '12 days',12000,12000,12000,0,'organiser','manual',false);
 
-insert into public.organiser_earnings_entries(organiser_id,event_id,order_id,payout_mode,kind,
- amount_paise,available_at,is_test)
-values('a5510000-0000-4000-8000-000000000001',
-'a5520000-0000-4000-8000-000000000001','a5530000-0000-4000-8000-000000000001','manual','ticket_sale',12000,
-now()-interval '12 days',false);
+-- A paid order is added to the host ledger by the existing on_order_paid trigger.
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','a5500000-0000-4000-8000-000000000003',true);
