@@ -23,6 +23,7 @@ export const emailSamples: TemplateData = {
     amountPaise: 149900,
   },
   event_reminder: { recipientName, event },
+  marketing_event: { event, organiserName: "Riverfront Live", actionPath: "/e/sample", unsubscribePath: "/unsubscribe?token=example" },
   event_changed: {
     recipientName,
     event,
