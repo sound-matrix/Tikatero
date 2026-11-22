@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -10,10 +11,6 @@ import { categories } from "@/lib/events/model";
 
 type Props = { params: Promise<{ city: string }> };
 const origin = "https://tikatero.com";
-
-export function generateStaticParams() {
-  return eventCities.map(({ slug }) => ({ city: slug }));
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   await connection();
@@ -33,7 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function CityEventsPage({ params }: Props) {
+async function CityEventsContent({ params }: Props) {
   await connection();
   const city = eventCity((await params).city);
   if (!city) notFound();
@@ -107,5 +104,13 @@ export default async function CityEventsPage({ params }: Props) {
         </Link>
       </section>
     </main>
+  );
+}
+
+export default function CityEventsPage(props: Props) {
+  return (
+    <Suspense fallback={<main className="mx-auto max-w-6xl p-8">Loading city events…</main>}>
+      <CityEventsContent {...props} />
+    </Suspense>
   );
 }
