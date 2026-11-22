@@ -1,4 +1,4 @@
-export type EmailBase = { recipientName?: string; actionPath?: string };
+export type EmailBase = { recipientName?: string; actionPath?: string; unsubscribePath?: string };
 export type EventDetails = { title: string; startsAt: string; venue: string };
 export type TemplateData = {
   backup_email_verification: EmailBase;
@@ -15,6 +15,7 @@ export type TemplateData = {
   };
   payment_failed: EmailBase & { eventTitle: string; orderRef: string; amountPaise: number };
   event_reminder: EmailBase & { event: EventDetails };
+  marketing_event: EmailBase & { event: EventDetails; organiserName: string };
   event_changed: EmailBase & { event: EventDetails; changes: string };
   event_cancelled: EmailBase & { eventTitle: string; reason: string; free?: boolean };
   event_hidden_by_admin: EmailBase & { eventTitle: string; reason: string };
