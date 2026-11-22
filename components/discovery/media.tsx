@@ -44,6 +44,8 @@ export function EventMedia({
           }
           className="object-cover"
           priority={priority}
+          quality={70}
+          loading={priority ? undefined : "lazy"}
         />
       ) : (
         <div
