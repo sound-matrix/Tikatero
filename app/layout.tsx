@@ -28,6 +28,9 @@ export const metadata: Metadata = {
   description:
     "Discover concerts, workshops, festivals and more on Tikatero. Book event tickets online or create and manage your own events across India.",
   applicationName: "Tikatero",
+  verification: process.env.GOOGLE_SITE_VERIFICATION
+    ? { google: process.env.GOOGLE_SITE_VERIFICATION }
+    : undefined,
   openGraph: {
     type: "website",
     siteName: "Tikatero",
