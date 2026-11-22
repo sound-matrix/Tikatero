@@ -8,6 +8,7 @@ export const footerLinks = [
   { href: "/help", label: "Help" },
   { href: "/contact", label: "Contact Us" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/organisers", label: "For Organisers" },
 ] as const;
 
 export const helpParagraphs = [

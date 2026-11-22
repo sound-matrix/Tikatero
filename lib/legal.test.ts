@@ -23,6 +23,7 @@ describe("legal copy", () => {
       "Help",
       "Contact Us",
       "Pricing",
+      "For Organisers",
     ]);
     expect(footerLinks.map((link) => link.href)).toEqual([
       "/legal/terms",
@@ -31,6 +32,7 @@ describe("legal copy", () => {
       "/help",
       "/contact",
       "/pricing",
+      "/organisers",
     ]);
   });
 
