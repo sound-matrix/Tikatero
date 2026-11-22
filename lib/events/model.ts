@@ -67,6 +67,7 @@ export type Values = {
   startsAt: string;
   endsAt: string;
   gatesAt: string;
+  bookingCloseAt: string;
   venue: string;
   address: string;
   city: string;
@@ -96,6 +97,7 @@ export function emptyValues(): Values {
     startsAt: "",
     endsAt: "",
     gatesAt: "",
+    bookingCloseAt: "",
     venue: "",
     address: "",
     city: "",

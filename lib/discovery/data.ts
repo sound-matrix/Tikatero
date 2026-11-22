@@ -2,13 +2,14 @@ import "server-only";
 import { cache } from "react";
 import { cacheLife, cacheTag } from "next/cache";
 import { createAnonClient } from "@/lib/supabase/anon";
+import { createServiceClient } from "@/lib/supabase/service";
 import type { Database } from "@/lib/db/types";
 import { istDayStart, istDayEnd, type Filters, type Guest, type Tier } from "./model";
 export type PublicEvent = Omit<
   Database["public"]["Views"]["discovery_events"]["Row"],
   "tiers" | "guests"
 > & { tiers: Tier[]; guests: Guest[] };
-type LinkedEvent = PublicEvent & { is_unlisted: boolean };
+type LinkedEvent = PublicEvent & { is_unlisted: boolean; booking_close_at: string | null };
 export const PAGE_SIZE = 12;
 function configured() {
   return (
@@ -55,7 +56,11 @@ export const publicEvent = cache(async (slug: string): Promise<LinkedEvent | nul
     .rpc("public_event_by_slug", { p_slug: slug })
     .maybeSingle();
   if (error) throw new Error("This event could not be loaded. Please try again.");
-  return data ? event(data) : null;
+  if (!data) return null;
+  const { data: deadline, error: deadlineError } = await createServiceClient()
+    .from("events").select("booking_close_at").eq("id", data.id).single();
+  if (deadlineError) throw new Error("Booking availability could not be checked.");
+  return { ...event(data), booking_close_at: deadline.booking_close_at };
 });
 
 export async function requestTime() {

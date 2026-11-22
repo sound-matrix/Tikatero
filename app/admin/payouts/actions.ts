@@ -81,6 +81,23 @@ export async function payoutAction(_state: PayoutState, form: FormData): Promise
     });
     return error ? { error: error.message } : saved("Payment record voided.");
   }
+  if (op === "final") {
+    if (!event || !uuid(event)) return { error: "Choose an event." };
+    const paidOn = value(form, "paidOn");
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(paidOn)) return { error: "Enter the bank transfer date." };
+    const { data: id, error } = await client.rpc("admin_record_final_event_payout", {
+      p_event: event,
+      p_method: value(form, "method"),
+      p_reference: reference,
+      p_paid_on: paidOn,
+      p_note: value(form, "note") || null,
+    });
+    if (error || !id) return { error: error?.message ?? "Final settlement could not be recorded." };
+    const mail = await notifyPayoutSettled(id).catch(() => null);
+    return saved(mail && ["sent", "sent_unlogged", "duplicate"].includes(mail.status)
+      ? "Final event settlement recorded. Host confirmation sent."
+      : "Final event settlement recorded. Host confirmation needs attention.");
+  }
   if (!uuid(host) || (event && !uuid(event))) return { error: "Choose a host and event." };
   if (op === "show") {
     const { data, error } = await client.rpc("admin_payout_bank_details", {

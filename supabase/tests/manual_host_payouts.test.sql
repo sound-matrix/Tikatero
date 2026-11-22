@@ -37,6 +37,19 @@ $$;
 
 select is(pg_temp.manual_hold('f2540000-0000-4000-8000-000000000001')->>'payout_mode','manual','Manual checkout needs no recipient');
 select ok((select vendor_id is null from public.orders where id = 'f2540000-0000-4000-8000-000000000001'),'Manual checkout stores no vendor');
+
+-- The event-wide deadline is checked under the checkout lock, without relying on cron.
+update public.events set booking_close_at = now() - interval '1 minute'
+ where id = 'f2520000-0000-4000-8000-000000000001';
+select throws_ok(
+  $select pg_temp.manual_hold('f2540000-0000-4000-8000-000000000008')$,
+  'P0001','Bookings for this event are closed.',
+  'Checkout rejects any new booking after the event booking deadline');
+select is((select count(*) from public.orders where id = 'f2540000-0000-4000-8000-000000000008'),
+  0::bigint,'Deadline rejection persists no pending order');
+update public.events set booking_close_at = null
+ where id = 'f2520000-0000-4000-8000-000000000001';
+
 update public.organisers set payout_mode_override = 'gateway_split' where id = 'f2510000-0000-4000-8000-000000000001';
 select throws_ok($$select pg_temp.manual_hold('f2540000-0000-4000-8000-000000000009')$$,
   'P0001','This organiser is not ready to accept payments.','Split checkout still requires a recipient');

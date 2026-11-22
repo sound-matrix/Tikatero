@@ -483,6 +483,14 @@ export function EventWizard({
                       onChange={(e) => update("endsAt", e.target.value)}
                     />
                   </Field>
+                  <Field label="Bookings close (IST, optional)" description="Tickets automatically stop selling at this time. Leave blank to close at event start.">
+                    <input
+                      type="datetime-local"
+                      className={fieldClass}
+                      value={values.bookingCloseAt}
+                      onChange={(e) => update("bookingCloseAt", e.target.value)}
+                    />
+                  </Field>
                   <Field label="Gates open (IST, optional)">
                     <input
                       type="datetime-local"

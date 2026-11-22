@@ -92,6 +92,7 @@ async function Payouts({ searchParams }: Props) {
               <tr key={event.id} className="border-t border-line">
                 <th scope="row" className="p-2 font-semibold">
                   {event.title}
+                  <a href={`/api/settlements/${event.id}/csv`} className="mt-1 block text-xs text-teal underline">Settlement CSV</a>
                 </th>
                 {[
                   event.gross_paise,

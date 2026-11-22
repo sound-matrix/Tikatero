@@ -29,6 +29,7 @@ export function rowValues(
     | "starts_at"
     | "ends_at"
     | "gates_open_at"
+    | "booking_close_at"
     | "venue_name"
     | "address"
     | "city"
@@ -62,6 +63,7 @@ export function rowValues(
     startsAt: toIstInput(row.starts_at),
     endsAt: toIstInput(row.ends_at),
     gatesAt: toIstInput(row.gates_open_at),
+    bookingCloseAt: toIstInput(row.booking_close_at),
     venue: row.venue_name ?? "",
     address: row.address ?? "",
     city: row.city ?? "",
@@ -105,7 +107,7 @@ export async function readDraft(
     client
       .from("events")
       .select(
-        "id, organiser_id, slug, title, status, category, details, is_unlisted, description, theme, is_free, starts_at, ends_at, gates_open_at, venue_name, address, city, country, maps_url, lat, lng, poster_key, capacity, fee_payer, refund_policy, refund_auto_approve, wizard_revision, wizard_step, wizard_completed_steps, hidden_at",
+        "id, organiser_id, slug, title, status, category, details, is_unlisted, description, theme, is_free, starts_at, ends_at, gates_open_at, booking_close_at, venue_name, address, city, country, maps_url, lat, lng, poster_key, capacity, fee_payer, refund_policy, refund_auto_approve, wizard_revision, wizard_step, wizard_completed_steps, hidden_at",
       )
       .eq("id", id)
       .maybeSingle(),

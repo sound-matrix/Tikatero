@@ -8,7 +8,7 @@ import {
   validateSavedInput,
   stepPayload,
 } from "@/lib/events/validation";
-import { toPaise } from "@/lib/events/model";
+import { fromIstInput, toPaise } from "@/lib/events/model";
 import { hasInternationalKyc } from "@/lib/kyc/store";
 import { INTERNATIONAL_PAID_TICKETS, internationalPaidTicketError } from "@/lib/kyc/paid-tickets";
 import { readDraft, type Draft } from "@/lib/events/store";
@@ -105,6 +105,14 @@ export async function saveEvent(input: unknown): Promise<SaveResult> {
                   ? "People have already booked this ticket type, so it can't be removed."
                   : "Your event could not be saved. Check your details and try again.",
     };
+  if (data.step === 1 && data.values.bookingCloseAt) {
+    const close = fromIstInput(data.values.bookingCloseAt);
+    const savedClose = await client.rpc("set_event_booking_close", {
+      p_event: data.eventId,
+      p_close: close,
+    });
+    if (savedClose.error) return { error: savedClose.error.message };
+  }
   const draft = await readDraft(client, data.eventId);
   if (draft?.status === "published") updateTag("public-events");
   revalidatePath("/console/events", "layout");

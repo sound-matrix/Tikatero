@@ -53,7 +53,8 @@ async function Detail({ params, searchParams }: Props) {
   const now = await requestTime(),
     end = e.ends_at ?? e.starts_at,
     seatsLeft = e.capacity === null ? null : Math.max(0, e.capacity - e.tickets_sold),
-    available = seatsLeft !== 0 && e.tiers.some((t) => tierState(t, end, now) === "Available"),
+    bookingsClosed = Date.parse(e.booking_close_at ?? e.starts_at) <= now,
+    available = !bookingsClosed && seatsLeft !== 0 && e.tiers.some((t) => tierState(t, end, now) === "Available"),
     origin = await siteOrigin();
   const [{ ref }, host, policyText] = await Promise.all([
     searchParams,
@@ -78,7 +79,7 @@ async function Detail({ params, searchParams }: Props) {
     </Link>
   ) : (
     <button disabled className="min-h-12 rounded-xl bg-soft px-7 font-bold text-muted">
-      {Date.parse(end) <= now
+      {bookingsClosed ? "Bookings closed" : Date.parse(end) <= now
         ? "Event ended"
         : seatsLeft === 0 || (e.tiers.length && e.tiers.every((t) => t.qty_sold >= t.qty_total))
           ? "Sold out"
@@ -249,7 +250,7 @@ async function Detail({ params, searchParams }: Props) {
           )}
           <div className="mt-5 space-y-3">
             {e.tiers.map((t) => {
-              const state =
+              const state = bookingsClosed ? "Bookings closed" :
                 seatsLeft === 0 && Date.parse(end) > now ? "Sold out" : tierState(t, end, now);
               return (
                 <div
@@ -267,7 +268,7 @@ async function Detail({ params, searchParams }: Props) {
                       ? ` · ${formatIst(t.sales_start)}`
                       : ""}
                   </p>
-                  {state === "Available" ? (
+                  {state === "Available" && !bookingsClosed ? (
                     <Link
                       className="mt-3 inline-flex min-h-11 items-center font-semibold underline underline-offset-4"
                       href={bookingPath(e.slug, "book", t.id, channel)}
