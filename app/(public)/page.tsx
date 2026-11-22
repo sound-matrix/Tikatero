@@ -139,7 +139,8 @@ export default function HomePage({ searchParams }: { searchParams: Promise<Searc
       <section className="mt-10 flex flex-col gap-5 rounded-2xl bg-ink p-7 text-white sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold">Bring people together.</h2>
-          <p className="mt-2 text-white/90">Create your event, your way.</p>
+          <p className="mt-2 text-white/90">Create your event, your way. Get started with ticket types, pricing and a booking link.</p>
+          <Link href="/organisers" className="mt-3 inline-block font-semibold text-white underline underline-offset-4">How event hosting works</Link>
         </div>
         <Link
           href="/console"
