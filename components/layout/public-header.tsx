@@ -30,6 +30,7 @@ export async function PublicHeader({ compact = false }: { compact?: boolean }) {
           className="col-span-2 row-start-2 flex items-center gap-5 text-sm font-semibold md:col-span-1 md:col-start-2 md:row-start-1 md:justify-end"
         >
           <Link href="/events">Find events</Link>
+          <Link href="/organisers">For organisers</Link>
           {!compact && (
             <Link href={menu ? (menu.host ? "/console" : "/me") : "/login?as=host"}>
               Host an event
