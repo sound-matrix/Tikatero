@@ -10,6 +10,7 @@ import { InstagramTicketSales } from "@/components/console/instagram-ticket-sale
 import { MarketingPoster } from "@/components/console/marketing-poster";
 import { ShareKit } from "@/components/console/share-kit";
 import { buildSocialCaption } from "@/lib/social/caption";
+import { PromotionPanel } from "@/components/console/promotion-panel";
 
 export const metadata: Metadata = { title: "Event Marketing Kit" };
 
@@ -28,6 +29,14 @@ export default async function EventMarketing({ params }: { params: Promise<{ id:
   if (error || !event || !account.organisers.some((org) => org.id === event.organiser_id))
     notFound();
   const published = event.status === "published" && !event.hidden_at;
+  const promotionInfo = published && !event.is_unlisted
+    ? await Promise.all([
+        client.from("promotion_campaigns").select("status").eq("event_id", id).maybeSingle(),
+        client.rpc("promotion_audience_count", { p_event: id }),
+      ])
+    : null;
+  if (promotionInfo && (promotionInfo[0].error || promotionInfo[1].error))
+    throw new Error("Smart Promotions could not be loaded.");
   const shareLive = published && !event.is_unlisted;
   const tiers = shareLive
     ? await client.from("ticket_types").select("price_paise").eq("event_id", id)
@@ -60,6 +69,9 @@ export default async function EventMarketing({ params }: { params: Promise<{ id:
             qr={qr}
           />
           <ShareEventCard client={client} event={event} />
+          {shareLive && <PromotionPanel eventId={id}
+            audience={promotionInfo?.[1].data ?? 0}
+            status={promotionInfo?.[0].data?.status ?? null} />}
           <InstagramTicketSales client={client} event={event} />
           {shareLive && event.starts_at && (
             <ShareKit
