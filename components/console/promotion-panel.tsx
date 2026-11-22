@@ -7,8 +7,9 @@ export function PromotionPanel({
   eventId,
   audience,
   status,
+  sent,
 }: {
-  eventId: string; audience: number; status: string | null;
+  eventId: string; audience: number; status: string | null; sent: number;
 }) {
   const [result, action, pending] = useActionState(requestSmartPromotion, {});
   return (
@@ -20,6 +21,7 @@ export function PromotionPanel({
       </p>
       <p className="font-semibold">{audience} eligible past {audience === 1 ? "customer" : "customers"} for email</p>
       <p className="text-sm">Campaign: {status?.replaceAll("_", " ") ?? "Not requested"}</p>
+      <p className="text-sm">Email messages sent: {sent}</p>
       {!status && (
         <form action={action}>
           <input name="event" value={eventId} type="hidden" />
