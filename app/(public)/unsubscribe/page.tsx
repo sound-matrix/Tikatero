@@ -1,10 +1,9 @@
-import { connection } from "next/server";
+import { Suspense } from "react";
 import { stopPromotionEmails } from "./actions";
 export const metadata = { title: "Unsubscribe from event promotions", robots: { index: false, follow: false } };
-export default async function Unsubscribe({ searchParams }: {
+async function UnsubscribeContent({ searchParams }: {
   searchParams: Promise<{ token?: string; done?: string }>
 }) {
-  await connection();
   const { token, done } = await searchParams;
   return <main className="mx-auto max-w-lg space-y-5 px-6 py-14">
     <h1 className="text-3xl font-bold">Event promotion preferences</h1>
@@ -24,4 +23,14 @@ export default async function Unsubscribe({ searchParams }: {
       <p>This link is missing or invalid. You can also adjust promotion preferences in Your account.</p>
     )}
   </main>;
+}
+
+export default function Unsubscribe({ searchParams }: {
+  searchParams: Promise<{ token?: string; done?: string }>
+}) {
+  return <Suspense fallback={<main className="mx-auto max-w-lg px-6 py-14">
+    Loading email preferences…
+  </main>}>
+    <UnsubscribeContent searchParams={searchParams} />
+  </Suspense>;
 }
