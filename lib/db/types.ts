@@ -1979,6 +1979,7 @@ export type Database = {
       };
       social_ig_posted_last_24h: { Args: Record<PropertyKey, never>; Returns: number };
       social_live_event: { Args: { p_event_id: string }; Returns: Json };
+      admin_record_final_event_payout: { Args: { p_event: string; p_method: string; p_reference: string; p_paid_on: string; p_note?: string | null }; Returns: string };
       event_settlement_statement: { Args: { p_event: string }; Returns: Json };
       set_event_booking_close: { Args: { p_event: string; p_close: string | null }; Returns: undefined };
       save_event_wizard: {
