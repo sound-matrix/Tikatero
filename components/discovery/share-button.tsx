@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { shareChannels, shareHref, shareText, type ShareEvent } from "@/lib/sharing/links";
 import type { ShareChannel } from "@/lib/db/account-schema";
+import { organiserWebsiteLink } from "@/lib/sharing/website-link";
 
 function log(slug: string, channel: ShareChannel, type: "share" | "visit") {
   void fetch("/api/events/share", {
@@ -26,7 +27,7 @@ export function TrackEventReferral({ slug, channel }: { slug: string; channel: S
   return null;
 }
 
-export function ShareButton({ event }: { event: ShareEvent }) {
+export function ShareButton({ event, publicEvent = false }: { event: ShareEvent; publicEvent?: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [message, setMessage] = useState("");
   const [native, setNative] = useState(false);
@@ -40,6 +41,16 @@ export function ShareButton({ event }: { event: ShareEvent }) {
       setMessage("Link copied.");
     } catch {
       setMessage(url);
+    }
+  }
+
+  async function copyWebsiteLink() {
+    const snippet = organiserWebsiteLink(event.slug, event.title);
+    try {
+      await navigator.clipboard.writeText(snippet);
+      setMessage("Website link code copied.");
+    } catch {
+      setMessage(snippet);
     }
   }
 
@@ -144,6 +155,18 @@ export function ShareButton({ event }: { event: ShareEvent }) {
               Download poster for your Story
             </a>
             <Button onClick={() => copy("instagram")}>Copy Instagram link</Button>
+          </div>
+        )}
+        {publicEvent && (
+          <div className="mt-5 rounded-xl border border-line bg-soft p-4">
+            <h3 className="font-bold">Promote on your own website</h3>
+            <p className="mt-2 text-sm text-muted">
+              If you organise this event, copy a simple ticket link for your
+              website or event page. It opens the public Tikatero event listing.
+            </p>
+            <Button className="mt-3" onClick={copyWebsiteLink}>
+              Copy website link code
+            </Button>
           </div>
         )}
         <p role="status" className="mt-3 break-all text-sm text-muted">
