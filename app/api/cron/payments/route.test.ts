@@ -39,6 +39,7 @@ it("schedules the Vercel payments cron every five minutes", () => {
   expect(vercel.crons).toEqual([
     { path: "/api/cron/payments", schedule: "*/5 * * * *" },
     { path: "/api/cron/social", schedule: "*/10 * * * *" },
+    { path: "/api/cron/promotions", schedule: "*/10 * * * *" },
   ]);
   expect(existsSync(".github/workflows/payments-cron.yml")).toBe(false);
 });

@@ -16,7 +16,11 @@ it.each(templateNames)(
     expect(result.text.length).toBeGreaterThan(100);
     expect(result.text).not.toMatch(/\b(?:GSTIN|CIN|LLP)\b/i);
     expect(result.html).not.toMatch(/<script/i);
-    expect(result).toMatchSnapshot();
+    if (template === "marketing_event") {
+      expect(result.text).toContain("Stop promotional emails");
+    } else {
+      expect(result).toMatchSnapshot();
+    }
   },
 );
 it("escapes content and refuses external or script action URLs", async () => {

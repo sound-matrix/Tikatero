@@ -47,3 +47,23 @@ export async function signOut(data: FormData) {
   revalidatePath("/", "layout");
   redirect(signOutPath(data.get("next")));
 }
+
+/** Account holder controls promotional consent. Ticket receipts are unaffected. */
+export async function changeMarketingPreference(
+  _previous: FormState,
+  data: FormData,
+): Promise<FormState> {
+  const { client } = await requireAccount();
+  const channel = data.get("channel");
+  const enabled = data.get("enabled");
+  if ((channel !== "email" && channel !== "whatsapp") ||
+      (enabled !== "true" && enabled !== "false"))
+    return { error: "Choose a valid marketing preference." };
+  const { error } = await client.rpc("set_marketing_preference", {
+    p_channel: channel,
+    p_enabled: enabled === "true",
+  });
+  if (error) return { error: "Your marketing choice could not be saved." };
+  revalidatePath("/me");
+  return { success: enabled === "true" ? "Promotional updates enabled." : "Promotional updates disabled." };
+}

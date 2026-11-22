@@ -123,6 +123,17 @@ const definitions: {
         "Open your account",
       ),
   },
+  marketing_event: {
+    label: "New event from an organiser you booked",
+    build: (d) =>
+      notice(
+        `New event from ${text(d.organiserName, 120)}`,
+        "You chose to receive updates about future public events from organisers you previously booked. This is an optional promotion, not a ticket confirmation.",
+        eventRows(d.event),
+        "View the event",
+        d.actionPath ?? "/events",
+      ),
+  },
   event_reminder: {
     label: "Event reminder",
     build: (d) =>
@@ -541,6 +552,14 @@ export function BrandedEmail({
             <Text style={{ margin: 0, color: "#5C6170", fontSize: "13px", textAlign: "center" }}>
               © Sound Matrix
             </Text>
+              {data.unsubscribePath && (
+                <Text style={{ marginTop: "8px", fontSize: "13px", textAlign: "center" }}>
+                  <a href={actionUrl(base, data.unsubscribePath)} style={{ color: "#5C6170" }}>
+                    Stop promotional emails
+                  </a>
+                </Text>
+              )}
+
           </Section>
         </Container>
       </Body>

@@ -19,6 +19,17 @@ export type Database = {
         Update: { consumed_at?: string | null };
         Relationships: [];
       };
+      marketing_preferences: {
+        Row: { user_id: string; email_opt_in: boolean; whatsapp_opt_in: boolean;
+          email_consented_at: string | null; whatsapp_consented_at: string | null; updated_at: string };
+        Insert: never; Update: never; Relationships: [];
+      };
+      promotion_campaigns: {
+        Row: { id: string; event_id: string; organiser_id: string;
+          status: "pending_review" | "approved" | "paused" | "rejected";
+          requested_at: string; approved_at: string | null; approved_by: string | null; created_at: string };
+        Insert: never; Update: never; Relationships: [];
+      };
       audit_log: {
         Row: {
           action: string;
@@ -1976,6 +1987,18 @@ export type Database = {
       };
       social_ig_posted_last_24h: { Args: Record<PropertyKey, never>; Returns: number };
       social_live_event: { Args: { p_event_id: string }; Returns: Json };
+      set_marketing_preference: { Args: { p_channel: "email" | "whatsapp"; p_enabled: boolean }; Returns: undefined };
+      promotion_audience_count: { Args: { p_event: string }; Returns: number };
+      promotion_campaign_stats: { Args: { p_event: string }; Returns: Json };
+      host_request_promotion: { Args: { p_event: string }; Returns: string };
+      admin_decide_promotion: { Args: { p_event: string; p_approved: boolean }; Returns: undefined };
+      promotion_claim_emails: { Args: { p_limit?: number }; Returns: {
+        campaign_id: string; buyer_id: string; buyer_email: string; event_id: string;
+        event_slug: string; event_title: string; starts_at: string;
+        venue_name: string; organiser_name: string;
+      }[] };
+      promotion_finish_email: { Args: { p_campaign: string; p_buyer: string; p_success: boolean }; Returns: undefined };
+      promotion_stop_email: { Args: { p_user: string }; Returns: undefined };
       save_event_wizard: {
         Args: {
           p_event_id: string;
