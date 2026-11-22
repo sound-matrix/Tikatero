@@ -73,7 +73,7 @@ end; $function$
 -- An existing event deadline must not be silently reopened by rescheduling
 -- the start time after checkout activity or after the cutoff has passed.
 CREATE OR REPLACE FUNCTION public.prevent_booking_deadline_reopen()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
 DECLARE old_cutoff timestamptz; new_cutoff timestamptz;
 BEGIN
   old_cutoff:=coalesce(OLD.booking_close_at, OLD.starts_at);
@@ -84,7 +84,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 REVOKE ALL ON FUNCTION public.prevent_booking_deadline_reopen() FROM PUBLIC;
 DROP TRIGGER IF EXISTS lock_event_booking_deadline ON public.events;
 CREATE TRIGGER lock_event_booking_deadline BEFORE UPDATE OF booking_close_at,starts_at ON public.events
