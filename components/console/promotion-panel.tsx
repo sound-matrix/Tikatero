@@ -12,7 +12,7 @@ export function PromotionPanel({
 }) {
   const [result, action, pending] = useActionState(requestSmartPromotion, {});
   return (
-    <Card className="space-y-3" id="smart-promotions">
+    <Card className="space-y-3">
       <h2 className="text-xl font-bold">Smart Promotions</h2>
       <p className="text-sm text-muted">
         Announce a published public event to previous customers who explicitly opted in.
