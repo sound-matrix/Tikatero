@@ -66,7 +66,27 @@ begin
   end loop;
   return to_jsonb(saved);
 end; $function$
-;\n\n-- A host can move the deadline earlier, but not reopen bookings or extend
+;\n\n-- An existing event deadline must not be silently reopened by rescheduling
+-- the start time after checkout activity or after the cutoff has passed.
+CREATE OR REPLACE FUNCTION public.prevent_booking_deadline_reopen()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $
+DECLARE old_cutoff timestamptz; new_cutoff timestamptz;
+BEGIN
+  old_cutoff:=coalesce(OLD.booking_close_at, OLD.starts_at);
+  new_cutoff:=coalesce(NEW.booking_close_at, NEW.starts_at);
+  IF old_cutoff IS NOT NULL AND new_cutoff IS NOT NULL AND new_cutoff>old_cutoff
+    AND ((now()>=old_cutoff) OR EXISTS(SELECT 1 FROM public.orders o WHERE o.event_id=OLD.id))
+    THEN RAISE EXCEPTION 'A booking deadline cannot be extended after checkout begins or closes.';
+  END IF;
+  RETURN NEW;
+END;
+$;
+REVOKE ALL ON FUNCTION public.prevent_booking_deadline_reopen() FROM PUBLIC;
+DROP TRIGGER IF EXISTS lock_event_booking_deadline ON public.events;
+CREATE TRIGGER lock_event_booking_deadline BEFORE UPDATE OF booking_close_at,starts_at ON public.events
+  FOR EACH ROW EXECUTE FUNCTION public.prevent_booking_deadline_reopen();
+
+-- A host can move the deadline earlier, but not reopen bookings or extend
 -- a deadline once buyers have initiated purchases. Staff can use existing
 -- event moderation controls to pause sales in emergencies.
 CREATE OR REPLACE FUNCTION public.set_event_booking_close(p_event uuid, p_close timestamptz)
