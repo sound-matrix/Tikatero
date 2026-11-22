@@ -8,6 +8,7 @@ import { discover } from "@/lib/discovery/data";
 import { locationFilters } from "@/lib/discovery/location";
 import { listingUrl, type Search } from "@/lib/discovery/model";
 import { categories } from "@/lib/events/model";
+import { categoryByName, categoryPath } from "@/lib/discovery/categories";
 import { eventCities, cityPath } from "@/lib/discovery/cities";
 import { DiscoveryFilters } from "@/components/discovery/filters";
 import { EventCard } from "@/components/discovery/event-card";
@@ -113,7 +114,7 @@ export default function HomePage({ searchParams }: { searchParams: Promise<Searc
           {categories.map((c, i) => (
             <Link
               key={c}
-              href={listingUrl({ category: c })}
+              href={categoryByName(c) ? categoryPath(categoryByName(c)!) : listingUrl({ category: c })}
               className="rounded-2xl border border-line p-5 font-bold hover:bg-soft"
             >
               <span aria-hidden="true" className="mb-3 block text-2xl">

@@ -113,3 +113,19 @@ export const publicCityEvents = cache(async (city: string): Promise<PublicEvent[
   if (error) throw new Error("City events could not be loaded.");
   return (data ?? []).map(event);
 });
+
+/** Public, upcoming events only; the discovery view excludes unlisted/hidden events. */
+export const publicCategoryEvents = cache(async (category: string): Promise<PublicEvent[]> => {
+  if (!configured()) return [];
+  const { data, error } = await createAnonClient()
+    .from("discovery_events")
+    .select("*")
+    .eq("country", "IN")
+    .eq("category", category)
+    .gte("starts_at", new Date().toISOString())
+    .order("starts_at", { ascending: true })
+    .order("id")
+    .limit(24);
+  if (error) throw new Error("Category events could not be loaded.");
+  return (data ?? []).map(event);
+});
