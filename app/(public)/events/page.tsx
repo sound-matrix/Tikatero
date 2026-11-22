@@ -8,6 +8,7 @@ import { EventCard } from "@/components/discovery/event-card";
 import { LocationMemory } from "@/components/discovery/location-memory";
 export const metadata = {
   title: "Find events",
+  alternates: { canonical: "https://tikatero.com/events" },
   description:
     "Discover concerts, comedy, workshops and more. Find events by city, date and ticket price.",
 };
