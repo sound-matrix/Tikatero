@@ -33,9 +33,10 @@ export default async function EventMarketing({ params }: { params: Promise<{ id:
     ? await Promise.all([
         client.from("promotion_campaigns").select("status").eq("event_id", id).maybeSingle(),
         client.rpc("promotion_audience_count", { p_event: id }),
+        client.rpc("promotion_campaign_stats", { p_event: id }),
       ])
     : null;
-  if (promotionInfo && (promotionInfo[0].error || promotionInfo[1].error))
+  if (promotionInfo && (promotionInfo[0].error || promotionInfo[1].error || promotionInfo[2].error))
     throw new Error("Smart Promotions could not be loaded.");
   const shareLive = published && !event.is_unlisted;
   const tiers = shareLive
@@ -71,7 +72,8 @@ export default async function EventMarketing({ params }: { params: Promise<{ id:
           <ShareEventCard client={client} event={event} />
           {shareLive && <PromotionPanel eventId={id}
             audience={promotionInfo?.[1].data ?? 0}
-            status={promotionInfo?.[0].data?.status ?? null} />}
+            status={promotionInfo?.[0].data?.status ?? null}
+            sent={(() => { const stats = promotionInfo?.[2].data; return stats && typeof stats === "object" && !Array.isArray(stats) && typeof stats.sent === "number" ? stats.sent : 0; })()} />}
           <InstagramTicketSales client={client} event={event} />
           {shareLive && event.starts_at && (
             <ShareKit
