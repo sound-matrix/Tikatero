@@ -91,6 +91,7 @@ function HostRow({
             <li key={event.event_id ?? "host"}>
               {event.title ?? "Host balance"} · {formatInr(event.available_paise)} available ·{" "}
               {formatInr(event.remaining_paise)} remaining
+              {event.event_id && <a className="ml-3 text-teal underline" href={`/api/settlements/${event.event_id}/csv`}>Settlement CSV</a>}
             </li>
           ))}
         </ul>
