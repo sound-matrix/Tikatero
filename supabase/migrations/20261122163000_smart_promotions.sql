@@ -258,3 +258,32 @@ end;
 $$;
 revoke all on function public.promotion_stop_email(uuid) from public,anon,authenticated;
 grant execute on function public.promotion_stop_email(uuid) to service_role;
+
+-- No recipient identities or addresses are returned to hosts.
+create function public.promotion_campaign_stats(p_event uuid)
+returns jsonb language plpgsql stable security definer set search_path='' as $$
+declare result jsonb;
+begin
+  if not exists(
+    select 1 from public.events e join public.organisers org on org.id=e.organiser_id
+    where e.id=p_event and (
+      org.owner_id=auth.uid() or exists(
+        select 1 from public.profiles p where p.id=auth.uid()
+          and p.role='admin' and p.blocked_at is null
+      )
+    )
+  ) then raise exception 'Campaign unavailable.' using errcode='42501'; end if;
+  select jsonb_build_object(
+    'queued',count(*) filter(where d.status='queued'),
+    'sending',count(*) filter(where d.status='sending'),
+    'sent',count(*) filter(where d.status='sent'),
+    'failed',count(*) filter(where d.status='failed'),
+    'suppressed',count(*) filter(where d.status='suppressed')
+  ) into result from public.promotion_campaigns c
+    left join public.promotion_email_deliveries d on d.campaign_id=c.id
+    where c.event_id=p_event;
+  return coalesce(result,'{}'::jsonb);
+end;
+$$;
+revoke all on function public.promotion_campaign_stats(uuid) from public,anon;
+grant execute on function public.promotion_campaign_stats(uuid) to authenticated;
