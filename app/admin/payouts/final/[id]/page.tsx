@@ -48,7 +48,7 @@ export default async function FinalEventSettlement({ params }: Props) {
         {ready && amount > 0 ? (
           <>
             <p className="my-3 font-semibold">Exact amount: {formatInr(amount)}</p>
-            <p className="my-2 text-sm text-muted">Transfer the exact amount to the host's previously verified bank account outside Tikatero. This action only records an already-completed transfer.</p>
+            <p className="my-2 text-sm text-muted">Transfer the exact amount to the host&apos;s previously verified bank account outside Tikatero. This action only records an already-completed transfer.</p>
             <PayoutForm className="max-w-lg space-y-3">
               <input type="hidden" name="operation" value="final" />
               <input type="hidden" name="event" value={id} />
