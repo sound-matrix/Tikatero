@@ -62,6 +62,7 @@ select lives_ok(
 select is((select status from public.promotion_campaigns
  where event_id='f5720000-0000-4000-8000-000000000001'),
  'approved','Approval explicitly recorded');
+reset role;
 select is((select count(*) from public.promotion_email_deliveries),
  0::bigint,'Admin approval does not message anyone without eligible consent');
 
