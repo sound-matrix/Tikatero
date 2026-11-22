@@ -1989,6 +1989,7 @@ export type Database = {
       social_live_event: { Args: { p_event_id: string }; Returns: Json };
       set_marketing_preference: { Args: { p_channel: "email" | "whatsapp"; p_enabled: boolean }; Returns: undefined };
       promotion_audience_count: { Args: { p_event: string }; Returns: number };
+      promotion_campaign_stats: { Args: { p_event: string }; Returns: Json };
       host_request_promotion: { Args: { p_event: string }; Returns: string };
       admin_decide_promotion: { Args: { p_event: string; p_approved: boolean }; Returns: undefined };
       promotion_claim_emails: { Args: { p_limit?: number }; Returns: {
