@@ -401,6 +401,7 @@ export type Database = {
       };
       events: {
         Row: {
+          booking_close_at: string | null;
           hidden_at: string | null;
           hidden_by: string | null;
           hidden_reason: string | null;
@@ -445,6 +446,7 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          booking_close_at?: string | null;
           hidden_at?: string | null;
           hidden_by?: string | null;
           hidden_reason?: string | null;
@@ -488,6 +490,7 @@ export type Database = {
           venue_name?: string | null;
         };
         Update: {
+          booking_close_at?: string | null;
           hidden_at?: string | null;
           hidden_by?: string | null;
           hidden_reason?: string | null;
@@ -1976,6 +1979,7 @@ export type Database = {
       };
       social_ig_posted_last_24h: { Args: Record<PropertyKey, never>; Returns: number };
       social_live_event: { Args: { p_event_id: string }; Returns: Json };
+      set_event_booking_close: { Args: { p_event: string; p_close: string | null }; Returns: undefined };
       save_event_wizard: {
         Args: {
           p_event_id: string;
