@@ -290,6 +290,7 @@ async function Detail({ params, searchParams }: Props) {
           </div>
           <div className="mt-5 hidden md:block">{book}</div>
           <ShareButton
+            publicEvent={!e.is_unlisted}
             event={{
               slug: e.slug,
               title: e.title,
