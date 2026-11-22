@@ -96,3 +96,20 @@ export async function sitemapEventSlugs() {
     if (data.length < pageSize) return slugs;
   }
 }
+
+
+/** Only genuinely public, upcoming events appear on city SEO pages. */
+export const publicCityEvents = cache(async (city: string): Promise<PublicEvent[]> => {
+  if (!configured()) return [];
+  const { data, error } = await createAnonClient()
+    .from("discovery_events")
+    .select("*")
+    .eq("country", "IN")
+    .ilike("city", city)
+    .gte("starts_at", new Date().toISOString())
+    .order("starts_at", { ascending: true })
+    .order("id")
+    .limit(24);
+  if (error) throw new Error("City events could not be loaded.");
+  return (data ?? []).map(event);
+});

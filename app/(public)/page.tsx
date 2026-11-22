@@ -8,6 +8,7 @@ import { discover } from "@/lib/discovery/data";
 import { locationFilters } from "@/lib/discovery/location";
 import { listingUrl, type Search } from "@/lib/discovery/model";
 import { categories } from "@/lib/events/model";
+import { eventCities, cityPath } from "@/lib/discovery/cities";
 import { DiscoveryFilters } from "@/components/discovery/filters";
 import { EventCard } from "@/components/discovery/event-card";
 import { LocationMemory } from "@/components/discovery/location-memory";
@@ -119,6 +120,17 @@ export default function HomePage({ searchParams }: { searchParams: Promise<Searc
                 {["♫", "✦", "◎", "☺", "✎", "⚑", "♡", "✧"][i]}
               </span>
               {c}
+            </Link>
+          ))}
+        </div>
+      </section>
+      <section className="mt-10">
+        <h2 className="text-2xl font-bold">Explore events by city</h2>
+        <div className="mt-5 flex flex-wrap gap-3">
+          {eventCities.map((city) => (
+            <Link key={city.slug} href={cityPath(city)}
+              className="rounded-full border border-line px-4 py-2 font-semibold hover:bg-soft">
+              {city.name}
             </Link>
           ))}
         </div>
