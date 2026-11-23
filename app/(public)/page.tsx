@@ -140,15 +140,16 @@ export default function HomePage({ searchParams }: { searchParams: Promise<Searc
       </section>
       <section className="mt-10 flex flex-col gap-5 rounded-2xl bg-ink p-7 text-white sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Bring people together.</h2>
-          <p className="mt-2 text-white/90">Create your event, your way. Get started with ticket types, pricing and a booking link.</p>
-          <Link href="/organisers" className="mt-3 inline-block font-semibold text-white underline underline-offset-4">How event hosting works</Link>
+          <p className="text-xs font-bold uppercase tracking-[.2em] text-white/75">For event organisers</p>
+          <h2 className="mt-2 text-2xl font-bold">Your Event. Your Audience. Your Success.</h2>
+          <p className="mt-2 text-white/90">Bring your next concert, workshop or community event to life. Set up ticket types, manage bookings and share one event link with your audience.</p>
+          <Link href="/organisers" className="mt-3 inline-block font-semibold text-white underline underline-offset-4">Explore organiser benefits</Link>
         </div>
         <Link
-          href="/console"
+          href="/organisers"
           className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,var(--coral),var(--orange))] px-5 text-xl font-bold text-ink"
         >
-          Host an event
+          Start hosting
         </Link>
       </section>
     </main>
