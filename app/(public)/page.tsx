@@ -35,19 +35,19 @@ async function HomeContent({ searchParams }: { searchParams: Promise<Search> }) 
             <div className="overflow-hidden rounded-2xl border border-[#f3c9ad]/70 bg-[#fff3e9] shadow-sm">
               <picture>
                 <source
-                  media="(min-width: 640px) and (prefers-reduced-motion: no-preference)"
+                  media="(prefers-reduced-motion: no-preference)"
                   srcSet="/animations/tikatero-welcome-entry.gif"
                   type="image/gif"
                 />
                 <Image
+                  unoptimized
                   src="/animations/tikatero-welcome-poster.png"
-                  alt="A guest approaches the Welcome Tikatero venue entrance with a QR ticket."
+                  alt="A guest scans a QR ticket at the Tikatero venue entrance and walks inside."
                   width={357}
                   height={358}
                   loading="eager"
+                  decoding="async"
                   fetchPriority="high"
-                  sizes="(max-width: 640px) 260px, 320px"
-                  quality={75}
                   className="h-auto w-full"
                 />
               </picture>
