@@ -1,134 +1,149 @@
 package com.soundmatrix.tikatero;
 
-import android.Manifest;
 import android.app.Activity;
-import android.content.ActivityNotFoundException;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Bundle;
-import android.webkit.CookieManager;
-import android.webkit.PermissionRequest;
-import android.webkit.ValueCallback;
-import android.webkit.WebChromeClient;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-import android.widget.Toast;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
 
-public class MainActivity extends Activity {
-    private static final String HOME = "https://tikatero.com/";
-    private static final int CAMERA_REQUEST = 10;
-    private static final int FILE_REQUEST = 11;
-    private WebView webView;
-    private PermissionRequest pendingPermission;
-    private ValueCallback<Uri[]> fileCallback;
+/**
+ * Tikatero native Android foundation.
+ * No WebView: all navigation and UI are Android views.
+ * Server-backed features are intentionally gated until native API integrations are ready.
+ */
+public final class MainActivity extends Activity {
+    private static final int BACKGROUND = Color.rgb(12, 16, 28);
+    private static final int PANEL = Color.rgb(25, 32, 47);
+    private static final int FOREGROUND = Color.WHITE;
+    private static final int MUTED = Color.rgb(169, 180, 196);
+    private static final int ACCENT = Color.rgb(83, 211, 180);
+
+    private LinearLayout content;
+    private LinearLayout nav;
+    private String selected = "Home";
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
-        webView = new WebView(this);
-        setContentView(webView);
-        WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setAllowFileAccess(false);
-        settings.setAllowContentAccess(true);
-        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        settings.setMediaPlaybackRequiresUserGesture(true);
-        CookieManager.getInstance().setAcceptCookie(true);
-        CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
-        webView.setWebViewClient(new WebViewClient() {
-            @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                Uri uri = request.getUrl();
-                String scheme = uri.getScheme();
-                if ("https".equalsIgnoreCase(scheme)) return false;
-                if ("http".equalsIgnoreCase(scheme)) {
-                    Toast.makeText(MainActivity.this, "Only secure links are supported", Toast.LENGTH_SHORT).show();
-                    return true;
-                }
-                if ("intent".equalsIgnoreCase(scheme)) {
-                    try {
-                        Intent intent = Intent.parseUri(uri.toString(), Intent.URI_INTENT_SCHEME);
-                        startActivity(intent);
-                    } catch (Exception e) {
-                        Toast.makeText(MainActivity.this, "No compatible app installed", Toast.LENGTH_SHORT).show();
-                    }
-                    return true;
-                }
-                try { startActivity(new Intent(Intent.ACTION_VIEW, uri)); }
-                catch (ActivityNotFoundException e) {
-                    Toast.makeText(MainActivity.this, "No compatible app installed", Toast.LENGTH_SHORT).show();
-                }
-                return true;
-            }
-        });
-        webView.setWebChromeClient(new WebChromeClient() {
-            @Override public void onPermissionRequest(PermissionRequest request) {
-                boolean camera = false;
-                for (String resource : request.getResources()) {
-                    if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)) camera = true;
-                    else { request.deny(); return; }
-                }
-                if (!camera || !HOME.startsWith(request.getOrigin().toString().replaceAll("/$", "") + "/")) {
-                    request.deny();
-                    return;
-                }
-                if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                    request.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});
-                } else {
-                    pendingPermission = request;
-                    requestPermissions(new String[]{Manifest.permission.CAMERA}, CAMERA_REQUEST);
-                }
-            }
-            @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
-                if (fileCallback != null) fileCallback.onReceiveValue(null);
-                fileCallback = callback;
-                try {
-                    startActivityForResult(params.createIntent(), FILE_REQUEST);
-                    return true;
-                } catch (ActivityNotFoundException e) {
-                    fileCallback = null;
-                    return false;
-                }
-            }
-        });
-        if (state == null) webView.loadUrl(HOME);
-        else webView.restoreState(state);
+        showScreen("Home");
     }
 
-    @Override public void onRequestPermissionsResult(int code, String[] permissions, int[] grants) {
-        super.onRequestPermissionsResult(code, permissions, grants);
-        if (code == CAMERA_REQUEST && pendingPermission != null) {
-            if (grants.length > 0 && grants[0] == PackageManager.PERMISSION_GRANTED)
-                pendingPermission.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});
-            else pendingPermission.deny();
-            pendingPermission = null;
+    private GradientDrawable background(int color, int radius) {
+        GradientDrawable shape = new GradientDrawable();
+        shape.setColor(color);
+        shape.setCornerRadius(dp(radius));
+        return shape;
+    }
+
+    private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
+
+    private TextView text(String value, int size, int color, boolean bold) {
+        TextView view = new TextView(this);
+        view.setText(value);
+        view.setTextColor(color);
+        view.setTextSize(size);
+        if (bold) view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        return view;
+    }
+
+    private void addText(String value, int size, int color, boolean bold) {
+        TextView view = text(value, size, color, bold);
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1, -2);
+        p.bottomMargin = dp(14);
+        content.addView(view, p);
+    }
+
+    private void addPanel(String title, String description) {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(18), dp(18), dp(18), dp(18));
+        panel.setBackground(background(PANEL, 18));
+        TextView heading = text(title, 18, FOREGROUND, true);
+        panel.addView(heading);
+        TextView body = text(description, 14, MUTED, false);
+        LinearLayout.LayoutParams bodyParams = new LinearLayout.LayoutParams(-1, -2);
+        bodyParams.topMargin = dp(8);
+        panel.addView(body, bodyParams);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+        params.bottomMargin = dp(14);
+        content.addView(panel, params);
+    }
+
+    private void addAction(String label, String target) {
+        Button button = new Button(this);
+        button.setAllCaps(false);
+        button.setText(label);
+        button.setTextColor(BACKGROUND);
+        button.setBackground(background(ACCENT, 14));
+        button.setOnClickListener(v -> showScreen(target));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(52));
+        params.bottomMargin = dp(18);
+        content.addView(button, params);
+    }
+
+    private void showScreen(String screen) {
+        selected = screen;
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(BACKGROUND);
+        root.setFitsSystemWindows(true);
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(22), dp(32), dp(22), dp(20));
+        scroll.addView(content);
+        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+
+        nav = new LinearLayout(this);
+        nav.setOrientation(LinearLayout.HORIZONTAL);
+        nav.setPadding(dp(6), dp(10), dp(6), dp(10));
+        nav.setBackgroundColor(PANEL);
+        root.addView(nav, new LinearLayout.LayoutParams(-1, dp(68)));
+        setContentView(root);
+
+        addText("TIKATERO", 14, ACCENT, true);
+        switch (screen) {
+            case "Home":
+                addText("Discover what's happening", 28, FOREGROUND, true);
+                addText("Find experiences and events worth attending.", 16, MUTED, false);
+                addAction("Explore events", "Discover");
+                addPanel("Native Android experience", "Fast native navigation, accessible screens and an Android-first layout. Live event listings will appear after the public event API is connected.");
+                addPanel("For organisers", "Event creation, sales, payouts and scanning require secure native integrations before they can be enabled.");
+                break;
+            case "Discover":
+                addText("Discover events", 28, FOREGROUND, true);
+                addPanel("Event catalogue", "Live events are not connected in this foundation build. We will connect the Tikatero events API and add category, city and date filters.");
+                break;
+            case "Tickets":
+                addText("Your tickets", 28, FOREGROUND, true);
+                addPanel("Sign-in required", "Your bookings and QR tickets will appear here after secure native authentication and tickets API integration.");
+                break;
+            case "Account":
+                addText("Your account", 28, FOREGROUND, true);
+                addPanel("Account & organiser access", "Native login, profile, organiser tools and role-based access are planned for the next integration stage. No account information is stored in this foundation build.");
+                break;
+            default:
+                showScreen("Home");
+                return;
         }
-    }
 
-    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == FILE_REQUEST && fileCallback != null) {
-            fileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
-            fileCallback = null;
+        for (String destination : new String[]{"Home", "Discover", "Tickets", "Account"}) {
+            TextView item = text(destination, 12, destination.equals(selected) ? ACCENT : MUTED, destination.equals(selected));
+            item.setGravity(Gravity.CENTER);
+            item.setOnClickListener(v -> showScreen(destination));
+            nav.addView(item, new LinearLayout.LayoutParams(0, -1, 1));
         }
     }
 
     @Override public void onBackPressed() {
-        if (webView.canGoBack()) webView.goBack();
+        if (!"Home".equals(selected)) showScreen("Home");
         else super.onBackPressed();
-    }
-
-    @Override protected void onSaveInstanceState(Bundle state) {
-        webView.saveState(state);
-        super.onSaveInstanceState(state);
-    }
-
-    @Override protected void onDestroy() {
-        if (pendingPermission != null) pendingPermission.deny();
-        if (fileCallback != null) fileCallback.onReceiveValue(null);
-        webView.destroy();
-        super.onDestroy();
     }
 }

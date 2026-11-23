@@ -1,15 +1,29 @@
-# Tikatero Android (GitHub-built APK)
+# Tikatero — native Android implementation
 
-This initial Android application opens the live Tikatero service at https://tikatero.com in a secure WebView. It shares the current website's backend. Android sources are isolated from the Next.js production site.
+This branch is the beginning of a **fully native Android app**. It replaces the WebView activity with Android-native Home, Discover, Tickets and Account screens and native bottom navigation. No page is embedded from the website.
 
-## Download a test APK from GitHub
+## Current implementation
 
-Open the repository's **Actions** tab, select **Tikatero Android APK**, open a successful run, then download the **Tikatero-Android-debug-APK** artifact ZIP. Extract `app-debug.apk` and install on an Android device. A debug APK is for internal testing, not a Play Store release.
+- Native Java Activity and Android View navigation.
+- No WebView and no website rendering.
+- Native dark UI with responsive Android density sizes.
+- Explicit unavailable states; the app does not invent live events or show a misleading checkout.
 
-Push or pull request changes under `android-app/` to build automatically, or choose **Run workflow** after the workflow exists on the default branch.
+## Not yet implemented (do not distribute as a full-featured Tikatero app)
 
-## Validation before release
+- Auth with Supabase and secure sessions / deep links.
+- Live event search, filters, details and booking API.
+- PayU native-safe checkout and verified return flows.
+- My Tickets with downloadable QR codes, scanner and camera permission.
+- Host onboarding, KYC, event publishing, sales, settlements and organiser console.
+- Push notifications, analytics, accessibility testing, automated instrumentation and release signing.
 
-Test Supabase sign-in and return callback, event browsing, real payment-provider redirect and return, ticket download, QR scanning (camera permissions), organiser console, and accessibility on actual Android devices. Some hosted payment providers block embedded WebViews: if detected, build native browser/Custom Tabs checkout and verified app links before accepting real payments in-app.
+Use the live website for business-critical flows until native integrations are verified. Keep server access governed by existing authentication and RLS; never embed service-role credentials or payment secrets in the APK.
 
-For production distribution, add an Android app icon, app links, stable release signing key stored in GitHub Secrets, instrumented tests and a signed release APK/AAB. Do not publish a debug build as a production app.
+## GitHub APK
+
+The workflow `.github/workflows/android-apk.yml` builds a **debug APK** for pull requests that touch `android-app/`. Open its Actions run, download `Tikatero-Android-debug-APK`, and extract `app-debug.apk`.
+
+A debug APK is an internal test artifact, not a signed production release. This branch must remain unmerged until functional parity is achieved and tested.
+
+No Vercel deployment is required for the Android build.
