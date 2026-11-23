@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = { alternates: { canonical: "https://tikatero.com/" } };
 import Link from "next/link";
+import Image from "next/image";
 import { discover } from "@/lib/discovery/data";
 import { locationFilters } from "@/lib/discovery/location";
 import { listingUrl, type Search } from "@/lib/discovery/model";
@@ -38,7 +39,8 @@ async function HomeContent({ searchParams }: { searchParams: Promise<Search> }) 
                   srcSet="/animations/tikatero-welcome-entry.gif"
                   type="image/gif"
                 />
-                <img
+                <Image
+                  unoptimized
                   src="/animations/tikatero-welcome-poster.png"
                   alt="A guest scans a QR ticket at the Tikatero venue entrance and walks inside."
                   width={357}
